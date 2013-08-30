@@ -167,6 +167,7 @@ public class TaskDispatcher<T> extends Thread {
 	
 	private Semaphore listLock = new Semaphore(1, true);
 	private Semaphore sleepLock = new Semaphore(0,true);
+	private Semaphore pauseLock = new Semaphore(0,true);
 	private volatile LinkedList queue = new LinkedList();
 	private volatile LinkedList inQueue = new LinkedList();
 	private HashMap<T,Dispatchable> mapSet = new HashMap<T, Dispatchable>();
@@ -175,7 +176,21 @@ public class TaskDispatcher<T> extends Thread {
 	private HashMap<T,Boolean> mutableSet = new HashMap<T, Boolean>();
 	private volatile Dispatchable curTask = null;
 	private volatile boolean disposed = false;
+	private volatile boolean paused = false;
 	private Dispatchable dummyTask = new Dispatchable();
+	
+	public void pause()
+	{
+		//System.out.println("Signaling pause");
+		paused = true;
+	}
+	
+	public void unpause()
+	{
+		//System.out.println("Signaling unpause");
+		paused = false;
+		pauseLock.release();
+	}
 	
 	public Boolean isMutable(T k)
 	{
@@ -254,32 +269,25 @@ public class TaskDispatcher<T> extends Thread {
 		}
 	}
 	
-	private boolean consumeInQueue(boolean lockSet)
+	private boolean consumeInQueue()
 	{
 		boolean rval = (inQueue.size() > 0);
 		
 		if (rval)
 		{
-			if (lockSet)
-			{
+			try {
+				listLock.acquire();
 				try {
-					listLock.acquire();
-					try {
-						_consumeInQueue();
-					}
-					finally
-					{
-						listLock.release();
-					}
+					_consumeInQueue();
 				}
-				catch (InterruptedException e)
+				finally
 				{
-					dispose(e);
+					listLock.release();
 				}
 			}
-			else
+			catch (InterruptedException e)
 			{
-				_consumeInQueue();
+				dispose(e);
 			}
 		}
 		
@@ -290,34 +298,43 @@ public class TaskDispatcher<T> extends Thread {
 	{
 		do
 		{
+			if (paused)
+			{
+				//System.out.println("Handling pause signal");
+				pauseLock.drainPermits();
+				try {
+					pauseLock.acquire();
+				}
+				catch (InterruptedException e)
+				{
+					paused = false;
+					dispose(e);
+				}
+			}
 			if (disposed)
 			{
 				break;
 			}
-			consumeInQueue(true);
+			consumeInQueue();
 			try {
-				listLock.acquire();
 				if (disposed)
 				{
-					listLock.release();
 					break;
 				}
 				curTask = queue.remove();
-				if (curTask == null && consumeInQueue(false))
+				if (curTask == null && consumeInQueue())
 				{
 					curTask = queue.remove();
 				}
 				if (curTask == null)
 				{
-					listLock.release();
 					//System.out.println("Going to sleep");
 					sleepLock.acquire();
 				}
 				else
 				{
 					//System.out.println("Running...");
-					inMapSet.put(curTask.k, null);
-					listLock.release();
+					mapSet.remove(curTask.k);
 					try {
 						Semaphore s = curTask.s;
 						try {
@@ -434,6 +451,10 @@ public class TaskDispatcher<T> extends Thread {
 			e.printStackTrace();
 		}
 		disposed = true;
+		if (paused)
+		{
+			unpause();
+		}
 	}
 	
 	public void dispose()
@@ -445,11 +466,12 @@ public class TaskDispatcher<T> extends Thread {
 	public static void main(String[] args)
 	{
 		TaskDispatcher<Integer> disp = new TaskDispatcher<Integer>();
-		final Semaphore s = new Semaphore(0,true);
+		disp.pause();
+		//final Semaphore s = new Semaphore(0,true);
 		disp.dispatch(1, new Runnable(){public void run(){
-			try {
-			s.acquire();
-			} catch(InterruptedException e){e.printStackTrace();}
+			//try {
+			//s.acquire();
+			//} catch(InterruptedException e){e.printStackTrace();}
 			System.out.println("rawr");
 		}});
 		disp.dispatch(2, new Runnable(){public void run(){
@@ -461,10 +483,11 @@ public class TaskDispatcher<T> extends Thread {
 		disp.dispatch(3, new Runnable(){public void run(){
 			System.out.println("rawr3-2");
 		}});
-		s.release();
+		//s.release();
 		disp.dispatch(4, new Runnable(){public void run(){
 			System.out.println("rawr4");
 		}});
+		disp.unpause();
 	}
 	*/
 
