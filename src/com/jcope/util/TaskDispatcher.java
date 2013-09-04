@@ -10,86 +10,123 @@ public class TaskDispatcher<T> extends Thread {
 		public Semaphore s;
 		public Node n;
 		public Runnable r;
+		
+		public void dispose()
+		{
+			k = null;
+			
+			s = null;
+			n = null;
+			r = null;
+		}
 	}
 	
 	class Node {
 		public volatile Node n;
 		public volatile Node p;
 		public volatile Dispatchable d;
+		
+		public void dispose()
+		{
+			Dispatchable cd = d;
+			
+			p = null;
+			n = null;
+			d = null;
+			
+			if (cd != null)
+			{
+				cd.dispose();
+			}
+		}
 	}
 
 	class LinkedList {
 		private volatile Node a = null;
 		private volatile Node z = null;
 		private volatile int size = 0;
+		private Semaphore s = new Semaphore(1, true);
 		
-		public Node add(Dispatchable d)
+		public Node add(Dispatchable d) throws InterruptedException
 		{
-			if (size + 1 <= 0)
+			s.acquire();
+			try
 			{
-				throw new RuntimeException();
-			}
-			
-			Node r;
-			
-			if (a == null)
-			{
-				a = new Node();
-				a.n = null;
-				a.p = null;
-				a.d = d;
-				r = a;
-			}
-			else
-			{
+				if (size + 1 <= 0)
+				{
+					throw new RuntimeException();
+				}
+				
 				Node b = new Node();
 				b.d = d;
 				b.n = null;
 				b.p = z;
-				z.n = b;
-				r = b;
+				if (z == null)
+				{
+					a = b;
+				}
+				else
+				{
+					z.n = b;
+				}
+				size++;
+				z = b;
+				
+				return b;
 			}
-			
-			size++;
-			z = r;
-			
-			return r;
+			finally
+			{
+				s.release();
+			}
 		}
 		
-		public Node addFirst(Dispatchable d)
+		public Node addFirst(Dispatchable d) throws InterruptedException
 		{
-			if (size + 1 <= 0)
+			s.acquire();
+			try
 			{
-				throw new RuntimeException();
-			}
-			
-			Node r;
-			
-			if (a == null)
-			{
-				r = add(d);
-			}
-			else
-			{
+				if (size + 1 <= 0)
+				{
+					throw new RuntimeException();
+				}
+				
 				Node b = new Node();
 				b.d = d;
 				b.p = null;
 				b.n = a;
-				a.p = b;
-				r = b;
+				if (a == null)
+				{
+					z = b;
+				}
+				else
+				{
+					a.p = b;
+				}
 				size++;
-				a = r;
+				a = b;
+				
+				return b;
 			}
-			
-			return r;
+			finally
+			{
+				s.release();
+			}
 		}
 		
-		public Dispatchable peek()
+		public Dispatchable peek() throws InterruptedException
 		{
-			return (a == null) ? null : a.d;
+			s.acquire();
+			try
+			{
+				return (a == null) ? null : a.d;
+			}
+			finally
+			{
+				s.release();
+			}
 		}
 		
-		public Dispatchable remove()
+		private Dispatchable _remove()
 		{
 			Dispatchable rval = null;
 			
@@ -110,6 +147,7 @@ public class TaskDispatcher<T> extends Thread {
 				
 				rval = b.d;
 				b.d = null;
+				b.n = null;
 				
 				size--;
 			}
@@ -117,55 +155,109 @@ public class TaskDispatcher<T> extends Thread {
 			return rval;
 		}
 		
-		public void remove(Node s)
+		public Dispatchable remove() throws InterruptedException
 		{
-			if (size - 1 < 0)
+			s.acquire();
+			try
 			{
-				throw new RuntimeException();
+				return _remove();
 			}
-			
-			if (s == a)
+			finally
 			{
-				if (a.n == null)
-				{
-					a = null;
-					z = null;
-				}
-				else
-				{
-					a = a.n;
-					a.p = null;
-				}
+				s.release();
 			}
-			else if (s == z)
-			{
-				if (z.p == null)
-				{
-					a = null;
-					z = null;
-				}
-				else
-				{
-					z = z.p;
-					z.n = null;
-				}
-			}
-			else
-			{
-				s.p.n = s.n;
-				s.n.p = s.p;
-			}
-			
-			size--;
 		}
 		
-		public int size()
+		public void remove(Node sn) throws InterruptedException
 		{
-			return size;
+			Node t;
+			s.acquire();
+			try
+			{
+				if (size - 1 < 0)
+				{
+					throw new RuntimeException();
+				}
+				
+				if (sn == a)
+				{
+					if (a.n == null)
+					{
+						a = null;
+						z = null;
+					}
+					else
+					{
+						a = a.n;
+					}
+				}
+				else if (sn == z)
+				{
+					z = z.p;
+				}
+				else
+				{
+					sn.p.n = sn.n;
+					sn.n.p = sn.p;
+				}
+				
+				size--;
+				sn.dispose();
+			}
+			finally
+			{
+				s.release();
+			}
+		}
+		
+		public int size() throws InterruptedException
+		{
+			s.acquire();
+			try
+			{
+				return size;
+			}
+			finally
+			{
+				s.release();
+			}
+		}
+		
+		/**
+		 * Will release all locks by default unless call clear(false)
+		 */
+		public void clear() throws InterruptedException
+		{
+			clear(true);
+		}
+		
+		public void clear(boolean releaseLocks) throws InterruptedException
+		{
+			s.acquire();
+			try
+			{
+				Dispatchable d;
+				Semaphore ns;
+				
+				while ((d = _remove()) != null)
+				{
+					ns = d.s;
+					d.dispose();
+					if (releaseLocks && ns != null)
+					{
+						ns.release();
+					}
+				}
+			}
+			finally
+			{
+				s.release();
+			}
 		}
 	}
 	
 	private Semaphore listLock = new Semaphore(1, true);
+	private Semaphore curTaskLock = new Semaphore(1,true);
 	private Semaphore sleepLock = new Semaphore(0,true);
 	private Semaphore pauseLock = new Semaphore(0,true);
 	private volatile LinkedList queue = new LinkedList();
@@ -178,6 +270,10 @@ public class TaskDispatcher<T> extends Thread {
 	private volatile boolean disposed = false;
 	private volatile boolean paused = false;
 	private Dispatchable dummyTask = new Dispatchable();
+	
+	public TaskDispatcher() {
+		start();
+	}
 	
 	public void pause()
 	{
@@ -252,26 +348,38 @@ public class TaskDispatcher<T> extends Thread {
 		}
 	}
 	
-	public TaskDispatcher() {
-		start();
-	}
-	
 	private void _consumeInQueue()
 	{
 		Dispatchable d;
 		
 		inMapSet.clear();
 		
-		while ((d = inQueue.remove()) != null)
+		try
 		{
-			//System.out.println("Adding to active queue");
-			_dispatch(d);
+			while ((d = inQueue.remove()) != null)
+			{
+				//System.out.println("Adding to active queue");
+				_dispatch(d);
+			}
+		}
+		catch (InterruptedException e)
+		{
+			dispose(e);
 		}
 	}
 	
 	private boolean consumeInQueue()
 	{
-		boolean rval = (inQueue.size() > 0);
+		boolean rval;
+		try
+		{
+			rval = (inQueue.size() > 0);
+		}
+		catch (InterruptedException e)
+		{
+			dispose(e);
+			return false;
+		}
 		
 		if (rval)
 		{
@@ -296,6 +404,7 @@ public class TaskDispatcher<T> extends Thread {
 	
 	public void run()
 	{
+		boolean isNullTask = true;
 		do
 		{
 			if (paused)
@@ -321,12 +430,29 @@ public class TaskDispatcher<T> extends Thread {
 				{
 					break;
 				}
-				curTask = queue.remove();
-				if (curTask == null && consumeInQueue())
+				try
+				{
+					curTaskLock.acquire();
+				}
+				catch (InterruptedException e)
+				{
+					dispose(e);
+					break;
+				}
+				try
 				{
 					curTask = queue.remove();
+					if (curTask == null && consumeInQueue())
+					{
+						curTask = queue.remove();
+					}
+					isNullTask = (curTask == null);
 				}
-				if (curTask == null)
+				finally
+				{
+					curTaskLock.release();
+				}
+				if (isNullTask)
 				{
 					//System.out.println("Going to sleep");
 					sleepLock.acquire();
@@ -338,8 +464,8 @@ public class TaskDispatcher<T> extends Thread {
 					try {
 						Semaphore s = curTask.s;
 						try {
-							curTask.s = null;
 							Runnable r = curTask.r;
+							curTask.s = null;
 							curTask.r = null;
 							r.run();
 						}
@@ -391,9 +517,26 @@ public class TaskDispatcher<T> extends Thread {
 			}
 			else
 			{
-				q.remove(d.n);
+				try
+				{
+					q.remove(d.n);
+				}
+				catch (InterruptedException e)
+				{
+					dispose(e);
+					return;
+				}
 				updateNode(d, r, s);
-				d.n = q.add(d);
+				try
+				{
+					d.n = q.add(d);
+				}
+				catch (InterruptedException e)
+				{
+					dispose(e);
+					d.n = null;
+					return;
+				}
 			}
 		}
 		else
@@ -402,14 +545,41 @@ public class TaskDispatcher<T> extends Thread {
 			d.k = k;
 			d.s = s;
 			d.r = r;
-			d.n = isImmediate(k) ? q.addFirst(d) : q.add(d);
-			m.put(k, d);
-			if (curTask == null && q == inQueue)
+			try
 			{
-				// wake up the dispatcher in 1-1 manner
-				// dispatcher will auto consume the inqueue
-				curTask = dummyTask;
-				sleepLock.release();
+				d.n = isImmediate(k) ? q.addFirst(d) : q.add(d);
+			}
+			catch (InterruptedException e)
+			{
+				dispose(e);
+				d.n = null;
+				return;
+			}
+			m.put(k, d);
+			if (q == inQueue)
+			{
+				try
+				{
+					curTaskLock.acquire();
+				}
+				catch (InterruptedException e)
+				{
+					dispose(e);
+					return;
+				}
+				try {
+					if (curTask == null)
+					{
+						// wake up the dispatcher in 1-1 manner
+						// dispatcher will auto consume the inqueue
+						curTask = dummyTask;
+						sleepLock.release();
+					}
+				}
+				finally
+				{
+					curTaskLock.release();
+				}
 			}
 		}
 	}
@@ -460,6 +630,61 @@ public class TaskDispatcher<T> extends Thread {
 	public void dispose()
 	{
 		dispose(null);
+	}
+	
+	public void clear()
+	{
+		boolean doUnpause = !paused;
+		pause();
+		try {
+			listLock.acquire();
+		}
+		catch (InterruptedException e)
+		{
+			dispose(e);
+			return;
+		}
+		try
+		{
+			inMapSet.clear();
+			inQueue.clear();
+		}
+		catch (InterruptedException e)
+		{
+			dispose(e);
+			return;
+		}
+		finally
+		{
+			listLock.release();
+		}
+		try {
+			curTaskLock.acquire();
+		}
+		catch (InterruptedException e)
+		{
+			dispose(e);
+			return;
+		}
+		try
+		{
+			mapSet.clear();
+			queue.clear();
+		}
+		catch (InterruptedException e)
+		{
+			dispose(e);
+			return;
+		}
+		finally
+		{
+			curTaskLock.release();
+		}
+		
+		if (doUnpause)
+		{
+			unpause();
+		}
 	}
 	
 	/*
