@@ -241,6 +241,7 @@ public class TaskDispatcher<T> extends Thread {
 				
 				while ((d = _remove()) != null)
 				{
+					//System.out.println("Dropping task!");
 					ns = d.s;
 					d.dispose();
 					if (releaseLocks && ns != null)
@@ -712,6 +713,7 @@ public class TaskDispatcher<T> extends Thread {
 		disp.dispatch(4, new Runnable(){public void run(){
 			System.out.println("rawr4");
 		}});
+		//disp.clear();
 		disp.unpause();
 	}
 	*/
