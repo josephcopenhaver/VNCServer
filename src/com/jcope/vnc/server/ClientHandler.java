@@ -31,26 +31,38 @@ public class ClientHandler extends Thread
 	private ClientState clientState = null;
 	private DirectRobot dirbot = null;
 	
-	private TaskDispatcher<Integer> unserializedDispatcher = new TaskDispatcher<Integer>("Unserialized dispatcher");
-    private TaskDispatcher<Integer> serializedDispatcher = new TaskDispatcher<Integer>("Serialized dispatcher");
+	private TaskDispatcher<Integer> unserializedDispatcher;
+    private TaskDispatcher<Integer> serializedDispatcher;
 	
 	public ClientHandler(Socket socket) throws IOException
 	{
-		super(String.format("ClientHandler: %s", socketToString(socket)));
-		this.socket = socket;
+	    super(toString(socket));
+	    this.socket = socket;
 		out = new ObjectOutputStream(socket.getOutputStream());
 		in = new ObjectInputStream(socket.getInputStream());
+		String strID = toString();
+		unserializedDispatcher = new TaskDispatcher<Integer>(String.format("Non-serial dispatcher: %s", strID));
+        serializedDispatcher = new TaskDispatcher<Integer>(String.format("Serial dispatcher: %s", strID));
+	}
+	
+	public String toString()
+	{
+	    String rval = toString(socket);
+	    
+	    return rval;
+	}
+	
+	private static String toString(Socket socket)
+	{
+	    String rval = String.format("ClientHandler: %s", socketToString(socket));
+	    
+	    return rval;
 	}
 	
 	private static String socketToString(Socket socket)
 	{
 		InetAddress addr = socket.getInetAddress();
 		return String.format("%s - %s - %d - %d", addr.getHostName(), addr.getHostAddress(), socket.getLocalPort(), socket.getPort());
-	}
-	
-	public String toString()
-	{
-		return socketToString(socket);
 	}
 	
 	private Runnable killIOAction = new Runnable()
@@ -218,58 +230,77 @@ public class ClientHandler extends Thread
 	}
 	
 	private Semaphore sendSema = new Semaphore(1, true);
+	private Semaphore serialSema = new Semaphore(1, true);
     volatile int tid = -1;
 
 	public void sendEvent(final SERVER_EVENT event, final Object... args)
 	{
-		try
-		{
-			sendSema.acquire();
-		}
-		catch (InterruptedException e)
-		{
-			LLog.e(e);
-		}
-		Runnable r = new Runnable() {
-            
-            @Override
-            public void run()
-            {
-                boolean killSelf = true;
-                try
+			Runnable r = new Runnable() {
+                
+                @Override
+                public void run()
                 {
+                    boolean killSelf = true;
                     try
                     {
-                        Msg.send(out, event, args);
+                        try
+                        {
+                            sendSema.acquire();
+                        }
+                        catch (InterruptedException e)
+                        {
+                            LLog.e(e);
+                        }
+                        try
+                        {
+                            Msg.send(out, event, args);
+                        }
+                        catch (IOException e)
+                        {
+                            LLog.e(e);
+                        }
+                        finally {
+                            sendSema.release();
+                        }
                         killSelf = false;
                     }
-                    catch (IOException e)
-                    {
-                        LLog.e(e);
+                    finally {
+                        if (killSelf)
+                        {
+                            kill();
+                        }
                     }
                 }
-                finally {
-                    sendSema.release();
-                    if (killSelf)
-                    {
-                        kill();
-                    }
-                }
-            }
-        };
-		if (event.isSerial())
-        {
-            tid++;
-            if (tid<0)
+            };
+    		if (event.isSerial())
             {
-                tid=0;
+    		    int tidTmp;
+    		    try
+    		    {
+    		        serialSema.acquire();
+    		    }
+                catch (InterruptedException e)
+                {
+                    LLog.e(e);
+                }
+    		    try
+    		    {
+                    tid++;
+                    if (tid<0)
+                    {
+                        tid=0;
+                    }
+                    tidTmp = tid;
+                }
+        		finally {
+        		    serialSema.release();
+        		}
+                serializedDispatcher.dispatch(tidTmp, r);
             }
-            serializedDispatcher.dispatch(tid, r);
-        }
-		else
-		{
-		    unserializedDispatcher.dispatch(event.ordinal(), r);
-		}
+    		else
+    		{
+    		    unserializedDispatcher.dispatch(event == SERVER_EVENT.SCREEN_SEGMENT_CHANGED ? -(((Integer)args[0])+1) : event.ordinal(), r);
+    		}
 	}
 	
 	public int[] getSegment(int segmentID)
