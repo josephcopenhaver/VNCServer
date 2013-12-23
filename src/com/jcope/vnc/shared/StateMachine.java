@@ -29,13 +29,16 @@ public class StateMachine
 	
 	public enum SERVER_EVENT
 	{
+	    AUTHORIZATION_UPDATE, // Response to client event OFFER_SECURITY_TOKEN
+	    
+	    
 		NUM_SCREENS_CHANGED,
 		CURSOR_GONE,
 		CURSOR_MOVE,
-		SCREEN_SEGMENT_UPDATE,
+		SCREEN_SEGMENT_UPDATE, // Response to client event GET_SCREEN_SEGMENT
 		SCREEN_SEGMENT_CHANGED,
-		ENTIRE_SCREEN_UPDATE,
-		ENTIRE_SCREEN_CHANGED,
+		//ENTIRE_SCREEN_UPDATE, // collapsed into SCREEN_SEGEMENT_* (ID = -1)
+		//ENTIRE_SCREEN_CHANGED,
 		SCREEN_RESIZED,
 		SCREEN_GONE,
 		CHAT_MSG_TO_ALL, // includes from and text message
@@ -55,7 +58,76 @@ public class StateMachine
 
         public boolean isSerial()
         {
-            boolean rval = (this != SCREEN_SEGMENT_CHANGED);
+            Boolean rval = null;
+            
+            switch (this)
+            {
+                // clients should only be notified of the
+                // latest version of these events
+                case SCREEN_SEGMENT_CHANGED:
+                case SCREEN_SEGMENT_UPDATE:
+                case CURSOR_GONE:
+                case CURSOR_MOVE:
+                case NUM_SCREENS_CHANGED:
+                case SCREEN_GONE:
+                case SCREEN_RESIZED:
+                case AUTHORIZATION_UPDATE:
+                    rval = false;
+                    break;
+                
+                // clients need to get each of these events in turn
+                // no collapsing or dropping
+                case ALIAS_DISCONNECTED:
+                case ALIAS_REGISTERED:
+                case ALIAS_UNREGISTERED:
+                case CHAT_MSG_TO_ALL:
+                case CHAT_MSG_TO_USER:
+                case CONNECTION_CLOSED:
+                case CONNECTION_ESTABLISHED:
+                case FAILED_AUTHORIZATION:
+                case ALIAS_CHANGED:
+                    rval = true;
+                    break;
+            }
+            
+            return rval;
+        }
+
+        public boolean hasMutableArgs()
+        {
+            Boolean rval = null;
+            
+            switch (this)
+            {
+                // events that have parameterized
+                // information that may shift
+                // when the event is fired
+                case ALIAS_DISCONNECTED:
+                case ALIAS_REGISTERED:
+                case ALIAS_UNREGISTERED:
+                case CHAT_MSG_TO_ALL:
+                case CHAT_MSG_TO_USER:
+                case CURSOR_MOVE:
+                case NUM_SCREENS_CHANGED:
+                case SCREEN_RESIZED:
+                case SCREEN_SEGMENT_UPDATE:
+                case ALIAS_CHANGED:
+                case CONNECTION_ESTABLISHED: // should contain WHO
+                case CONNECTION_CLOSED: // should contain WHO
+                case FAILED_AUTHORIZATION: // should contain WHO
+                case AUTHORIZATION_UPDATE:
+                    rval = true;
+                    break;
+                
+                // events that either have no parameterized
+                // information or parameters that are handled
+                // in such a way that they never shift
+                case CURSOR_GONE:
+                case SCREEN_GONE:
+                case SCREEN_SEGMENT_CHANGED:
+                    rval = false;
+                    break;
+            }
             
             return rval;
         }

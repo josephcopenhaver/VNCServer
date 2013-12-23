@@ -304,6 +304,27 @@ public class TaskDispatcher<T> extends Thread
 		pauseLock.release();
 	}
 	
+	public boolean queueContains(T k)
+	{
+	    try
+        {
+            listLock.acquire();
+        }
+        catch (InterruptedException e)
+        {
+            dispose(e);
+        }
+	    try
+	    {
+	        boolean rval = (mapSet.get(k) != null || inMapSet.get(k) != null);
+	        
+	        return rval;
+	    }
+	    finally {
+	        listLock.release();
+	    }
+	}
+	
 	public Boolean isMutable(T k)
 	{
 		Boolean b = mutableSet.get(k);

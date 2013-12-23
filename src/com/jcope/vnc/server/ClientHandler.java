@@ -235,72 +235,90 @@ public class ClientHandler extends Thread
 
 	public void sendEvent(final SERVER_EVENT event, final Object... args)
 	{
-			Runnable r = new Runnable() {
-                
-                @Override
-                public void run()
-                {
-                    boolean killSelf = true;
-                    try
-                    {
-                        try
-                        {
-                            sendSema.acquire();
-                        }
-                        catch (InterruptedException e)
-                        {
-                            LLog.e(e);
-                        }
-                        try
-                        {
-                            Msg.send(out, event, args);
-                        }
-                        catch (IOException e)
-                        {
-                            LLog.e(e);
-                        }
-                        finally {
-                            sendSema.release();
-                        }
-                        killSelf = false;
-                    }
-                    finally {
-                        if (killSelf)
-                        {
-                            kill();
-                        }
-                    }
-                }
-            };
-    		if (event.isSerial())
+	    int tidTmp;
+	    TaskDispatcher<Integer> dispatcher;
+	    boolean dispatch;
+		if (event.isSerial())
+        {
+		    try
+		    {
+		        serialSema.acquire();
+		    }
+            catch (InterruptedException e)
             {
-    		    int tidTmp;
-    		    try
-    		    {
-    		        serialSema.acquire();
-    		    }
-                catch (InterruptedException e)
-                {
-                    LLog.e(e);
-                }
-    		    try
-    		    {
-                    tid++;
-                    if (tid<0)
-                    {
-                        tid=0;
-                    }
-                    tidTmp = tid;
-                }
-        		finally {
-        		    serialSema.release();
-        		}
-                serializedDispatcher.dispatch(tidTmp, r);
+                LLog.e(e);
             }
-    		else
-    		{
-    		    unserializedDispatcher.dispatch(event == SERVER_EVENT.SCREEN_SEGMENT_CHANGED ? -(((Integer)args[0])+1) : event.ordinal(), r);
+		    try
+		    {
+                tid++;
+                if (tid<0)
+                {
+                    tid=0;
+                }
+                tidTmp = tid;
+            }
+    		finally {
+    		    serialSema.release();
     		}
+            dispatcher = serializedDispatcher;
+            dispatch = true;
+        }
+		else
+		{
+		    if (event == SERVER_EVENT.SCREEN_SEGMENT_CHANGED)
+		    {
+		        tidTmp = -(((Integer)args[0])+1);
+		    }
+		    else
+		    {
+		        tidTmp = event.ordinal();
+		    }
+		    dispatcher = unserializedDispatcher;
+		    // TODO: only dispatch if we know for sure that the arguments have changed
+		    dispatch = (event.hasMutableArgs() || !unserializedDispatcher.queueContains(tidTmp));
+		        
+		}
+		if (dispatch)
+		{
+		    Runnable r = new Runnable() {
+	            
+	            @Override
+	            public void run()
+	            {
+	                boolean killSelf = true;
+	                try
+	                {
+	                    try
+	                    {
+	                        sendSema.acquire();
+	                    }
+	                    catch (InterruptedException e)
+	                    {
+	                        LLog.e(e);
+	                    }
+	                    try
+	                    {
+	                        Msg.send(out, event, args);
+	                    }
+	                    catch (IOException e)
+	                    {
+	                        LLog.e(e);
+	                    }
+	                    finally {
+	                        sendSema.release();
+	                    }
+	                    killSelf = false;
+	                }
+	                finally {
+	                    if (killSelf)
+	                    {
+	                        kill();
+	                    }
+	                }
+	            }
+	        };
+	        dispatcher.dispatch(tidTmp, r);
+		}
 	}
 	
 	public int[] getSegment(int segmentID)
