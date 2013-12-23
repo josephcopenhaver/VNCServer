@@ -183,15 +183,6 @@ public class Monitor extends Thread
 			
 			stopped = Boolean.TRUE;
 			joined = Boolean.TRUE;
-			
-			try
-			{
-				join();
-			}
-			catch (InterruptedException e)
-			{
-				LLog.e(e);
-			}
 		}
 	}
 	
@@ -332,7 +323,9 @@ public class Monitor extends Thread
 
     public int[] getSegment(int segmentID)
     {
-        return segments[segmentID];
+        int[] rval = (segmentID == -1) ? dirbot.getRGBPixels() : segments[segmentID];
+        
+        return rval;
     }
 
 }

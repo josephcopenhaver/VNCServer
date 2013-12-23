@@ -85,6 +85,7 @@ public class Manager extends Thread
 		int numMissing;
 		while (true)
 		{
+		    // TODO: when all clients disconnect, pause this thread
 			setChanged = Boolean.FALSE;
 			GraphicsDevice[] graphicsDeviceList = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices();
 			tmpGraphicsDeviceSet.putAll(graphicDevicesSet);

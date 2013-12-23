@@ -2,7 +2,11 @@ package com.jcope.vnc.server;
 
 import static com.jcope.debug.Debug.assert_;
 
+import java.io.Serializable;
+import java.util.concurrent.Semaphore;
+
 import com.jcope.debug.LLog;
+import com.jcope.util.TaskDispatcher;
 import com.jcope.vnc.shared.Msg;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
@@ -31,8 +35,8 @@ public class StateMachine
 			_handleClientInput(client, (CLIENT_EVENT) msg.event, msg.args);
 		}
 	}
-	
-	private static void _handleClientInput(ClientHandler client, CLIENT_EVENT event, Object[] args)
+    
+    private static void _handleClientInput(ClientHandler client, CLIENT_EVENT event, Object[] args)
 	{
 		// TODO: 
 		LLog.logEvent(String.format("Client \"%s\"", client.toString()), event, args);
@@ -42,8 +46,6 @@ public class StateMachine
                 assert_(args != null);
                 assert_(args.length == 1);
                 assert_(args[0] instanceof Integer);
-                // TODO: use a task dispatcher
-                // TODO: send pixel array
                 client.sendEvent(SERVER_EVENT.SCREEN_SEGMENT_UPDATE, args[0], client.getSegment((Integer) args[0]));
                 break;
             default:

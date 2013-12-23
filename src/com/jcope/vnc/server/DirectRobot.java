@@ -19,6 +19,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.WeakHashMap;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.ReentrantLock;
 
 import sun.awt.ComponentFactory;
@@ -331,31 +332,47 @@ getScreenDevices();
 		isDirty = true;
 	}
 	
+	private Semaphore getPixelsSema = new Semaphore(1, true);
+	
 	public boolean getRGBPixels(int x, int y, int width, int height, int[] pixels)
 	{
-		if (isDirty)
-		{
-			isDirty = false;
-			usedEfficientMethod = getRGBPixels();
-		}
-		else
-		{
-			usedEfficientMethod = true;
-		}
-		
-		getRGBPixelSlice(pixelCache, this.width, this.height, x, y, width, height, pixels);
-		
-		return usedEfficientMethod;
+	    try
+	    {
+	        getPixelsSema.acquire();
+	    }
+        catch (InterruptedException e)
+        {
+            LLog.e(e);
+        }
+	    try
+	    {
+    		if (isDirty)
+    		{
+    			isDirty = false;
+    			usedEfficientMethod = _getRGBPixels();
+    		}
+    		else
+    		{
+    			usedEfficientMethod = true;
+    		}
+    		
+    		getRGBPixelSlice(pixelCache, this.width, this.height, x, y, width, height, pixels);
+    		
+    		return usedEfficientMethod;
+	    }
+	    finally {
+	        getPixelsSema.release();
+	    }
 	}
 	
 	private ReentrantLock methLock = new ReentrantLock(true);
-	private boolean getRGBPixels()
+	private boolean _getRGBPixels()
 	{
 		Rectangle r = getScreenBounds();
 		numPixels = r.width * r.height;
 		width = r.width;
 		height = r.height;
-		if (pixelCache == null || pixelCache.length < numPixels)
+		if (pixelCache == null || pixelCache.length != numPixels)
 		{
 			pixelCache = new int[numPixels];
 		}
@@ -514,6 +531,26 @@ getScreenDevices();
 		
 		return image;
 	}
+	
+	public int[] getRGBPixels()
+    {
+	    try
+        {
+            getPixelsSema.acquire();
+        }
+        catch (InterruptedException e)
+        {
+            LLog.e(e);
+        }
+        try
+        {
+            _getRGBPixels();
+            return pixelCache;
+        }
+        finally {
+            getPixelsSema.release();
+        }
+    }
 	
 	private Object getRGBPixelsMethodParam;
 	private int getRGBPixelsMethodType;

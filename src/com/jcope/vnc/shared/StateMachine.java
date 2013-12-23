@@ -51,6 +51,13 @@ public class StateMachine
 		// for monitoring connections to the server
 		CONNECTION_ESTABLISHED, // server socket was bound
 		FAILED_AUTHORIZATION, // a user failed to log in
-		CONNECTION_CLOSED
+		CONNECTION_CLOSED;
+
+        public boolean isSerial()
+        {
+            boolean rval = (this != SCREEN_SEGMENT_CHANGED);
+            
+            return rval;
+        }
 	};
 }

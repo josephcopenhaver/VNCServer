@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.concurrent.Semaphore;
 
 import com.jcope.debug.LLog;
+import com.jcope.util.TaskDispatcher;
 import com.jcope.vnc.server.screen.Manager;
 import com.jcope.vnc.server.screen.ScreenListener;
 import com.jcope.vnc.shared.Msg;
@@ -29,6 +30,9 @@ public class ClientHandler extends Thread
 	
 	private ClientState clientState = null;
 	private DirectRobot dirbot = null;
+	
+	private TaskDispatcher<Integer> unserializedDispatcher = new TaskDispatcher<Integer>("Unserialized dispatcher");
+    private TaskDispatcher<Integer> serializedDispatcher = new TaskDispatcher<Integer>("Serialized dispatcher");
 	
 	public ClientHandler(Socket socket) throws IOException
 	{
@@ -151,6 +155,17 @@ public class ClientHandler extends Thread
 		finally {
 			onDestroyActions.clear();
 			onDestroyActions = null;
+			try
+			{
+			    serializedDispatcher.dispose();
+			    unserializedDispatcher.dispose();
+			    serializedDispatcher.join();
+			    unserializedDispatcher.join();
+			}
+            catch (InterruptedException e)
+            {
+                LLog.e(e);
+            }
 		}
 		
 		alive = false;
@@ -203,8 +218,9 @@ public class ClientHandler extends Thread
 	}
 	
 	private Semaphore sendSema = new Semaphore(1, true);
+    volatile int tid = -1;
 
-	public void sendEvent(SERVER_EVENT event, Object... args)
+	public void sendEvent(final SERVER_EVENT event, final Object... args)
 	{
 		try
 		{
@@ -214,25 +230,45 @@ public class ClientHandler extends Thread
 		{
 			LLog.e(e);
 		}
-		boolean killSelf = true;
-		try
+		Runnable r = new Runnable() {
+            
+            @Override
+            public void run()
+            {
+                boolean killSelf = true;
+                try
+                {
+                    try
+                    {
+                        Msg.send(out, event, args);
+                        killSelf = false;
+                    }
+                    catch (IOException e)
+                    {
+                        LLog.e(e);
+                    }
+                }
+                finally {
+                    sendSema.release();
+                    if (killSelf)
+                    {
+                        kill();
+                    }
+                }
+            }
+        };
+		if (event.isSerial())
+        {
+            tid++;
+            if (tid<0)
+            {
+                tid=0;
+            }
+            serializedDispatcher.dispatch(tid, r);
+        }
+		else
 		{
-			try
-			{
-				Msg.send(out, event, args);
-				killSelf = false;
-			}
-			catch (IOException e)
-			{
-				LLog.e(e);
-			}
-		}
-		finally {
-			sendSema.release();
-			if (killSelf)
-			{
-				kill();
-			}
+		    unserializedDispatcher.dispatch(event.ordinal(), r);
 		}
 	}
 	

@@ -496,6 +496,10 @@ public class TaskDispatcher<T> extends Thread
 				{
 					//System.out.println("Going to sleep");
 					sleepLock.acquire();
+					if (disposed)
+	                {
+	                    break;
+	                }
 				}
 				else
 				{
@@ -670,6 +674,7 @@ public class TaskDispatcher<T> extends Thread
 		{
 			unpause();
 		}
+		sleepLock.release();
 	}
 	
 	public void dispose()
