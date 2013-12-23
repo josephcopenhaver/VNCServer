@@ -1,11 +1,13 @@
-package com.jcope.util.TaskDispatcher;
+package com.jcope.util;
 
-import java.util.concurrent.Semaphore;
 import java.util.HashMap;
+import java.util.concurrent.Semaphore;
 
-public class TaskDispatcher<T> extends Thread {
+public class TaskDispatcher<T> extends Thread
+{
 
-	class Dispatchable {
+	class Dispatchable
+	{
 		public T k;
 		public Semaphore s;
 		public Node n;
@@ -21,7 +23,8 @@ public class TaskDispatcher<T> extends Thread {
 		}
 	}
 	
-	class Node {
+	class Node
+	{
 		public volatile Node n;
 		public volatile Node p;
 		public volatile Dispatchable d;
@@ -41,7 +44,8 @@ public class TaskDispatcher<T> extends Thread {
 		}
 	}
 
-	class LinkedList {
+	class LinkedList
+	{
 		private volatile Node a = null;
 		private volatile Node z = null;
 		private volatile int size = 0;
@@ -170,7 +174,6 @@ public class TaskDispatcher<T> extends Thread {
 		
 		public void remove(Node sn) throws InterruptedException
 		{
-			Node t;
 			s.acquire();
 			try
 			{
@@ -272,11 +275,23 @@ public class TaskDispatcher<T> extends Thread {
 	private volatile boolean paused = false;
 	private Dispatchable dummyTask = new Dispatchable();
 	
-	public TaskDispatcher() {
-		start();
-	}
+	public TaskDispatcher()
+	{
+        init();
+    }
+    
+	public TaskDispatcher(String name)
+	{
+        super(name);
+        init();
+    }
 	
-	public void pause()
+	private void init()
+	{
+	    start();
+	}
+    
+    public void pause()
 	{
 		//System.out.println("Signaling pause");
 		paused = true;
@@ -313,7 +328,8 @@ public class TaskDispatcher<T> extends Thread {
 		return b;
 	}
 	
-	public void setImmediate(boolean b, T... set)
+	@SafeVarargs
+	public final void setImmediate(boolean b, T... set)
 	{
 		if (!b)
 		{
@@ -331,7 +347,8 @@ public class TaskDispatcher<T> extends Thread {
 		}
 	}
 	
-	public void setMutable(boolean b, T... set)
+	@SafeVarargs
+	public final void setMutable(boolean b, T... set)
 	{
 		if (b)
 		{
@@ -384,9 +401,11 @@ public class TaskDispatcher<T> extends Thread {
 		
 		if (rval)
 		{
-			try {
+			try
+			{
 				listLock.acquire();
-				try {
+				try
+				{
 					_consumeInQueue();
 				}
 				finally
@@ -406,13 +425,15 @@ public class TaskDispatcher<T> extends Thread {
 	public void run()
 	{
 		boolean isNullTask = true;
+		boolean needsRelease;
 		do
 		{
 			if (paused)
 			{
 				//System.out.println("Handling pause signal");
 				pauseLock.drainPermits();
-				try {
+				try
+				{
 					pauseLock.acquire();
 				}
 				catch (InterruptedException e)
@@ -426,7 +447,8 @@ public class TaskDispatcher<T> extends Thread {
 				break;
 			}
 			consumeInQueue();
-			try {
+			try
+			{
 				if (disposed)
 				{
 					break;
@@ -440,18 +462,35 @@ public class TaskDispatcher<T> extends Thread {
 					dispose(e);
 					break;
 				}
+				needsRelease = true;
 				try
 				{
 					curTask = queue.remove();
-					if (curTask == null && consumeInQueue())
+					if (curTask == null)
 					{
-						curTask = queue.remove();
+					    curTaskLock.release();
+					    needsRelease = false;
+					    if (consumeInQueue())
+					    {
+					        try
+	                        {
+	                            curTaskLock.acquire();
+	                        }
+	                        catch (InterruptedException e)
+	                        {
+	                            dispose(e);
+	                        }
+	                        needsRelease = true;
+					        curTask = queue.remove();
+					    }
 					}
 					isNullTask = (curTask == null);
 				}
-				finally
-				{
-					curTaskLock.release();
+				finally {
+				    if (needsRelease)
+				    {
+				        curTaskLock.release();
+				    }
 				}
 				if (isNullTask)
 				{
@@ -462,9 +501,11 @@ public class TaskDispatcher<T> extends Thread {
 				{
 					//System.out.println("Running...");
 					mapSet.remove(curTask.k);
-					try {
+					try
+					{
 						Semaphore s = curTask.s;
-						try {
+						try
+						{
 							Runnable r = curTask.r;
 							curTask.s = null;
 							curTask.r = null;
@@ -568,7 +609,8 @@ public class TaskDispatcher<T> extends Thread {
 					dispose(e);
 					return;
 				}
-				try {
+				try
+				{
 					if (curTask == null)
 					{
 						// wake up the dispatcher in 1-1 manner
@@ -598,9 +640,11 @@ public class TaskDispatcher<T> extends Thread {
 	
 	public void dispatch(T k, Runnable r)
 	{
-		try {
+		try
+		{
 			listLock.acquire();
-			try {
+			try
+			{
 				//System.out.println("Adding to input queue");
 				_dispatch(k, r, null);
 			}
@@ -637,7 +681,8 @@ public class TaskDispatcher<T> extends Thread {
 	{
 		boolean doUnpause = !paused;
 		pause();
-		try {
+		try
+		{
 			listLock.acquire();
 		}
 		catch (InterruptedException e)
@@ -659,7 +704,8 @@ public class TaskDispatcher<T> extends Thread {
 		{
 			listLock.release();
 		}
-		try {
+		try
+		{
 			curTaskLock.acquire();
 		}
 		catch (InterruptedException e)
