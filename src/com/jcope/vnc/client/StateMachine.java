@@ -1,7 +1,5 @@
 package com.jcope.vnc.client;
 
-import static com.jcope.debug.Debug.assert_;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -15,6 +13,7 @@ import javax.swing.JOptionPane;
 
 import com.jcope.debug.LLog;
 import com.jcope.util.TaskDispatcher;
+import com.jcope.vnc.client.input.Handler;
 import com.jcope.vnc.shared.Msg;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
@@ -121,97 +120,9 @@ public class StateMachine implements Runnable
 
 	private void _handleServerEvent(SERVER_EVENT event, Object[] args)
 	{
-        // TODO: use generated handlers class concept
-		LLog.logEvent("Server", event, args);
-		switch (event)
-		{
-		    case SCREEN_SEGMENT_CHANGED :
-		    {
-		        assert_(args != null);
-		        assert_(args.length == 1);
-		        assert_(args[0] instanceof Integer);
-		        int segmentID = (Integer) args[0];
-		        assert_(segmentID >= -1);
-		        sendEvent(CLIENT_EVENT.GET_SCREEN_SEGMENT, segmentID);
-		        break;
-		    }
-            case ALIAS_CHANGED:
-                // TODO: 
-                break;
-            case ALIAS_DISCONNECTED:
-                // TODO: 
-                break;
-            case ALIAS_REGISTERED:
-                // TODO: 
-                break;
-            case ALIAS_UNREGISTERED:
-                // TODO: 
-                break;
-            case AUTHORIZATION_UPDATE:
-                // TODO: 
-                break;
-            case CHAT_MSG_TO_ALL:
-                // TODO: 
-                break;
-            case CHAT_MSG_TO_USER:
-                // TODO: 
-                break;
-            case CONNECTION_CLOSED:
-                // TODO: 
-                break;
-            case CONNECTION_ESTABLISHED:
-                // TODO: 
-                break;
-            case CURSOR_GONE:
-                // TODO: 
-                break;
-            case CURSOR_MOVE:
-                // TODO: 
-                break;
-            case FAILED_AUTHORIZATION:
-                // TODO: 
-                break;
-            case NUM_SCREENS_CHANGED:
-                // TODO: 
-                break;
-            case SCREEN_GONE:
-                // TODO: 
-                break;
-            case SCREEN_RESIZED:
-                // TODO: 
-                break;
-            case SCREEN_SEGMENT_UPDATE:
-            {
-                assert_(args != null);
-                assert_(args.length == 2);
-                assert_(args[0] instanceof Integer);
-                assert_(args[1] instanceof int[]);
-                int segmentID = (Integer) args[0];
-                int[] pixels = (int[]) args[1];
-                assert_(segmentID >= -1);
-                assert_(pixels != null);
-                if (segmentID == -1)
-                {
-                    loadEntireScreen(pixels);
-                }
-                else
-                {
-                    loadScreenSegment(segmentID, pixels);
-                }
-                break;
-            }
-		}
+        LLog.logEvent("Server", event, args);
+	    Handler.getInstance().handle(this, event, args);
 	}
-    
-    private void loadEntireScreen(int[] pixels)
-    {
-        // TODO: 
-    }
-    
-    private void loadScreenSegment(int segmentID, int[] pixels)
-    {
-        // TODO: 
-    }
 	
 	private Semaphore sendSema = new Semaphore(1, true);
 	private TaskDispatcher<Integer> dispatcher = new TaskDispatcher<Integer>("Client output dispatcher");

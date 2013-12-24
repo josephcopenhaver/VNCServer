@@ -3,6 +3,7 @@ package com.jcope.vnc.client;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 
 import javax.swing.JFrame;
 import javax.swing.JMenu;
@@ -35,7 +36,7 @@ public class MainFrame extends JFrame
 		
 		// setup control mechanisms
 		
-		refreshScreen.setAccelerator(KeyStroke.getKeyStroke('r', InputEvent.CTRL_DOWN_MASK));
+		refreshScreen.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_R, InputEvent.CTRL_DOWN_MASK)); 
 		refreshScreen.addActionListener(new ActionListener() {
             
             @Override
