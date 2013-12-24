@@ -6,7 +6,10 @@ public class Debug
 	
 	public static void assert_(boolean condition)
 	{
-		assert(condition);
+		if (!condition)
+		{
+		    throw new AssertionError();
+		}
 	}
 	
 }

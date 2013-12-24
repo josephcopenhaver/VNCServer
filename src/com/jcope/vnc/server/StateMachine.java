@@ -1,12 +1,7 @@
 package com.jcope.vnc.server;
 
-import static com.jcope.debug.Debug.assert_;
-
-import java.io.Serializable;
-import java.util.concurrent.Semaphore;
-
 import com.jcope.debug.LLog;
-import com.jcope.util.TaskDispatcher;
+import com.jcope.vnc.server.input.Handler;
 import com.jcope.vnc.shared.Msg;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
@@ -38,19 +33,8 @@ public class StateMachine
     
     private static void _handleClientInput(ClientHandler client, CLIENT_EVENT event, Object[] args)
 	{
-		// TODO: 
 		LLog.logEvent(String.format("Client \"%s\"", client.toString()), event, args);
-		switch (event)
-        {
-            case GET_SCREEN_SEGMENT :
-                assert_(args != null);
-                assert_(args.length == 1);
-                assert_(args[0] instanceof Integer);
-                client.sendEvent(SERVER_EVENT.SCREEN_SEGMENT_UPDATE, args[0], client.getSegment((Integer) args[0]));
-                break;
-            default:
-                break;
-        }
+		Handler.getInstance().handle(client, event, args);
 	}
 	
 	// TODO: make thread safe!
