@@ -4,16 +4,11 @@ import static com.jcope.debug.Debug.assert_;
 
 import com.jcope.vnc.server.ClientHandler;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
-import com.jcope.vnc.shared.input.Handle;
+import com.jcope.vnc.server.input.Handle;
 
-public class GetScreenSegment extends Handle<ClientHandler>
+public class GetScreenSegment extends Handle
 {
-
-    public GetScreenSegment()
-    {
-        super(ClientHandler.class);
-    }
-
+    
     @Override
     public void handle(ClientHandler client, Object[] args)
     {
@@ -22,4 +17,5 @@ public class GetScreenSegment extends Handle<ClientHandler>
         assert_(args[0] instanceof Integer);
         client.sendEvent(SERVER_EVENT.SCREEN_SEGMENT_UPDATE, args[0], client.getSegment((Integer) args[0]));
     }
+    
 }
