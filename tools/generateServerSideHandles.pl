@@ -44,20 +44,17 @@ my $format = 'package %s.input.handle;
 import static com.jcope.debug.Debug.assert_;
 
 import %s;
-import com.jcope.vnc.shared.input.Handle;
+import com.jcope.vnc.server.input.Handle;
 
-public class %s extends Handle<%s>
+public class %s extends Handle
 {
-    public %s()
-    {
-        super(%s.class);
-    }
     
     @Override
     public void handle(%s %s, Object[] args)
     {
         assert_(true); // TODO: remove me and finish
     }
+    
 }
 ';
 
@@ -95,7 +92,7 @@ foreach (split(/\r?\n/, $enumList))
             #print "$e\n";
             print "$dstPath\n";
             open(F, ">$dstPath") || die;
-            my $content = sprintf($format, $packageRoot, $argClassImport, $c, $argType, $c, $argType, $argType, $argName);
+            my $content = sprintf($format, $packageRoot, $argClassImport, $c, $argType, $argType, $argName);
             #print "$content\n";
             print F $content;
             close(F);
