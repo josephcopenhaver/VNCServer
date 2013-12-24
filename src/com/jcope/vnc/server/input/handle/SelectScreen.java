@@ -9,7 +9,7 @@ public class SelectScreen extends Handle
 {
     
     @Override
-    public void handle(ClientHandler ClientHandler, Object[] args)
+    public void handle(ClientHandler client, Object[] args)
     {
         assert_(true); // TODO: remove me and finish
     }

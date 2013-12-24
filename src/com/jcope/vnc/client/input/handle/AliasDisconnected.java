@@ -9,7 +9,7 @@ public class AliasDisconnected extends Handle
 {
     
     @Override
-    public void handle(StateMachine StateMachine, Object[] args)
+    public void handle(StateMachine stateMachine, Object[] args)
     {
         assert_(true); // TODO: remove me and finish
     }
