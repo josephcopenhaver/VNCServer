@@ -92,7 +92,7 @@ foreach (split(/\r?\n/, $enumList))
             #print "$e\n";
             print "$dstPath\n";
             open(F, ">$dstPath") || die;
-            my $content = sprintf($format, $packageRoot, $argClassImport, $c, $argType, $argType, $argName);
+            my $content = sprintf($format, $packageRoot, $argClassImport, $c, $argType, $argName);
             #print "$content\n";
             print F $content;
             close(F);
