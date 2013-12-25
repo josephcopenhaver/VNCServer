@@ -8,7 +8,6 @@ public abstract class Handler<R,T>
     public static String formatNameCamelCase(String name)
     {
         StringBuffer sb = new StringBuffer();
-        boolean isFirst = true;
         boolean doCap = true;
         
         for (char c : name.toCharArray())
@@ -17,13 +16,7 @@ public abstract class Handler<R,T>
             String tmpL = tmpU.toLowerCase();
             if (!tmpU.equals(tmpL))
             {
-                if (isFirst)
-                {
-                    isFirst = false;
-                    doCap = false;
-                    sb.append(tmpU.charAt(0));
-                }
-                else if (doCap)
+                if (doCap)
                 {
                     doCap = false;
                     sb.append(tmpU.charAt(0));

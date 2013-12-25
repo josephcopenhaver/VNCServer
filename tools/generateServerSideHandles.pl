@@ -5,8 +5,7 @@ sub camelCase($)
     my $s = shift;
     my $l = length($s);
     my $rval = '';
-    my $doCap = 0;
-    my $isFirst = 1;
+    my $doCap = 1;
     
     for (my $i=0; $i<$l; $i++)
     {
@@ -14,13 +13,7 @@ sub camelCase($)
         my $lc = lc($uc);
         if ($uc ne $lc)
         {
-            if ($isFirst)
-            {
-                $isFirst = 0;
-                $doCap = 0;
-                $rval .= $uc;
-            }
-            elsif ($doCap)
+            if ($doCap)
             {
                 $doCap = 0;
                 $rval .= $uc;
