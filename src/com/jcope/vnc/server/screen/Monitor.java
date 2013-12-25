@@ -1,11 +1,10 @@
 package com.jcope.vnc.server.screen;
 
-import static com.jcope.debug.Debug.assert_;
-
 import java.awt.Rectangle;
 import java.util.ArrayList;
 
 import com.jcope.debug.LLog;
+import com.jcope.util.SegmentationInfo;
 import com.jcope.vnc.server.ClientHandler;
 import com.jcope.vnc.server.DirectRobot;
 import com.jcope.vnc.server.StateMachine;
@@ -39,7 +38,8 @@ import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 public class Monitor extends Thread
 {
 	public static final long refreshMS = 1000;
-	private int screenX, screenY, segmentWidth, segmentHeight, maxSegmentNumPixels, numHorizontalSegments, numVerticalSegments, numSegments, maxHorizontalSegmentIdx, maxVerticalSegmentIdx, maxSegmentID, lastSegmentWidth, lastSegmentHeight, bottomRowNumPixels, rightColNumPixels, bottomRightSegmentNumPixels;
+	int screenX, screenY;
+	SegmentationInfo segInfo = new SegmentationInfo();
 	private Integer screenWidth = null, screenHeight;
 	private ArrayList<ClientHandler> clients;
 	private DirectRobot dirbot;
@@ -51,11 +51,10 @@ public class Monitor extends Thread
 	public Monitor(int segmentWidth, int segmentHeight, DirectRobot dirbot, ArrayList<ClientHandler> clients)
 	{
 		super(String.format("Monitor: %s", dirbot.toString()));
-		this.segmentWidth = segmentWidth;
-		this.segmentHeight = segmentHeight;
+		segInfo.segmentWidth = segmentWidth;
+		segInfo.segmentHeight = segmentHeight;
 		this.dirbot = dirbot;
 		this.clients = clients;
-		maxSegmentNumPixels = segmentWidth * segmentHeight;
 		syncBounds();
 	}
 	
@@ -70,29 +69,10 @@ public class Monitor extends Thread
 		screenHeight = bounds.height;
 		if (lastWidth == null || lastWidth != screenWidth || lastHeight != screenHeight)
 		{
-			numHorizontalSegments = ((screenWidth+ (segmentWidth-1))/segmentWidth);
-			numVerticalSegments = ((screenHeight + (segmentHeight-1))/segmentHeight);
-			numSegments = numHorizontalSegments * numVerticalSegments;
-			
-			maxHorizontalSegmentIdx = numHorizontalSegments - 1;
-			maxVerticalSegmentIdx = numVerticalSegments - 1;
-			maxSegmentID = numSegments - 1;
-			lastSegmentWidth = screenWidth%segmentWidth;
-			lastSegmentHeight = screenHeight%segmentHeight;
-			if (lastSegmentWidth == 0)
-			{
-				lastSegmentWidth = segmentWidth;
-			}
-			if (lastSegmentHeight == 0)
-			{
-				lastSegmentHeight = segmentHeight;
-			}
-			bottomRowNumPixels = segmentWidth * lastSegmentHeight;
-			rightColNumPixels = lastSegmentWidth * segmentHeight;
-			bottomRightSegmentNumPixels = lastSegmentWidth * lastSegmentHeight;
-			segments = new int[numSegments][];
-			changedSegments = new boolean[numSegments];
-			for (int i=0; i<numSegments; i++)
+		    segInfo.loadConfig(screenWidth, screenHeight, segInfo.segmentWidth, segInfo.segmentHeight);
+		    segments = new int[segInfo.numSegments][];
+			changedSegments = new boolean[segInfo.numSegments];
+			for (int i=0; i<segInfo.numSegments; i++)
 			{
 				segments[i] = new int[getSegmentPixelCount(i)];
 				changedSegments[i] = Boolean.FALSE;
@@ -115,7 +95,7 @@ public class Monitor extends Thread
 		
 		boolean changed;
 		
-		int[] buffer = new int[maxSegmentNumPixels];
+		int[] buffer = new int[segInfo.maxSegmentNumPixels];
 		int[] segmentDim = new int[2];
 		int x, y;
 		long startAt, timeConsumed;
@@ -130,9 +110,9 @@ public class Monitor extends Thread
 				
 				dirbot.markRGBCacheDirty();
 				
-				for (int i=0; i<=maxSegmentID; i++)
+				for (int i=0; i<=segInfo.maxSegmentID; i++)
 				{
-					getAbsSegmentPos(i, segmentDim);
+					getSegmentPos(i, segmentDim);
 					x = segmentDim[0];
 					y = segmentDim[1];
 					getSegmentDim(i, segmentDim);
@@ -189,7 +169,7 @@ public class Monitor extends Thread
 	{
 	    Rectangle bounds = getScreenBounds();
 	    client.sendEvent(SERVER_EVENT.SCREEN_RESIZED, bounds.width, bounds.height);
-	    client.sendEvent(SERVER_EVENT.SCREEN_SEGMENT_SIZE_UPDATE, segmentWidth, segmentHeight);
+	    client.sendEvent(SERVER_EVENT.SCREEN_SEGMENT_SIZE_UPDATE, segInfo.segmentWidth, segInfo.segmentHeight);
 	}
 	
 	private boolean copyIntArray(int[] dst, int[] src, int length)
@@ -210,91 +190,48 @@ public class Monitor extends Thread
 	
 	public int getSegmentID(int x, int y)
 	{
-		assert_(x >= 0);
-		assert_(y >= 0);
-		
-		int rval = x + y*numHorizontalSegments;
-		
-		assert_(rval >= 0);
-		assert_(rval <= maxSegmentID);
+		int rval = segInfo.getSegmentID(x, y);
 		
 		return rval;
 	}
 	
 	public void getSegmentDim(int segmentID, int[] dim)
 	{
-		assert_(segmentID >= 0);
-		assert_(segmentID <= maxSegmentID);
-		assert_(dim.length >= 2);
-		
-		int x, y;
-		getSegmentPos(segmentID, dim);
-		x = dim[0];
-		y = dim[1];
-		
-		dim[0] = (x == maxHorizontalSegmentIdx) ? lastSegmentWidth : segmentWidth;
-		dim[1] = (y == maxVerticalSegmentIdx) ? lastSegmentHeight : segmentHeight;
+	    segInfo.getDim(segmentID, dim);
 	}
 	
-	public void getAbsSegmentPos(int segmentID, int[] absPos)
+	public void getSegmentPos(int segmentID, int[] absPos)
 	{
-		assert_(segmentID >= 0);
-		assert_(segmentID <= maxSegmentID);
-		assert_(absPos.length >= 2);
-		
-		getSegmentPos(segmentID, absPos);
-		absPos[0] = (absPos[0] * segmentWidth) + screenX;
-		absPos[1] = (absPos[1] * segmentHeight) + screenY;
+	    segInfo.getPos(segmentID, absPos);
+	    absPos[0] += screenX;
+	    absPos[1] += screenY;
 	}
 	
-	public void getSegmentPos(int segmentID, int[] pos)
+	public void getSegmentIdxPos(int segmentID, int[] pos)
 	{
-		assert_(segmentID >= 0);
-		assert_(segmentID <= maxSegmentID);
-		assert_(pos.length >= 2);
-		
-		pos[0] = segmentID%numHorizontalSegments;
-		pos[1] = segmentID/numHorizontalSegments;
+	    segInfo.getIdxPos(segmentID, pos);
 	}
 	
 	public int getSegmentPixelCount(int segmentID)
 	{
-		assert_(segmentID >= 0);
-		assert_(segmentID <= maxSegmentID);
-		
-		int rval;
-		int[] pos = new int[2];
-		getSegmentPos(segmentID, pos);
-		
-		if (pos[0] == maxHorizontalSegmentIdx)
-		{
-			rval = (pos[1] == maxVerticalSegmentIdx) ? bottomRightSegmentNumPixels : rightColNumPixels;
-		}
-		else if (pos[1] == maxVerticalSegmentIdx)
-		{
-			rval = bottomRowNumPixels;
-		}
-		else
-		{
-			rval = maxSegmentNumPixels;
-		}
+		int rval = segInfo.getSegmentPixelCount(segmentID);
 		
 		return rval;
 	}
 	
 	public int getMaxSegmentPixelCount()
 	{
-		return maxSegmentNumPixels;
+		return segInfo.maxSegmentNumPixels;
 	}
 	
 	public int getSegmentWidth()
 	{
-		return segmentWidth;
+		return segInfo.segmentWidth;
 	}
 	
 	public int getSegmentHeight()
 	{
-		return segmentHeight;
+		return segInfo.segmentHeight;
 	}
 	
 	public Rectangle getScreenBounds()
@@ -304,7 +241,7 @@ public class Monitor extends Thread
 	
 	public int getSegmentCount()
 	{
-		return numSegments;
+		return segInfo.numSegments;
 	}
 	
 	private void signalStop()

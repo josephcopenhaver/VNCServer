@@ -5,21 +5,21 @@ import java.awt.image.BufferedImage;
 
 import javax.swing.JPanel;
 
+import com.jcope.util.SegmentationInfo;
+
 public class ImagePanel extends JPanel
 {
-
+    
     // Generated: serialVersionUID
     private static final long serialVersionUID = -4538018101380490678L;
     
     private BufferedImage image;
-    private int segmentWidth;
-    private int segmentHeight;
+    private SegmentationInfo segInfo;
     
     public ImagePanel(int width, int height)
     {
         image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-        segmentWidth = 0;
-        segmentHeight = 0;
+        segInfo = new SegmentationInfo();
     }
     
     @Override
@@ -31,9 +31,9 @@ public class ImagePanel extends JPanel
     
     private void loadScreenPixels(int[] pixels)
     {
-        int width = image.getWidth();
-        int height = image.getHeight();
-        image.setRGB(0, 0, width, height, pixels, 0, width);
+        int screenWidth = image.getWidth();
+        int screenHeight = image.getHeight();
+        image.setRGB(0, 0, screenWidth, screenHeight, pixels, 0, screenWidth);
         repaint();
     }
     
@@ -45,13 +45,25 @@ public class ImagePanel extends JPanel
             return;
         }
         
-        // TODO: utilize segmentWidth and segmentHeight
+        int[] tmp = new int[2];
+        int startX, startY;
+        segInfo.getPos(segmentID, tmp);
+        startX = tmp[0];
+        startY = tmp[1];
+        segInfo.getDim(segmentID, tmp);
+        // assert_(tmp[0] * tmp[1] == pixels.length);
+        
+        
+        image.setRGB(startX, startY, tmp[0], tmp[1], pixels, 0, tmp[0]);
+        
+        repaint(startX, startY, tmp[0], tmp[1]);
     }
 
     public void setSegmentSize(int segmentWidth, int segmentHeight)
     {
-        this.segmentWidth = segmentWidth;
-        this.segmentHeight = segmentHeight;
+        int screenWidth = image.getWidth();
+        int screenHeight = image.getHeight();
+        segInfo.loadConfig(screenWidth, screenHeight, segmentWidth, segmentHeight);
     }
     
 }

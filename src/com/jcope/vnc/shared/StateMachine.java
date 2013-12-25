@@ -1,5 +1,7 @@
 package com.jcope.vnc.shared;
 
+import static com.jcope.debug.Debug.assert_;
+
 public class StateMachine
 {
 	public enum CONNECTION_STATE
@@ -130,6 +132,34 @@ public class StateMachine
                 case SCREEN_SEGMENT_CHANGED:
                     rval = false;
                     break;
+            }
+            
+            return rval;
+        }
+
+        private static Integer maxOrdinal = null;
+        public static int getMaxOrdinal()
+        {
+            int rval;
+            
+            if (maxOrdinal == null)
+            {
+                rval = -1;
+                for (SERVER_EVENT event : SERVER_EVENT.values())
+                {
+                    if (rval < event.ordinal())
+                    {
+                        rval = event.ordinal();
+                    }
+                }
+                
+                assert_(rval >= 0);
+                
+                maxOrdinal = rval;
+            }
+            else
+            {
+                rval = maxOrdinal;
             }
             
             return rval;

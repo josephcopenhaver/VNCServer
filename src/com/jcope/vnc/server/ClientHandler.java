@@ -265,9 +265,17 @@ public class ClientHandler extends Thread
         }
 		else
 		{
-		    if (event == SERVER_EVENT.SCREEN_SEGMENT_CHANGED)
+		    if (event == SERVER_EVENT.SCREEN_SEGMENT_CHANGED || event == SERVER_EVENT.SCREEN_SEGMENT_UPDATE)
 		    {
-		        tidTmp = -(((Integer)args[0])+1);
+		        tidTmp = ((Integer)args[0]) + 2;
+		        if (event == SERVER_EVENT.SCREEN_SEGMENT_UPDATE)
+		        {
+		            tidTmp += SERVER_EVENT.getMaxOrdinal();
+		        }
+		        else
+		        {
+		            tidTmp = -tidTmp;
+		        }
 		    }
 		    else
 		    {
