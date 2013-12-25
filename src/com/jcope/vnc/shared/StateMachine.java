@@ -35,6 +35,7 @@ public class StateMachine
 		NUM_SCREENS_CHANGED,
 		CURSOR_GONE,
 		CURSOR_MOVE,
+		SCREEN_SEGMENT_SIZE_UPDATE,
 		SCREEN_SEGMENT_UPDATE, // Response to client event GET_SCREEN_SEGMENT
 		SCREEN_SEGMENT_CHANGED,
 		//ENTIRE_SCREEN_UPDATE, // collapsed into SCREEN_SEGEMENT_* (ID = -1)
@@ -72,6 +73,7 @@ public class StateMachine
                 case SCREEN_GONE:
                 case SCREEN_RESIZED:
                 case AUTHORIZATION_UPDATE:
+                case SCREEN_SEGMENT_SIZE_UPDATE:
                     rval = false;
                     break;
                 
@@ -116,6 +118,7 @@ public class StateMachine
                 case CONNECTION_CLOSED: // should contain WHO
                 case FAILED_AUTHORIZATION: // should contain WHO
                 case AUTHORIZATION_UPDATE:
+                case SCREEN_SEGMENT_SIZE_UPDATE:
                     rval = true;
                     break;
                 

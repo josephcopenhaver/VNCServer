@@ -189,6 +189,7 @@ public class Monitor extends Thread
 	{
 	    Rectangle bounds = getScreenBounds();
 	    client.sendEvent(SERVER_EVENT.SCREEN_RESIZED, bounds.width, bounds.height);
+	    client.sendEvent(SERVER_EVENT.SCREEN_SEGMENT_SIZE_UPDATE, segmentWidth, segmentHeight);
 	}
 	
 	private boolean copyIntArray(int[] dst, int[] src, int length)

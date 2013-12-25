@@ -187,6 +187,11 @@ public class StateMachine implements Runnable
 		socket = null;
 	}
 	
+	public MainFrame getFrame()
+	{
+	    return frame;
+	}
+	
 	public void kill()
 	{
 		System.exit(0);

@@ -11,6 +11,7 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.KeyStroke;
 
+import com.jcope.ui.ImagePanel;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
 
 public class MainFrame extends JFrame
@@ -19,6 +20,8 @@ public class MainFrame extends JFrame
 	private static final long serialVersionUID = -6735839955506471961L;
 	
 	private final StateMachine client;
+	
+	private volatile ImagePanel imagePanel = null;
 
 	public MainFrame(final StateMachine stateMachine)
 	{
@@ -49,6 +52,21 @@ public class MainFrame extends JFrame
 		// TODO: finish
 		
 	}
+	
+	public ImagePanel getImagePanel()
+	{
+	    return imagePanel;
+	}
+
+    public void setImagePanel(ImagePanel imagePanel)
+    {
+        if (this.imagePanel != null)
+        {
+            remove(this.imagePanel);
+        }
+        this.imagePanel = imagePanel;
+        add(imagePanel);
+    }
 	
 	@Override
 	public void dispose()
