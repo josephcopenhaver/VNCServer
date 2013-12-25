@@ -1,6 +1,6 @@
 package com.jcope.vnc.shared.input;
 
-public abstract class AbstractHandler<R,T>
+public abstract class Handler<R,T>
 {
     
     public abstract void handle(R obj, T event, Object... args);

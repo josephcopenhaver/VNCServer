@@ -8,11 +8,10 @@ import java.util.concurrent.Semaphore;
 import com.jcope.debug.LLog;
 import com.jcope.vnc.client.StateMachine;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
-import com.jcope.vnc.shared.input.AbstractHandler;
 import com.jcope.vnc.shared.input.Handle;
 
 @SuppressWarnings("unchecked")
-public class Handler extends AbstractHandler<StateMachine, SERVER_EVENT>
+public class Handler extends com.jcope.vnc.shared.input.Handler<StateMachine, SERVER_EVENT>
 {
     
     private static final HashMap<SERVER_EVENT,Handle<StateMachine>> eventHandles;
