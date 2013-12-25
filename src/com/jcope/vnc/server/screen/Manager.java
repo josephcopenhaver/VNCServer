@@ -145,6 +145,11 @@ public class Manager extends Thread
 			LLog.e(e);
 		}
 		Monitor monitor = new Monitor(SEGMENT_WIDTH, SEGMENT_HEIGHT, dirbot, registeredClients);
+		for (ClientHandler client : registeredClients)
+		{
+		    monitor.initBeforeAdd(client);
+		}
+		monitor.start();
 		monitorForGraphicsDevice.put(graphicsDevice, monitor);
 	}
 	
@@ -207,6 +212,11 @@ public class Manager extends Thread
 			else if (registeredClients.contains(client))
 			{
 				return;
+			}
+			if (!newMonitor)
+			{
+			    Monitor monitor = monitorForGraphicsDevice.get(graphicsDevice);
+                monitor.initBeforeAdd(client);
 			}
 			registeredClients.add(client);
 			if (newMonitor)

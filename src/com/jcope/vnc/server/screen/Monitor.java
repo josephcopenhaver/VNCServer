@@ -57,7 +57,6 @@ public class Monitor extends Thread
 		this.clients = clients;
 		maxSegmentNumPixels = segmentWidth * segmentHeight;
 		syncBounds();
-		start();
 	}
 	
 	private void syncBounds()
@@ -184,6 +183,12 @@ public class Monitor extends Thread
 			stopped = Boolean.TRUE;
 			joined = Boolean.TRUE;
 		}
+	}
+	
+	public void initBeforeAdd(ClientHandler client)
+	{
+	    Rectangle bounds = getScreenBounds();
+	    client.sendEvent(SERVER_EVENT.SCREEN_RESIZED, bounds.width, bounds.height);
 	}
 	
 	private boolean copyIntArray(int[] dst, int[] src, int length)
