@@ -147,7 +147,7 @@ public class Manager extends Thread
 		Monitor monitor = new Monitor(SEGMENT_WIDTH, SEGMENT_HEIGHT, dirbot, registeredClients);
 		for (ClientHandler client : registeredClients)
 		{
-		    monitor.initBeforeAdd(client);
+		    monitor.sendDisplayInitEvents(client);
 		}
 		monitor.start();
 		monitorForGraphicsDevice.put(graphicsDevice, monitor);
@@ -216,7 +216,7 @@ public class Manager extends Thread
 			if (!newMonitor)
 			{
 			    Monitor monitor = monitorForGraphicsDevice.get(graphicsDevice);
-                monitor.initBeforeAdd(client);
+                monitor.sendDisplayInitEvents(client);
 			}
 			registeredClients.add(client);
 			if (newMonitor)

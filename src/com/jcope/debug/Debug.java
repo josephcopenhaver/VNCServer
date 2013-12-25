@@ -6,9 +6,25 @@ public class Debug
 	
 	public static void assert_(boolean condition)
 	{
+	    assert_(condition, null);
+	}
+	
+	public static void assert_(boolean condition, String msg)
+	{
 		if (!condition)
 		{
-		    throw new AssertionError();
+		    AssertionError e;
+		    
+		    if (msg == null)
+		    {
+		        e = new AssertionError();
+		    }
+		    else
+		    {
+		        e = new AssertionError(msg);
+		    }
+		    
+		    throw e;
 		}
 	}
 	

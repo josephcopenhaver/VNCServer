@@ -185,7 +185,7 @@ public class Monitor extends Thread
 		}
 	}
 	
-	public void initBeforeAdd(ClientHandler client)
+	public void sendDisplayInitEvents(ClientHandler client)
 	{
 	    Rectangle bounds = getScreenBounds();
 	    client.sendEvent(SERVER_EVENT.SCREEN_RESIZED, bounds.width, bounds.height);
