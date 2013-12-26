@@ -9,6 +9,7 @@ import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.KeyStroke;
 
 import com.jcope.ui.ImagePanel;
@@ -22,9 +23,15 @@ public class MainFrame extends JFrame
 	private final StateMachine client;
 	
 	private volatile ImagePanel imagePanel = null;
+	private String alias = null;
 
 	public MainFrame(final StateMachine stateMachine)
 	{
+	    
+	    // TODO: define mneumonics
+	    
+	    final MainFrame fthis = this;
+	    
 		client = stateMachine;
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		
@@ -36,6 +43,10 @@ public class MainFrame extends JFrame
 		menuBar.add(actionMenu);
 		JMenuItem refreshScreen = new JMenuItem("Refresh");
 		actionMenu.add(refreshScreen);
+		JMenuItem setAlias = new JMenuItem("Set Alias");
+		actionMenu.add(setAlias);
+		JMenuItem clearAlias = new JMenuItem("Clear Alias");
+		actionMenu.add(clearAlias);
 		
 		// setup control mechanisms
 		
@@ -46,6 +57,41 @@ public class MainFrame extends JFrame
             public void actionPerformed(ActionEvent ae)
             {
                 client.sendEvent(CLIENT_EVENT.GET_SCREEN_SEGMENT, Integer.valueOf(-1));
+            }
+        });
+		
+		final ActionListener clearAction;
+		// TODO: define accelerator
+        clearAlias.addActionListener((clearAction = new ActionListener() {
+            
+            @Override
+            public void actionPerformed(ActionEvent ae)
+            {
+                alias = null;
+                // TODO: 
+            }
+        }));
+		
+		// TODO: define accelerator
+		setAlias.addActionListener(new ActionListener() {
+            
+            @Override
+            public void actionPerformed(ActionEvent ae)
+            {
+                // TODO: 
+                String result = JOptionPane.showInputDialog(fthis, "What would your alias to be?", alias);
+                if (result != null)
+                {
+                    if (result.equals(""))
+                    {
+                        clearAction.actionPerformed(null);
+                    }
+                    else if (!result.equals(alias))
+                    {
+                        alias = result;
+                        stateMachine.sendEvent(CLIENT_EVENT.REQUEST_ALIAS, alias);
+                    }
+                }
             }
         });
 		
@@ -74,5 +120,15 @@ public class MainFrame extends JFrame
 		super.dispose();
 		client.kill();
 	}
+
+    public String getAlias()
+    {
+        return alias;
+    }
+    
+    public void setAlias(String alias)
+    {
+        this.alias = alias;
+    }
 	
 }

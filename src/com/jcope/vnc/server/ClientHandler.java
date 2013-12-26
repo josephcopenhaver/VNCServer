@@ -65,6 +65,25 @@ public class ClientHandler extends Thread
 		return String.format("%s - %s - %d - %d", addr.getHostName(), addr.getHostAddress(), socket.getLocalPort(), socket.getPort());
 	}
 	
+	private static Runnable getUnbindAliasAction(final ClientHandler thiz)
+	{
+	    Runnable rval = new Runnable()
+	    {
+	        
+	        @Override
+	        public void run()
+	        {
+	            if (AliasRegistry.hasInstance())
+	            {
+	                AliasRegistry.getInstance().unbind(thiz);
+	            }
+	        }
+	        
+	    };
+	    
+	    return rval;
+	} 
+	
 	private Runnable killIOAction = new Runnable()
 	{
 		public void run()
@@ -105,6 +124,7 @@ public class ClientHandler extends Thread
 		try
 		{
 			addOnDestroyAction(killIOAction);
+			addOnDestroyAction(getUnbindAliasAction(this));
 			graphicsDevice = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
 			Manager.getInstance().bind(this, graphicsDevice);
 			while (!dying)

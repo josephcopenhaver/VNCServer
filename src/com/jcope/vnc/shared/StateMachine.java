@@ -32,6 +32,7 @@ public class StateMachine
 	public enum SERVER_EVENT
 	{
 	    AUTHORIZATION_UPDATE, // Response to client event OFFER_SECURITY_TOKEN
+	    CLIENT_ALIAS_UPDATE, // Response to client event REQUEST_ALIAS
 	    
 	    
 		NUM_SCREENS_CHANGED,
@@ -76,6 +77,7 @@ public class StateMachine
                 case SCREEN_RESIZED:
                 case AUTHORIZATION_UPDATE:
                 case SCREEN_SEGMENT_SIZE_UPDATE:
+                case CLIENT_ALIAS_UPDATE:
                     rval = false;
                     break;
                 
@@ -121,6 +123,7 @@ public class StateMachine
                 case FAILED_AUTHORIZATION: // should contain WHO
                 case AUTHORIZATION_UPDATE:
                 case SCREEN_SEGMENT_SIZE_UPDATE:
+                case CLIENT_ALIAS_UPDATE:
                     rval = true;
                     break;
                 
