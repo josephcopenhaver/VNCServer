@@ -31,10 +31,7 @@ public class ClientAliasUpdate extends Handle
         }
         else
         {
-            if (alias.equals(curAlias))
-            {
-                frame.setAlias(null);
-            }
+            frame.setAlias(null);
         }
     }
     

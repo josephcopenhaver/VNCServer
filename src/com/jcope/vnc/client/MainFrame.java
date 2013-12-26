@@ -68,6 +68,7 @@ public class MainFrame extends JFrame
             public void actionPerformed(ActionEvent ae)
             {
                 alias = null;
+                stateMachine.sendEvent(CLIENT_EVENT.REQUEST_ALIAS, "");
                 // TODO: 
             }
         }));

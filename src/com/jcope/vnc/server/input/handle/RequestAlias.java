@@ -19,6 +19,12 @@ public class RequestAlias extends Handle
         
         String alias = (String) args[0];
         
+        if (alias.equals(""))
+        {
+            AliasRegistry.getInstance().unbind(client);
+            return;
+        }
+        
         boolean worked = AliasRegistry.getInstance().bind(client, alias);
         
         client.sendEvent(SERVER_EVENT.CLIENT_ALIAS_UPDATE, alias, worked);
