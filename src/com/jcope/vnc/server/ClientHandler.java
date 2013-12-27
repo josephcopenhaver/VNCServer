@@ -33,6 +33,7 @@ public class ClientHandler extends Thread
 	
 	private TaskDispatcher<Integer> unserializedDispatcher;
     private TaskDispatcher<Integer> serializedDispatcher;
+    private boolean isNewFlag = Boolean.TRUE;
 	
 	public ClientHandler(Socket socket) throws IOException
 	{
@@ -82,7 +83,17 @@ public class ClientHandler extends Thread
 	    };
 	    
 	    return rval;
-	} 
+	}
+	
+	public boolean getIsNewFlag()
+	{
+	    return isNewFlag;
+	}
+	
+	public void setIsNewFlag(boolean x)
+	{
+	    isNewFlag = x;
+	}
 	
 	private Runnable killIOAction = new Runnable()
 	{

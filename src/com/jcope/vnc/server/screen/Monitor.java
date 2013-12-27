@@ -99,6 +99,7 @@ public class Monitor extends Thread
 		int[] segmentDim = new int[2];
 		int x, y;
 		long startAt, timeConsumed;
+		ArrayList<ClientHandler> newClients = new ArrayList<ClientHandler>();
 		
 		try
 		{
@@ -124,10 +125,22 @@ public class Monitor extends Thread
 					}
 				}
 				
+				for (ClientHandler client : clients)
+				{
+				    if (!client.getIsNewFlag())
+                    {
+                        newClients.add(client);
+                    }
+				}
+				
 				if (changed)
 				{
 					for (ClientHandler client : clients)
 					{
+					    if (!client.getIsNewFlag())
+					    {
+					        continue;
+					    }
 						ScreenListener l = client.getScreenListener(dirbot);
 						for (int i=0; i<changedSegments.length; i++)
 						{
@@ -141,6 +154,20 @@ public class Monitor extends Thread
 					{
 						changedSegments[i] = Boolean.FALSE;
 					}
+				}
+				
+				if (newClients.size() > 0)
+				{
+				    for (ClientHandler client : newClients)
+				    {
+				        client.setIsNewFlag(Boolean.FALSE);
+				        ScreenListener l = client.getScreenListener(dirbot);
+				        for (int i=0; i<segInfo.numSegments; i++)
+				        {
+				            l.onScreenChange(i);
+				        }
+				    }
+				    newClients.clear();
 				}
 				
 				timeConsumed = System.currentTimeMillis() - startAt;

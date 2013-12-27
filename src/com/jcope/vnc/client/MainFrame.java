@@ -80,7 +80,7 @@ public class MainFrame extends JFrame
             public void actionPerformed(ActionEvent ae)
             {
                 // TODO: 
-                String result = JOptionPane.showInputDialog(fthis, "What would your alias to be?", alias);
+                String result = JOptionPane.showInputDialog(fthis, "What would you like your alias to be?", alias);
                 if (result != null)
                 {
                     if (result.equals(""))
