@@ -127,7 +127,7 @@ public class Monitor extends Thread
 				
 				for (ClientHandler client : clients)
 				{
-				    if (!client.getIsNewFlag())
+				    if (client.getIsNewFlag())
                     {
                         newClients.add(client);
                     }
@@ -137,7 +137,7 @@ public class Monitor extends Thread
 				{
 					for (ClientHandler client : clients)
 					{
-					    if (!client.getIsNewFlag())
+					    if (client.getIsNewFlag())
 					    {
 					        continue;
 					    }
