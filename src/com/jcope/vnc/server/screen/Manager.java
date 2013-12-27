@@ -77,6 +77,20 @@ public class Manager extends Thread
 		return rval;
 	}
 	
+	private Semaphore hasMonitorLock = new Semaphore(0, true);
+	
+	private void decreaseMonitorLock()
+	{
+	    try
+        {
+            hasMonitorLock.acquire();
+        }
+        catch (InterruptedException e)
+        {
+            LLog.e(e);
+        }
+	}
+	
 	public void run()
 	{
 		HashMap<GraphicsDevice,Boolean> graphicDevicesSet = new HashMap<GraphicsDevice,Boolean>();
@@ -85,51 +99,57 @@ public class Manager extends Thread
 		int numMissing;
 		while (true)
 		{
-		    // TODO: when all clients disconnect, pause this thread
-			setChanged = Boolean.FALSE;
-			GraphicsDevice[] graphicsDeviceList = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices();
-			tmpGraphicsDeviceSet.putAll(graphicDevicesSet);
-			for (GraphicsDevice graphicsDevice : graphicsDeviceList)
-			{
-				if (tmpGraphicsDeviceSet.remove(graphicsDevice) == null)
-				{
-					setChanged = Boolean.TRUE;
-					graphicDevicesSet.put(graphicsDevice, Boolean.TRUE);
-				}
-			}
-			numMissing = tmpGraphicsDeviceSet.size();
-			if (numMissing > 0)
-			{
-				try
-				{
-					setChanged = Boolean.TRUE;
-					GraphicsDevice[] missingSet = new GraphicsDevice[numMissing];
-					missingSet = tmpGraphicsDeviceSet.keySet().toArray(missingSet);
-					for (GraphicsDevice graphicsDevice : missingSet)
-					{
-						graphicDevicesSet.remove(graphicsDevice);
-					}
-					unbindSet(missingSet);
-				}
-				finally {
-					tmpGraphicsDeviceSet.clear();
-				}
-			}
-			if (setChanged)
-			{
-				sendToAll(SERVER_EVENT.NUM_SCREENS_CHANGED, Integer.valueOf(graphicDevicesSet.size()));
-			}
-			else
-			{
-				try
-				{
-					sleep(refreshMS);
-				}
-				catch (InterruptedException e)
-				{
-					LLog.e(e);
-				}
-			}
+		    decreaseMonitorLock();
+		    try
+		    {
+    			setChanged = Boolean.FALSE;
+    			GraphicsDevice[] graphicsDeviceList = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices();
+    			tmpGraphicsDeviceSet.putAll(graphicDevicesSet);
+    			for (GraphicsDevice graphicsDevice : graphicsDeviceList)
+    			{
+    				if (tmpGraphicsDeviceSet.remove(graphicsDevice) == null)
+    				{
+    					setChanged = Boolean.TRUE;
+    					graphicDevicesSet.put(graphicsDevice, Boolean.TRUE);
+    				}
+    			}
+    			numMissing = tmpGraphicsDeviceSet.size();
+    			if (numMissing > 0)
+    			{
+    				try
+    				{
+    					setChanged = Boolean.TRUE;
+    					GraphicsDevice[] missingSet = new GraphicsDevice[numMissing];
+    					missingSet = tmpGraphicsDeviceSet.keySet().toArray(missingSet);
+    					for (GraphicsDevice graphicsDevice : missingSet)
+    					{
+    						graphicDevicesSet.remove(graphicsDevice);
+    					}
+    					unbindSet(missingSet);
+    				}
+    				finally {
+    					tmpGraphicsDeviceSet.clear();
+    				}
+    			}
+    			if (setChanged)
+    			{
+    				sendToAll(SERVER_EVENT.NUM_SCREENS_CHANGED, Integer.valueOf(graphicDevicesSet.size()));
+    			}
+    			else
+    			{
+    				try
+    				{
+    					sleep(refreshMS);
+    				}
+    				catch (InterruptedException e)
+    				{
+    					LLog.e(e);
+    				}
+    			}
+		    }
+		    finally {
+		        hasMonitorLock.release();
+		    }
 		}
 	}
 	
@@ -213,6 +233,7 @@ public class Manager extends Thread
 			{
 				return;
 			}
+			hasMonitorLock.release();
 			if (!newMonitor)
 			{
 			    Monitor monitor = monitorForGraphicsDevice.get(graphicsDevice);
@@ -248,6 +269,7 @@ public class Manager extends Thread
 						clientsPerGraphicsDevice.remove(graphicsDevice);
 						killMonitorForGraphicsDevice(graphicsDevice);
 					}
+					decreaseMonitorLock();
 					break;
 				}
 			}
@@ -289,6 +311,7 @@ public class Manager extends Thread
 					for (ClientHandler client : clientsToSignal)
 					{
 						handleServerEvent(client, SERVER_EVENT.SCREEN_GONE);
+						decreaseMonitorLock();
 					}
 				}
 				finally {

@@ -103,9 +103,9 @@ public class StateMachine implements Runnable
 			}
 			finally {
 				if (out != null) {try{out.close();}catch(Exception e){}}
-				if (os != null)     {try{os.close();    }catch(Exception e){}}
-				if (in != null)     {try{in.close();    }catch(Exception e){}}
-				if (is != null)     {try{is.close();    }catch(Exception e){}}
+				if (os  != null) {try{ os.close();}catch(Exception e){}}
+				if (in  != null) {try{ in.close();}catch(Exception e){}}
+				if (is  != null) {try{ is.close();}catch(Exception e){}}
 				disconnect();
 			}
 			if (whyFailed != null)
