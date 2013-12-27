@@ -26,6 +26,7 @@ public class StateMachine implements Runnable
 	
 	private Socket socket;
 	private volatile ObjectOutputStream out;
+	private volatile Exception whyFailed = null;
 	
 	public StateMachine(String serverAddress, int serverPort) throws UnknownHostException, IOException
 	{
@@ -35,14 +36,39 @@ public class StateMachine implements Runnable
 		frame = new MainFrame(this);
 		frame.setVisible(true);
 	}
+	
+	Semaphore setWhyFailedLock = new Semaphore(1, true);
+	private void setWhyFailed(Exception e)
+	{
+	    if (whyFailed == null)
+	    {
+	        try
+	        {
+	            setWhyFailedLock.acquire();
+	        }
+            catch (InterruptedException e1)
+            {
+                LLog.e(e);
+            }
+	        try
+	        {
+	            if (whyFailed == null)
+	            {
+	                whyFailed = e;
+	            }
+	        }
+	        finally {
+	            setWhyFailedLock.release();
+	        }
+	    }
+	}
 
 	public void run()
 	{
 		boolean tryConnect, wasConnected;
-		Exception whyFailed = null;
 		do
 		{
-			tryConnect = Boolean.FALSE;
+		    tryConnect = Boolean.FALSE;
 			wasConnected = Boolean.FALSE;
 			socket = null;
 			OutputStream os = null;
@@ -65,11 +91,11 @@ public class StateMachine implements Runnable
 			}
 			catch (UnknownHostException e)
 			{
-				whyFailed = e;
+			    setWhyFailed(e);
 			}
 			catch (IOException e)
 			{
-				whyFailed = e;
+			    setWhyFailed(e);
 			}
 			catch (ClassNotFoundException e)
 			{
@@ -80,7 +106,7 @@ public class StateMachine implements Runnable
 				if (os != null)     {try{os.close();    }catch(Exception e){}}
 				if (in != null)     {try{in.close();    }catch(Exception e){}}
 				if (is != null)     {try{is.close();    }catch(Exception e){}}
-				if (socket != null) {try{socket.close();}catch(Exception e){}}
+				disconnect();
 			}
 			if (whyFailed != null)
 			{
@@ -156,7 +182,7 @@ public class StateMachine implements Runnable
                     }
                     catch (IOException e)
                     {
-                        LLog.e(e, false); // TODO: should be able to handoff this error to "whyfail" concept
+                        setWhyFailed(e);
                     }
                 }
                 finally {
@@ -173,18 +199,26 @@ public class StateMachine implements Runnable
 	
 	private void disconnect()
 	{
-		if (socket != null)
-		{
-		    try
-		    {
-		        socket.close();
-		    }
-		    catch (IOException e)
-		    {
-		        // Do Nothing
-		    }
-		}
-		socket = null;
+	    try
+	    {
+    		if (socket != null)
+    		{
+    		    try
+    		    {
+    		        socket.close();
+    		    }
+    		    catch (IOException e)
+    		    {
+    		        // Do Nothing
+    		    }
+    		    finally {
+    		        socket = null;
+    		    }
+    		}
+	    }
+	    finally {
+	        dispatcher.clear();
+	    }
 	}
 	
 	public MainFrame getFrame()
