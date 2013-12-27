@@ -38,7 +38,7 @@ public class StateMachine implements Runnable
 	}
 	
 	Semaphore setWhyFailedLock = new Semaphore(1, true);
-	private void setWhyFailed(Exception e)
+	private void setWhyFailed(Exception exception)
 	{
 	    if (whyFailed == null)
 	    {
@@ -46,7 +46,7 @@ public class StateMachine implements Runnable
 	        {
 	            setWhyFailedLock.acquire();
 	        }
-            catch (InterruptedException e1)
+            catch (InterruptedException e)
             {
                 LLog.e(e);
             }
@@ -54,7 +54,7 @@ public class StateMachine implements Runnable
 	        {
 	            if (whyFailed == null)
 	            {
-	                whyFailed = e;
+	                whyFailed = exception;
 	            }
 	        }
 	        finally {
