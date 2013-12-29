@@ -1,5 +1,6 @@
 package com.jcope.vnc.server.screen;
 
+import java.awt.Point;
 import java.awt.Rectangle;
 import java.util.ArrayList;
 
@@ -47,6 +48,8 @@ public class Monitor extends Thread
 	private boolean[] changedSegments;
 	private volatile boolean stopped = Boolean.FALSE;
 	private volatile boolean joined = Boolean.FALSE;
+	private Boolean mouseOnMyScreen = null;
+	private final Point mouseLocation = new Point();
 	
 	public Monitor(int segmentWidth, int segmentHeight, DirectRobot dirbot, ArrayList<ClientHandler> clients)
 	{
@@ -88,6 +91,30 @@ public class Monitor extends Thread
 		}
 	}
 	
+	private void syncMouse()
+	{
+	    Boolean mouseWasOnMyScreen = mouseOnMyScreen;
+	    int lastX = mouseLocation.x, lastY = mouseLocation.y;
+	    mouseOnMyScreen = (DirectRobot.getMouseInfo(mouseLocation) == dirbot.device);
+	    if (mouseOnMyScreen)
+	    {
+	        if ((mouseWasOnMyScreen == null || (lastX != mouseLocation.x || lastY != mouseLocation.y)))
+	        {
+    	        for (ClientHandler client : clients)
+    	        {
+    	            StateMachine.handleServerEvent(client, SERVER_EVENT.CURSOR_MOVE, Integer.valueOf(mouseLocation.x), Integer.valueOf(mouseLocation.y));
+    	        }
+	        }
+	    }
+	    else if (mouseWasOnMyScreen != null && mouseWasOnMyScreen)
+	    {
+	        for (ClientHandler client : clients)
+            {
+                StateMachine.handleServerEvent(client, SERVER_EVENT.CURSOR_GONE);
+            }
+	    }
+	}
+	
 	public void run()
 	{
 		// detect change in a segment of the configured screen
@@ -106,6 +133,8 @@ public class Monitor extends Thread
 			while (!stopped)
 			{
 				startAt = System.currentTimeMillis();
+				
+				syncMouse();
 				
 				changed = Boolean.FALSE;
 				
@@ -186,7 +215,6 @@ public class Monitor extends Thread
 			}
 		}
 		finally {
-			
 			stopped = Boolean.TRUE;
 			joined = Boolean.TRUE;
 		}
@@ -197,6 +225,10 @@ public class Monitor extends Thread
 	    Rectangle bounds = getScreenBounds();
 	    client.sendEvent(SERVER_EVENT.SCREEN_RESIZED, bounds.width, bounds.height);
 	    client.sendEvent(SERVER_EVENT.SCREEN_SEGMENT_SIZE_UPDATE, segInfo.segmentWidth, segInfo.segmentHeight);
+	    if (mouseOnMyScreen != null && mouseOnMyScreen)
+	    {
+	        client.sendEvent(SERVER_EVENT.CURSOR_MOVE, Integer.valueOf(mouseLocation.x), Integer.valueOf(mouseLocation.y));
+	    }
 	}
 	
 	private boolean copyIntArray(int[] dst, int[] src, int length)

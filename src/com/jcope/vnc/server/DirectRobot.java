@@ -112,27 +112,30 @@ public final class DirectRobot
 		{
 			try
 			{
-				boolean accessible = false;
+				boolean accessibleChanged = false;
 				
 				method = peerClass.getDeclaredMethod("getRGBPixelsImpl", new Class<?>[] { Class.forName("sun.awt.X11GraphicsConfig"), Integer.TYPE, Integer.TYPE, Integer.TYPE, Integer.TYPE, int[].class });
-				methodType = 3;
 				Field field = peerClass.getDeclaredField("xgc");
 				try
 				{
-					field.setAccessible(true);
-					accessible = true;
+				    if (!field.isAccessible())
+				    {
+    					field.setAccessible(true);
+    					accessibleChanged = true;
+				    }
 					methodParam = field.get(peer);
+					methodType = 3;
 				}
 				catch (IllegalArgumentException e)
 				{
-					LLog.e(e);
+				    exceptions.add(e);
 				}
 				catch (IllegalAccessException e)
 				{
-					LLog.e(e);
+				    exceptions.add(e);
 				}
 				finally {
-					if (accessible)
+					if (accessibleChanged)
 					{
 						field.setAccessible(false);
 					}
@@ -140,19 +143,19 @@ public final class DirectRobot
 			}
 			catch (SecurityException e)
 			{
-				LLog.e(e);
+			    exceptions.add(e);
 			}
 			catch (NoSuchFieldException e)
 			{
-				LLog.e(e);
+			    exceptions.add(e);
 			}
 			catch (NoSuchMethodException e)
 			{
-				LLog.e(e);
+			    exceptions.add(e);
 			}
 			catch (ClassNotFoundException e)
 			{
-				LLog.e(e);
+			    exceptions.add(e);
 			}
 		}
 
@@ -165,10 +168,13 @@ public final class DirectRobot
 		}
 		else
 		{
-			for (Exception e : exceptions)
-			{
-				e.printStackTrace();
-			}
+		    if (DEBUG)
+		    {
+    			for (Exception e : exceptions)
+    			{
+    				e.printStackTrace();
+    			}
+		    }
 			exceptions.clear();
 			exceptions = null;
 			if (DEBUG)
@@ -195,58 +201,89 @@ public final class DirectRobot
 
 	public static GraphicsDevice getMouseInfo(Point point)
 	{
-		if (!hasMouseInfoPeer)
+	    GraphicsDevice rval;
+	    
+	    if (!hasMouseInfoPeer)
 		{
 			hasMouseInfoPeer = true;
+			mouseInfoPeer = null;
+			ArrayList<Exception> exceptions = new ArrayList<Exception>();
 			try
 			{
 				Toolkit toolkit = Toolkit.getDefaultToolkit();
 				Method method = toolkit.getClass().getDeclaredMethod("getMouseInfoPeer", new Class<?>[0]);
+				boolean accessibleChanged = false;
 				try
 				{
-					method.setAccessible(true);
+				    if (!method.isAccessible())
+				    {
+				        method.setAccessible(true);
+				        accessibleChanged = true;
+				    }
 					mouseInfoPeer = (MouseInfoPeer) method.invoke(toolkit, new Object[0]);
 				}
 				catch (IllegalArgumentException e)
 				{
-					LLog.e(e);
+					exceptions.add(e);
 				}
 				catch (IllegalAccessException e)
 				{
-					LLog.e(e);
+				    exceptions.add(e);
 				}
 				catch (InvocationTargetException e)
 				{
-					LLog.e(e);
+				    exceptions.add(e);
 				}
 				finally {
-					method.setAccessible(false);
+				    if (accessibleChanged)
+				    {
+				        method.setAccessible(false);
+				    }
 				}
 			}
 			catch (SecurityException e)
 			{
-				LLog.e(e);
+			    exceptions.add(e);
 			}
 			catch (NoSuchMethodException e)
 			{
-				LLog.e(e);
+			    exceptions.add(e);
 			}
+			
+	        if (DEBUG)
+            {
+                for (Exception e : exceptions)
+                {
+                    e.printStackTrace();
+                }
+            }
+            exceptions.clear();
+            exceptions = null;
+            
 		}
-		if (mouseInfoPeer != null)
+		if (mouseInfoPeer == null)
 		{
-			int device = mouseInfoPeer.fillPointWithCoords(point != null ? point:new Point());
-			GraphicsDevice[] devices = GraphicsEnvironment.getLocalGraphicsEnvironment().
+		    PointerInfo info = MouseInfo.getPointerInfo();
+		    
+            if (point != null)
+            {
+                Point tmpPoint = info.getLocation();
+                point.x = tmpPoint.x;
+                point.y = tmpPoint.y;
+            }
+            
+            rval = info.getDevice();
+		}
+		else
+		{
+		    int device = mouseInfoPeer.fillPointWithCoords(point != null ? point : new Point());
+            GraphicsDevice[] devices = GraphicsEnvironment.getLocalGraphicsEnvironment().
 getScreenDevices();
-			return devices[device];
+            
+            rval = devices[device];
 		}
-		PointerInfo info = MouseInfo.getPointerInfo();
-		if (point != null)
-		{
-			Point location = info.getLocation();
-			point.x = location.x;
-			point.y = location.y;
-		}
-		return info.getDevice();
+		
+		return rval;
 	}
 
 	public static int getNumberOfMouseButtons()

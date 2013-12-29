@@ -269,6 +269,7 @@ public class ClientHandler extends Thread
 	    int tidTmp;
 	    TaskDispatcher<Integer> dispatcher;
 	    boolean dispatch;
+	    
 		if (event.isSerial())
         {
 		    try
