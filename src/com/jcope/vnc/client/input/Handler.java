@@ -37,7 +37,23 @@ public class Handler extends com.jcope.vnc.shared.input.Handler<StateMachine, SE
                 assert_(((Handle<?>)handle).getType() == StateMachine.class);
                 eventHandles.put(event, (Handle<StateMachine>) handle); 
             }
-            catch (ClassNotFoundException | SecurityException | InstantiationException | IllegalAccessException | IllegalArgumentException e)
+            catch (ClassNotFoundException e)
+            {
+                LLog.e(e);
+            }
+            catch (SecurityException e)
+            {
+                LLog.e(e);
+            }
+            catch (InstantiationException e)
+            {
+                LLog.e(e);
+            }
+            catch (IllegalAccessException e)
+            {
+                LLog.e(e);
+            }
+            catch (IllegalArgumentException e)
             {
                 LLog.e(e);
             }

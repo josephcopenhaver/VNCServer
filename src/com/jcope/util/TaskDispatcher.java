@@ -349,7 +349,8 @@ public class TaskDispatcher<T> extends Thread
 		return b;
 	}
 	
-	@SafeVarargs
+	// Uncomment if on java v1.7
+	//@SafeVarargs
 	public final void setImmediate(boolean b, T... set)
 	{
 		if (!b)
@@ -368,7 +369,8 @@ public class TaskDispatcher<T> extends Thread
 		}
 	}
 	
-	@SafeVarargs
+	// Uncomment if on java v1.7
+        //@SafeVarargs
 	public final void setMutable(boolean b, T... set)
 	{
 		if (b)

@@ -1,8 +1,19 @@
-#TODO: untested
+#!/bin/bash
 OPT_RESTART=n
+OPT_RUNNING=n
+function detect_if_runningf {
+    OPT_RUNNING=n
+    if [ -f "server.lock" ] && [ -f "server.pid" ]; then
+        pid=$(head -1 server.pid)
+        cmd_name=$(head -1 /proc/$pid/comm)
+        if [ "$cmd_name" == "java" ]; then
+            OPT_RUNNING=y
+        fi
+    fi
+}
 function startf {
-    rm "server.lock" >/dev/null 2>&1
-    if [ -e "server.lock" ]; then
+    detect_if_runningf
+    if [ "$OPT_RUNNING" == "y" ]; then
         echo Service already running.
     else
         (java -cp bin com.jcope.vnc.Server 2>&1 | tee server.log 2>&1) &
@@ -10,10 +21,10 @@ function startf {
     fi
 }
 function stopf {
-    rm "server.lock" >/dev/null 2>&1
-    if [ ! -e "server.lock" ]; then
+    detect_if_runningf
+    if [ "$OPT_RUNNING" == "n" ]; then
         if [ "$OPT_RESTART" == "y" ]; then
-            startf()
+            startf
         else
             echo Service already terminated.
         fi
@@ -24,24 +35,24 @@ function stopf {
         rm "server.pid" >/dev/null 2>&1
         echo Service terminated.
         if [ "$OPT_RESTART" == "y" ]; then
-            startf()
+            startf
         fi
     fi
 }
 function restartf {
     OPT_RESTART=y
-    stopf()
+    stopf
 }
 function unknownf {
     echo Unknown command \"$1\"
 }
 
 if [ "$1" == "start" ]; then
-    startf()
+    startf
 elif [ "$1" == "stop" ]; then
-    stopf()
+    stopf
 elif [ "$1" == "restart" ]; then
-    restartf()
+    restartf
 else
-    unknownf()
+    unknownf
 fi
