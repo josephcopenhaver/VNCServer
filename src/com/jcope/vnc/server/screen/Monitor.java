@@ -98,7 +98,7 @@ public class Monitor extends Thread
 	    mouseOnMyScreen = (DirectRobot.getMouseInfo(mouseLocation) == dirbot.device);
 	    if (mouseOnMyScreen)
 	    {
-	        if ((mouseWasOnMyScreen == null || (lastX != mouseLocation.x || lastY != mouseLocation.y)))
+	        if (mouseWasOnMyScreen == null || lastX != mouseLocation.x || lastY != mouseLocation.y)
 	        {
     	        for (ClientHandler client : clients)
     	        {

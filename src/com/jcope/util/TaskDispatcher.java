@@ -370,7 +370,7 @@ public class TaskDispatcher<T> extends Thread
 	}
 	
 	// Uncomment if on java v1.7
-        //@SafeVarargs
+    //@SafeVarargs
 	public final void setMutable(boolean b, T... set)
 	{
 		if (b)
