@@ -3,6 +3,7 @@ package com.jcope.vnc;
 import java.io.IOException;
 import java.net.UnknownHostException;
 
+import static com.jcope.debug.Debug.DEBUG;
 import com.jcope.vnc.client.StateMachine;
 
 /**
@@ -18,7 +19,7 @@ public class Client
 {
 	public static void main(String[] args) throws UnknownHostException, IOException, InterruptedException
 	{
-		boolean forceStop = Boolean.FALSE;
+		boolean forceStop = !DEBUG;
 		String targetHost = "localhost";
 		int targetPort = 1979;
 		

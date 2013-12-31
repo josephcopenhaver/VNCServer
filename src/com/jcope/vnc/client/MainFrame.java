@@ -23,7 +23,7 @@ public class MainFrame extends JFrame
 	private final StateMachine client;
 	
 	private volatile ImagePanel imagePanel = null;
-	private String alias = null;
+	private volatile String alias = null;
 
 	public MainFrame(final StateMachine stateMachine)
 	{
