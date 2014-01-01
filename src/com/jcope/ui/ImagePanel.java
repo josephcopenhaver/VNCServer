@@ -3,13 +3,17 @@ package com.jcope.ui;
 import static com.jcope.debug.Debug.assert_;
 
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 
 import javax.swing.JPanel;
 
+import com.jcope.util.DimensionF;
 import com.jcope.util.SegmentationInfo;
 
 public class ImagePanel extends JPanel
@@ -26,19 +30,38 @@ public class ImagePanel extends JPanel
     private SegmentationInfo segInfo;
     
     private boolean cursorVisible = false;
+    private volatile boolean isScaling = false;
     private Point cursorPosition = new Point();
+    private Dimension preferredSize = new Dimension();
+    
+    private volatile DimensionF scaleFactors = new DimensionF(1.0f, 1.0f);
+    private volatile BufferedImage scaledImageCache = null;
+    private Rectangle pixelsUnderCursorRect = new Rectangle();
     
     public ImagePanel(int width, int height)
     {
         image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         segInfo = new SegmentationInfo();
+        preferredSize.width = width;
+        preferredSize.height = height;
+        syncPreferredSize();
     }
     
     @Override
     protected void paintComponent(Graphics g)
     {
         super.paintComponent(g);
-        g.drawImage(image, 0, 0, null);
+        if (isScaling)
+        {
+            if (scaledImageCache != null)
+            {
+                g.drawImage(scaledImageCache, 0, 0, null);
+            }
+        }
+        else
+        {
+            g.drawImage(image, 0, 0, null);
+        }
     }
     
     private void loadScreenPixels(int[] pixels)
@@ -81,6 +104,44 @@ public class ImagePanel extends JPanel
         
         repaint(startX, startY, tmp[0], tmp[1]);
     }
+    
+    @Override
+    public void repaint(final int x, final int y, final int w, final int h)
+    {
+        if (isScaling)
+        {
+            if (scaledImageCache == null || scaledImageCache.getWidth() != preferredSize.width || scaledImageCache.getHeight() != preferredSize.height)
+            {
+                // pull the entire image out and place into scaledImageCache
+                scaledImageCache = new BufferedImage(preferredSize.width, preferredSize.height, image.getType());
+                Graphics2D g2d = scaledImageCache.createGraphics();
+                g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                g2d.drawImage(image, 0, 0, scaledImageCache.getWidth(), scaledImageCache.getHeight(), 0, 0, image.getWidth(), image.getHeight(), null);
+                g2d.dispose();
+                repaint();
+            }
+            else
+            {
+                final float _xScaled = ((float)scaleFactors.width*((float)x));
+                final float _yScaled = ((float)scaleFactors.height*((float)y));
+                final int xScaled = (int) Math.floor((double)_xScaled);
+                final int yScaled = (int) Math.floor((double)_yScaled);
+                final int wScaled = (int) Math.ceil((double)(((float)(scaleFactors.width*((float)(x+w))))-_xScaled));
+                final int hScaled = (int) Math.ceil((double)(((float)(scaleFactors.height*((float)(y+h))))-_yScaled));
+                
+                // pull the region out and place into scaledImageCache
+                Graphics2D g2d = scaledImageCache.createGraphics();
+                g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                g2d.drawImage(image, xScaled, yScaled, xScaled+wScaled, yScaled+hScaled, x, y, x+w, y+h, null);
+                g2d.dispose();
+                super.repaint(xScaled, yScaled, wScaled, hScaled);
+            }
+        }
+        else
+        {
+            super.repaint(x, y, w, h);
+        }
+    }
 
     public void setSegmentSize(int segmentWidth, int segmentHeight)
     {
@@ -100,8 +161,6 @@ public class ImagePanel extends JPanel
             repaint(pixelsUnderCursorRect.x, pixelsUnderCursorRect.y, pixelsUnderCursorRect.width, pixelsUnderCursorRect.height);
         }
     }
-    
-    private Rectangle pixelsUnderCursorRect = new Rectangle();
     
     private void storePixelsUnderCursor(int x, int y)
     {
@@ -184,6 +243,39 @@ public class ImagePanel extends JPanel
         
         hideCursor();
         drawCursor(x, y);
+    }
+    
+    public void setScaleFactors(float wScale, float hScale)
+    {
+        if (scaleFactors.width != wScale || scaleFactors.height != hScale)
+        {
+            isScaling = (wScale != 1.0f || hScale != 1.0f);
+            scaleFactors.width = wScale;
+            scaleFactors.height = hScale;
+            float fScaledWidth = scaleFactors.width * ((float)image.getWidth());
+            float fScaledHeight = scaleFactors.height * ((float)image.getHeight());
+            // TODO: possibly pass in the expected image dimensions so there is
+            // no need to round
+            preferredSize.width = (int) Math.round(fScaledWidth);
+            preferredSize.height = (int) Math.round(fScaledHeight);
+            if (!isScaling || (scaledImageCache != null && (scaledImageCache.getWidth() != preferredSize.width || scaledImageCache.getHeight() != preferredSize.height)))
+            {
+                scaledImageCache = null;
+            }
+            syncPreferredSize();
+            repaint();
+        }
+    }
+    
+    private void syncPreferredSize()
+    {
+        setPreferredSize(preferredSize);
+    }
+    
+    public void getImageSize(Point p)
+    {
+        p.x = image.getWidth();
+        p.y = image.getHeight();
     }
     
 }

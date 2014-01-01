@@ -28,6 +28,13 @@ public class StateMachine implements Runnable
 	private volatile ObjectOutputStream out;
 	private volatile Exception whyFailed = null;
 	
+	private Semaphore setWhyFailedLock = new Semaphore(1, true);
+	
+	private Semaphore inputHandlingSema = new Semaphore(1, true);
+	
+	private Semaphore sendSema = new Semaphore(1, true);
+    private TaskDispatcher<Integer> dispatcher = new TaskDispatcher<Integer>("Client output dispatcher");
+	
 	public StateMachine(String serverAddress, int serverPort) throws UnknownHostException, IOException
 	{
 		this.serverAddress = serverAddress;
@@ -37,7 +44,6 @@ public class StateMachine implements Runnable
 		frame.setVisible(true);
 	}
 	
-	Semaphore setWhyFailedLock = new Semaphore(1, true);
 	private void setWhyFailed(Exception exception)
 	{
 	    if (whyFailed == null)
@@ -62,8 +68,27 @@ public class StateMachine implements Runnable
 	        }
 	    }
 	}
-
-	public void run()
+	
+	public void handleUserAction(Runnable r)
+    {
+        try
+        {
+            inputHandlingSema.acquire();
+        }
+        catch (InterruptedException e)
+        {
+            LLog.e(e);
+        }
+        try
+        {
+            r.run();
+        }
+        finally {
+            inputHandlingSema.release();
+        }
+    }
+    
+    public void run()
 	{
 		boolean tryConnect, wasConnected;
 		do
@@ -86,7 +111,21 @@ public class StateMachine implements Runnable
 				Object obj;
 				while ((obj = in.readObject()) != null)
 				{
-					handleServerEvent(obj);
+				    try
+				    {
+				        inputHandlingSema.acquire();
+				    }
+                    catch (InterruptedException e)
+                    {
+                        LLog.e(e);
+                    }
+				    try
+				    {
+				        handleServerEvent(obj);
+				    }
+				    finally {
+				        inputHandlingSema.release();
+				    }
 				}
 			}
 			catch (UnknownHostException e)
@@ -150,9 +189,6 @@ public class StateMachine implements Runnable
 	    Handler.getInstance().handle(this, event, args);
 	}
 	
-	private Semaphore sendSema = new Semaphore(1, true);
-	private TaskDispatcher<Integer> dispatcher = new TaskDispatcher<Integer>("Client output dispatcher");
-
 	public void sendEvent(final CLIENT_EVENT event, final Object... args)
 	{
 	    Runnable r = new Runnable() {

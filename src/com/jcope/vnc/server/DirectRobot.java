@@ -201,7 +201,7 @@ public final class DirectRobot
 
 	public static GraphicsDevice getMouseInfo(Point point)
 	{
-	    GraphicsDevice rval;
+	    GraphicsDevice rval = null;
 	    
 	    if (!hasMouseInfoPeer)
 		{
@@ -281,6 +281,43 @@ public final class DirectRobot
 getScreenDevices();
             
             rval = devices[device];
+		}
+		
+		if (rval != null)
+		{
+		    // found an instance where garbage ridiculously large values were
+		    // returned when coming back from lock screen on windows7
+            Rectangle bounds = rval.getDefaultConfiguration().getBounds();
+            if (DEBUG && (bounds.x != 0 || bounds.y != 0))
+            {
+                System.out.println(String.format("AHA! Found an instance where the point may have not been adjusted to the bounds: (%d,%d)", bounds.x, bounds.y));
+            }
+            int width = bounds.width - bounds.x;
+            int height = bounds.height - bounds.y;
+            
+            {
+                // TODO: not sure if this block makes sense yet
+                point.x -= bounds.x;
+                point.y -= bounds.y;
+            }
+            
+            if (point.x < 0)
+            {
+                point.x = 0;
+            }
+            else if (point.x > width)
+            {
+                point.x = width;
+            }
+            
+            if (point.y < 0)
+            {
+                point.y = 0;
+            }
+            else if (point.y > height)
+            {
+                point.y = height;
+            }
 		}
 		
 		return rval;
