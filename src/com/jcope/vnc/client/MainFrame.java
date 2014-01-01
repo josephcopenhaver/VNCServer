@@ -196,10 +196,25 @@ public class MainFrame extends JFrame
                         @Override
                         public void run()
                         {
+                            int lSpace,tSpace;
+                            
                             scaleFactors.width = 1.0f;
                             scaleFactors.height = 1.0f;
-                            imagePanel.setPaintOffset(0, 0);
-                            imagePanel.setScaleFactors(scaleFactors);
+                            
+                            imagePanel.getImageSize(imagePanelSize);
+                            
+                            lSpace = (contentPaneSize.width - imagePanelSize.width)/2;
+                            tSpace = (contentPaneSize.height - imagePanelSize.height)/2;
+                            if (lSpace < 0)
+                            {
+                                lSpace = 0;
+                            }
+                            if (tSpace < 0)
+                            {
+                                tSpace = 0;
+                            }
+                            
+                            imagePanel.setScaleFactors(lSpace, tSpace, scaleFactors);
                         }
                         
                 });
@@ -230,10 +245,25 @@ public class MainFrame extends JFrame
                         public void run()
                         {
                             // TODO: use full screen values
+                            int lSpace,tSpace;
+                            
                             scaleFactors.width = 1.0f;
                             scaleFactors.height = 1.0f;
-                            imagePanel.setPaintOffset(0, 0);
-                            imagePanel.setScaleFactors(scaleFactors);
+                            
+                            imagePanel.getImageSize(imagePanelSize);
+                            
+                            lSpace = (contentPaneSize.width - imagePanelSize.width)/2;
+                            tSpace = (contentPaneSize.height - imagePanelSize.height)/2;
+                            if (lSpace < 0)
+                            {
+                                lSpace = 0;
+                            }
+                            if (tSpace < 0)
+                            {
+                                tSpace = 0;
+                            }
+                            
+                            imagePanel.setScaleFactors(lSpace, tSpace, scaleFactors);
                         }
                         
                     });
@@ -266,8 +296,7 @@ public class MainFrame extends JFrame
                             imagePanel.getImageSize(imagePanelSize);
                             scaleFactors.width = ((float)((float)contentPaneSize.width)/((float)imagePanelSize.width));
                             scaleFactors.height = ((float)((float)contentPaneSize.height)/((float)imagePanelSize.height));
-                            imagePanel.setPaintOffset(0, 0);
-                            imagePanel.setScaleFactors(scaleFactors);
+                            imagePanel.setScaleFactors(0, 0, scaleFactors);
                         }
                         
                     });
@@ -298,13 +327,15 @@ public class MainFrame extends JFrame
                         @Override
                         public void run()
                         {
+                            int lSpace,tSpace;
+                            
                             imagePanel.getImageSize(imagePanelSize);
                             factorsThatStretchToFit(imagePanelSize.width, imagePanelSize.height, contentPaneSize.width, contentPaneSize.height, scaleFactors);
-                            int lSpace,tSpace;
+                            
                             lSpace = (int) Math.floor((((float)contentPaneSize.width) - ((float)imagePanelSize.width)*scaleFactors.width)/2.0f);
                             tSpace = (int) Math.floor((((float)contentPaneSize.height) - ((float)imagePanelSize.height)*scaleFactors.height)/2.0f);
-                            imagePanel.setPaintOffset(lSpace, tSpace);
-                            imagePanel.setScaleFactors(scaleFactors);
+                            
+                            imagePanel.setScaleFactors(lSpace, tSpace, scaleFactors);
                         }
                         
                     });
@@ -339,13 +370,15 @@ public class MainFrame extends JFrame
                         @Override
                         public void run()
                         {
+                            int lSpace,tSpace;
+                            
                             imagePanel.getImageSize(imagePanelSize);
                             factorsThatShrinkToFitWithin(imagePanelSize.width, imagePanelSize.height, contentPaneSize.width, contentPaneSize.height, scaleFactors);
-                            int lSpace,tSpace;
+                            
                             lSpace = (int) Math.floor((((float)contentPaneSize.width) - ((float)imagePanelSize.width)*scaleFactors.width)/2.0f);
                             tSpace = (int) Math.floor((((float)contentPaneSize.height) - ((float)imagePanelSize.height)*scaleFactors.height)/2.0f);
-                            imagePanel.setPaintOffset(lSpace, tSpace);
-                            imagePanel.setScaleFactors(scaleFactors);
+                            
+                            imagePanel.setScaleFactors(lSpace, tSpace, scaleFactors);
                         }
                         
                     });
@@ -369,7 +402,6 @@ public class MainFrame extends JFrame
 	public void validate()
 	{
 	    int lastWidth, lastHeight;
-        boolean synchronizeView = false;
 	    
         super.validate();
 	    
@@ -387,22 +419,7 @@ public class MainFrame extends JFrame
             contentPaneSize.height = 1;
         }
         
-	    switch (viewMode)
-	    {
-	        case NORMAL_SCROLLING:
-	            synchronizeView = false;
-	            break;
-	            
-	        case FIT:
-            case STRETCHED_FIT:
-            case FULL_SCREEN:
-            case STRETCH:
-                synchronizeView = true;
-                break;
-                
-	    }
-	    
-	    if (synchronizeView && (lastWidth != contentPaneSize.width || lastHeight != contentPaneSize.height))
+	    if (lastWidth != contentPaneSize.width || lastHeight != contentPaneSize.height)
 	    {
 	        ActionListener action = viewModeActions.get(viewMode);
 	        if (action != null)
@@ -443,8 +460,16 @@ public class MainFrame extends JFrame
             @Override
             public void run()
             {
-                scrollPane.invalidate();
-                scrollPane.repaint();
+                ActionListener action = viewModeActions.get(viewMode);
+                if (action != null)
+                {
+                    action.actionPerformed(null);
+                }
+                else
+                {
+                    scrollPane.invalidate();
+                    scrollPane.repaint();
+                }
             }
             
         });

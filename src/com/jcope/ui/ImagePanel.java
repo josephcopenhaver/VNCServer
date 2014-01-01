@@ -33,8 +33,9 @@ public class ImagePanel extends JPanel
     private volatile boolean isScaling = false;
     private Point cursorPosition = new Point();
     private Dimension preferredSize = new Dimension();
+    private Dimension preferredSizeWithOffsets = new Dimension();
     
-    private volatile DimensionF scaleFactors = new DimensionF(1.0f, 1.0f);
+    private DimensionF scaleFactors = new DimensionF(1.0f, 1.0f);
     private volatile BufferedImage scaledImageCache = null;
     private Rectangle pixelsUnderCursorRect = new Rectangle();
     private volatile int offX=0;
@@ -248,13 +249,20 @@ public class ImagePanel extends JPanel
         drawCursor(x, y);
     }
     
-    public void setScaleFactors(DimensionF scaleFactors)
+    public void setScaleFactors(int offX, int offY, DimensionF scaleFactors)
     {
-        setScaleFactors(scaleFactors.width, scaleFactors.height);
+        setScaleFactors(offX, offY, scaleFactors.width, scaleFactors.height);
     }
     
-    private void setScaleFactors(float wScale, float hScale)
+    private void setScaleFactors(int offX, int offY, float wScale, float hScale)
     {
+        boolean doSync = false;
+        
+        if (setPaintOffset(offX, offY))
+        {
+            doSync = true;
+        }
+        
         if (scaleFactors.width != wScale || scaleFactors.height != hScale)
         {
             isScaling = (wScale != 1.0f || hScale != 1.0f);
@@ -270,6 +278,11 @@ public class ImagePanel extends JPanel
             {
                 scaledImageCache = null;
             }
+            doSync = true;
+        }
+        
+        if (doSync)
+        {
             syncPreferredSize();
             repaint();
         }
@@ -277,13 +290,9 @@ public class ImagePanel extends JPanel
     
     private void syncPreferredSize()
     {
-        if (offX == 0 && offY == 0)
-        {
-            setPreferredSize(preferredSize);
-            return;
-        }
-        Dimension sizeWithBorders = new Dimension(preferredSize.width + offX, preferredSize.height + offY);
-        setPreferredSize(sizeWithBorders);
+        preferredSizeWithOffsets.width = preferredSize.width + offX;
+        preferredSizeWithOffsets.height = preferredSize.height + offY;
+        setPreferredSize(preferredSizeWithOffsets);
     }
     
     public void getImageSize(Dimension d)
@@ -292,10 +301,18 @@ public class ImagePanel extends JPanel
         d.height = image.getHeight();
     }
     
-    public void setPaintOffset(int offX, int offY)
+    private boolean setPaintOffset(int offX, int offY)
     {
-        this.offX = offX;
-        this.offY = offY;
+        boolean rval = false;
+        
+        if (this.offX != offX || this.offY != offY)
+        {
+            this.offX = offX;
+            this.offY = offY;
+            rval = true;
+        }
+        
+        return rval;
     }
     
 }
