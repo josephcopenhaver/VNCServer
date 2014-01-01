@@ -1,7 +1,10 @@
 package com.jcope.vnc.client;
 
+import static com.jcope.debug.Debug.DEBUG;
+import static com.jcope.util.Scale.factorsThatShrinkToFitWithin;
+import static com.jcope.util.Scale.factorsThatStretchToFit;
+
 import java.awt.Dimension;
-import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
@@ -17,9 +20,8 @@ import javax.swing.JScrollPane;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 
-import static com.jcope.debug.Debug.DEBUG;
-
 import com.jcope.ui.ImagePanel;
+import com.jcope.util.DimensionF;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
 
 enum VIEW_MODE
@@ -30,8 +32,6 @@ enum VIEW_MODE
     STRETCHED_FIT,
     STRETCH
 };
-
-// TODO: center the image in the frame, keep scroll bars on inner side of frame
 
 public class MainFrame extends JFrame
 {
@@ -47,6 +47,9 @@ public class MainFrame extends JFrame
 	
 	private Dimension contentPaneSize = new Dimension();
 	private HashMap<VIEW_MODE,ActionListener> viewModeActions = new HashMap<VIEW_MODE,ActionListener>(VIEW_MODE.values().length);
+	
+	private Dimension imagePanelSize = new Dimension();
+	private DimensionF scaleFactors = new DimensionF(1.0f, 1.0f);
 
 	public MainFrame(final StateMachine stateMachine)
 	{
@@ -105,9 +108,9 @@ public class MainFrame extends JFrame
         viewMenu.add(fullScreen);
         JMenuItem stretchScreen = new JMenuItem("Stretch");
         viewMenu.add(stretchScreen);
-        JMenuItem stretchedFitScreen = new JMenuItem("Stretched Fit");
+        JMenuItem stretchedFitScreen = new JMenuItem("Stretch to fit");
         viewMenu.add(stretchedFitScreen);
-        JMenuItem fitScreen = new JMenuItem("Fit");
+        JMenuItem fitScreen = new JMenuItem("Shrink to fit");
         viewMenu.add(fitScreen);
 		
 		
@@ -193,7 +196,10 @@ public class MainFrame extends JFrame
                         @Override
                         public void run()
                         {
-                            imagePanel.setScaleFactors(1.0f, 1.0f);
+                            scaleFactors.width = 1.0f;
+                            scaleFactors.height = 1.0f;
+                            imagePanel.setPaintOffset(0, 0);
+                            imagePanel.setScaleFactors(scaleFactors);
                         }
                         
                 });
@@ -213,8 +219,7 @@ public class MainFrame extends JFrame
                     return;
                 }
                 viewMode = VIEW_MODE.FULL_SCREEN;
-                // TODO: 
-                // Maximize and stretch
+                // TODO: Make window full screen
                 disableScrolling();
                 if (imagePanel != null)
                 {
@@ -224,7 +229,11 @@ public class MainFrame extends JFrame
                         @Override
                         public void run()
                         {
-                            imagePanel.setScaleFactors(1.0f, 1.0f); // TODO: use full screen values
+                            // TODO: use full screen values
+                            scaleFactors.width = 1.0f;
+                            scaleFactors.height = 1.0f;
+                            imagePanel.setPaintOffset(0, 0);
+                            imagePanel.setScaleFactors(scaleFactors);
                         }
                         
                     });
@@ -254,12 +263,11 @@ public class MainFrame extends JFrame
                         @Override
                         public void run()
                         {
-                            float xScale, yScale;
-                            Point p = new Point();
-                            imagePanel.getImageSize(p);
-                            xScale = ((float)((float)contentPaneSize.width)/((float)p.x));
-                            yScale = ((float)((float)contentPaneSize.height)/((float)p.y));
-                            imagePanel.setScaleFactors(xScale, yScale);
+                            imagePanel.getImageSize(imagePanelSize);
+                            scaleFactors.width = ((float)((float)contentPaneSize.width)/((float)imagePanelSize.width));
+                            scaleFactors.height = ((float)((float)contentPaneSize.height)/((float)imagePanelSize.height));
+                            imagePanel.setPaintOffset(0, 0);
+                            imagePanel.setScaleFactors(scaleFactors);
                         }
                         
                     });
@@ -290,7 +298,13 @@ public class MainFrame extends JFrame
                         @Override
                         public void run()
                         {
-                            imagePanel.setScaleFactors(1.0f, 1.0f); // TODO: scale using aspect ratio cap
+                            imagePanel.getImageSize(imagePanelSize);
+                            factorsThatStretchToFit(imagePanelSize.width, imagePanelSize.height, contentPaneSize.width, contentPaneSize.height, scaleFactors);
+                            int lSpace,tSpace;
+                            lSpace = (int) Math.floor((((float)contentPaneSize.width) - ((float)imagePanelSize.width)*scaleFactors.width)/2.0f);
+                            tSpace = (int) Math.floor((((float)contentPaneSize.height) - ((float)imagePanelSize.height)*scaleFactors.height)/2.0f);
+                            imagePanel.setPaintOffset(lSpace, tSpace);
+                            imagePanel.setScaleFactors(scaleFactors);
                         }
                         
                     });
@@ -314,6 +328,8 @@ public class MainFrame extends JFrame
                 // Not guaranteed to fill any axis
                 // Only guaranteed to scale down if required to make entire
                 // screen visible in current viewport
+                
+                // To actually see this work, view a small screen on a larger screen
                 disableScrolling();
                 if (imagePanel != null)
                 {
@@ -323,7 +339,13 @@ public class MainFrame extends JFrame
                         @Override
                         public void run()
                         {
-                            imagePanel.setScaleFactors(1.0f, 1.0f); // TODO: scale down preserving aspect ratio if required
+                            imagePanel.getImageSize(imagePanelSize);
+                            factorsThatShrinkToFitWithin(imagePanelSize.width, imagePanelSize.height, contentPaneSize.width, contentPaneSize.height, scaleFactors);
+                            int lSpace,tSpace;
+                            lSpace = (int) Math.floor((((float)contentPaneSize.width) - ((float)imagePanelSize.width)*scaleFactors.width)/2.0f);
+                            tSpace = (int) Math.floor((((float)contentPaneSize.height) - ((float)imagePanelSize.height)*scaleFactors.height)/2.0f);
+                            imagePanel.setPaintOffset(lSpace, tSpace);
+                            imagePanel.setScaleFactors(scaleFactors);
                         }
                         
                     });
@@ -354,7 +376,17 @@ public class MainFrame extends JFrame
 	    lastWidth = contentPaneSize.width;
         lastHeight = contentPaneSize.height;
         getContentPane().getSize(contentPaneSize);
-	    
+        
+        // Was able to get height to be negative...
+        if (contentPaneSize.width <= 0)
+        {
+            contentPaneSize.width = 1;
+        }
+        if (contentPaneSize.height <= 0)
+        {
+            contentPaneSize.height = 1;
+        }
+        
 	    switch (viewMode)
 	    {
 	        case NORMAL_SCROLLING:

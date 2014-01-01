@@ -37,9 +37,12 @@ public class ImagePanel extends JPanel
     private volatile DimensionF scaleFactors = new DimensionF(1.0f, 1.0f);
     private volatile BufferedImage scaledImageCache = null;
     private Rectangle pixelsUnderCursorRect = new Rectangle();
+    private volatile int offX=0;
+    private volatile int offY=0;
     
     public ImagePanel(int width, int height)
     {
+        setBackground(Color.BLACK);
         image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         segInfo = new SegmentationInfo();
         preferredSize.width = width;
@@ -55,12 +58,12 @@ public class ImagePanel extends JPanel
         {
             if (scaledImageCache != null)
             {
-                g.drawImage(scaledImageCache, 0, 0, null);
+                g.drawImage(scaledImageCache, offX, offY, null);
             }
         }
         else
         {
-            g.drawImage(image, 0, 0, null);
+            g.drawImage(image, offX, offY, null);
         }
     }
     
@@ -134,12 +137,12 @@ public class ImagePanel extends JPanel
                 g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
                 g2d.drawImage(image, xScaled, yScaled, xScaled+wScaled, yScaled+hScaled, x, y, x+w, y+h, null);
                 g2d.dispose();
-                super.repaint(xScaled, yScaled, wScaled, hScaled);
+                super.repaint(offX + xScaled, offY + yScaled, wScaled, hScaled);
             }
         }
         else
         {
-            super.repaint(x, y, w, h);
+            super.repaint(offX + x, offY + y, w, h);
         }
     }
 
@@ -245,7 +248,12 @@ public class ImagePanel extends JPanel
         drawCursor(x, y);
     }
     
-    public void setScaleFactors(float wScale, float hScale)
+    public void setScaleFactors(DimensionF scaleFactors)
+    {
+        setScaleFactors(scaleFactors.width, scaleFactors.height);
+    }
+    
+    private void setScaleFactors(float wScale, float hScale)
     {
         if (scaleFactors.width != wScale || scaleFactors.height != hScale)
         {
@@ -269,13 +277,25 @@ public class ImagePanel extends JPanel
     
     private void syncPreferredSize()
     {
-        setPreferredSize(preferredSize);
+        if (offX == 0 && offY == 0)
+        {
+            setPreferredSize(preferredSize);
+            return;
+        }
+        Dimension sizeWithBorders = new Dimension(preferredSize.width + offX, preferredSize.height + offY);
+        setPreferredSize(sizeWithBorders);
     }
     
-    public void getImageSize(Point p)
+    public void getImageSize(Dimension d)
     {
-        p.x = image.getWidth();
-        p.y = image.getHeight();
+        d.width = image.getWidth();
+        d.height = image.getHeight();
+    }
+    
+    public void setPaintOffset(int offX, int offY)
+    {
+        this.offX = offX;
+        this.offY = offY;
     }
     
 }
