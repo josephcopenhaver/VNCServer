@@ -287,36 +287,27 @@ getScreenDevices();
 		{
 		    // found an instance where garbage ridiculously large values were
 		    // returned when coming back from lock screen on windows7
-            Rectangle bounds = rval.getDefaultConfiguration().getBounds();
-            if (DEBUG && (bounds.x != 0 || bounds.y != 0))
-            {
-                System.out.println(String.format("AHA! Found an instance where the point may have not been adjusted to the bounds: (%d,%d)", bounds.x, bounds.y));
-            }
-            int width = bounds.width - bounds.x;
-            int height = bounds.height - bounds.y;
+            Rectangle bounds = getDeviceBounds(rval);
             
-            {
-                // TODO: not sure if this block makes sense yet
-                point.x -= bounds.x;
-                point.y -= bounds.y;
-            }
+            point.x -= bounds.x;
+            point.y -= bounds.y;
             
             if (point.x < 0)
             {
                 point.x = 0;
             }
-            else if (point.x > width)
+            else if (point.x > bounds.width)
             {
-                point.x = width;
+                point.x = bounds.width;
             }
             
             if (point.y < 0)
             {
                 point.y = 0;
             }
-            else if (point.y > height)
+            else if (point.y > bounds.height)
             {
-                point.y = height;
+                point.y = bounds.height;
             }
 		}
 		
@@ -340,7 +331,17 @@ getScreenDevices();
 	
 	public Rectangle getScreenBounds()
 	{
-		return device.getDefaultConfiguration().getBounds();
+	    return getDeviceBounds(device);
+	}
+	
+	private static Rectangle getDeviceBounds(GraphicsDevice device)
+	{
+	    Rectangle rval = device.getDefaultConfiguration().getBounds();
+	    
+	    // x and y describe relative origin
+        // width and height are true width and height of the graphics device
+	    
+	    return rval;
 	}
 
 	public void mouseMove(int x, int y)

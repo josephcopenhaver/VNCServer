@@ -38,6 +38,11 @@ public class StateMachine
 	}
 	
 	// TODO: make thread safe!
+    public static void handleServerEvent(ClientHandler client, SERVER_EVENT event)
+    {
+        client.sendEvent(event);
+    }
+    
 	public static void handleServerEvent(ClientHandler client, SERVER_EVENT event, Object... args)
 	{
 		client.sendEvent(event, args);

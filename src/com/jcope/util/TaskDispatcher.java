@@ -507,7 +507,7 @@ public class TaskDispatcher<T> extends Thread
 					        curTask = queue.remove();
 					    }
 					}
-					isNullTask = (curTask == null);
+					isNullTask = (curTask == null || curTask == dummyTask);
 				}
 				finally {
 				    if (needsRelease)

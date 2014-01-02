@@ -263,6 +263,11 @@ public class ClientHandler extends Thread
 	private Semaphore sendSema = new Semaphore(1, true);
 	private Semaphore serialSema = new Semaphore(1, true);
     volatile int tid = -1;
+    
+    public void sendEvent(SERVER_EVENT event)
+    {
+        sendEvent(event, (Object[]) null);
+    }
 
 	public void sendEvent(final SERVER_EVENT event, final Object... args)
 	{

@@ -20,6 +20,8 @@ del server.lock>NUL 2>&1
 del server.pid>NUL 2>&1
 echo.
 echo Service terminated.
+rem wait 2 seconds (3 pings)
+if "%OPT_RESTART%"=="y" ping 127.0.0.1 -n 3 > nul
 if "%OPT_RESTART%"=="y" goto start
 goto end
 

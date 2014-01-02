@@ -189,6 +189,11 @@ public class StateMachine implements Runnable
 	    Handler.getInstance().handle(this, event, args);
 	}
 	
+	public void sendEvent(CLIENT_EVENT event)
+	{
+	    sendEvent(event, (Object[]) null);
+	}
+	
 	public void sendEvent(final CLIENT_EVENT event, final Object... args)
 	{
 	    Runnable r = new Runnable() {
