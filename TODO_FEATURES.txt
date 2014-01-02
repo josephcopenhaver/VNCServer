@@ -1,9 +1,9 @@
 *DONE* 1. Load entire image into client viewspace
 *DONE* 2. Load segments into client viewspace
 3. Enable aspect ratio locking option on client
-4. Track the pointer and communicate its movements to the client
-5. Draw the pointer position on the client
-6. invalidate previously overlapped segments when pointer moves
+*DONE* 4. Track the pointer and communicate its movements to the client
+*DONE* 5. Draw the pointer position on the client
+*DONE* 6. invalidate previously overlapped segments when pointer moves
 *DONE* 7. Implement alias registration and cleanup actions when a client disconnects
 8. Implement text chat for users with a registered alias
 9. Implement password config and entry on connect as well as connection type handling
