@@ -5,21 +5,29 @@ import static com.jcope.util.Scale.factorsThatShrinkToFitWithin;
 import static com.jcope.util.Scale.factorsThatStretchToFit;
 
 import java.awt.Dimension;
+import java.awt.DisplayMode;
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
+import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.util.HashMap;
+import java.util.concurrent.Semaphore;
 
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
+import javax.swing.JRootPane;
 import javax.swing.JScrollPane;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 
+import com.jcope.debug.LLog;
 import com.jcope.ui.ImagePanel;
 import com.jcope.util.DimensionF;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
@@ -50,6 +58,14 @@ public class MainFrame extends JFrame
 	
 	private Dimension imagePanelSize = new Dimension();
 	private DimensionF scaleFactors = new DimensionF(1.0f, 1.0f);
+	
+	private Point locationBeforeFullScreen = new Point();
+    private Dimension sizeBeforeFullScreen = new Dimension();
+    private volatile boolean isChangingFullScreenStatus = false;
+	private Semaphore isChangingFullScreenLock = new Semaphore(1, true);
+	private boolean isFullScreen = false;
+	private DisplayMode displayMode = null;
+	private GraphicsDevice currentFullScreenDevice = null;
 
 	public MainFrame(final StateMachine stateMachine)
 	{
@@ -141,7 +157,7 @@ public class MainFrame extends JFrame
             {
                 alias = null;
                 stateMachine.sendEvent(CLIENT_EVENT.REQUEST_ALIAS, "");
-                // TODO: 
+                // TODO: disable chat input pane
             }
         }));
 		
@@ -151,7 +167,7 @@ public class MainFrame extends JFrame
             @Override
             public void actionPerformed(ActionEvent ae)
             {
-                // TODO: 
+                // TODO: enable chat input pane
                 String result = JOptionPane.showInputDialog(fthis, "What would you like your alias to be?", alias);
                 if (result != null)
                 {
@@ -169,9 +185,11 @@ public class MainFrame extends JFrame
         });
 		
 		
+		
 		// View Menu
 		final ActionListener defaultView;
 		ActionListener tmpActionListener = null;
+		
 		
 		
 		// TODO: define accelerator
@@ -180,11 +198,11 @@ public class MainFrame extends JFrame
             @Override
             public void actionPerformed(ActionEvent ae)
             {
-                if (viewMode == VIEW_MODE.NORMAL_SCROLLING)
+                if (!setViewMode(VIEW_MODE.NORMAL_SCROLLING))
                 {
                     return;
                 }
-                viewMode = VIEW_MODE.NORMAL_SCROLLING;
+                
                 // No stretching/scale factors
                 // enable scrolling as needed
                 enableScrolling();
@@ -229,43 +247,48 @@ public class MainFrame extends JFrame
             @Override
             public void actionPerformed(ActionEvent ae)
             {
-                if (viewMode == VIEW_MODE.FULL_SCREEN)
+                if (!setViewMode(VIEW_MODE.FULL_SCREEN))
                 {
                     return;
                 }
-                viewMode = VIEW_MODE.FULL_SCREEN;
-                // TODO: Make window full screen
-                disableScrolling();
+                
+                setFullScreen(true);
                 if (imagePanel != null)
                 {
-                    stateMachine.handleUserAction(new Runnable()
-                    {
-    
+                    SwingUtilities.invokeLater(new Runnable() {
+                        
                         @Override
                         public void run()
                         {
-                            // TODO: use full screen values
-                            int lSpace,tSpace;
-                            
-                            scaleFactors.width = 1.0f;
-                            scaleFactors.height = 1.0f;
-                            
-                            imagePanel.getImageSize(imagePanelSize);
-                            
-                            lSpace = (contentPaneSize.width - imagePanelSize.width)/2;
-                            tSpace = (contentPaneSize.height - imagePanelSize.height)/2;
-                            if (lSpace < 0)
+                            stateMachine.handleUserAction(new Runnable()
                             {
-                                lSpace = 0;
-                            }
-                            if (tSpace < 0)
-                            {
-                                tSpace = 0;
-                            }
-                            
-                            imagePanel.setScaleFactors(lSpace, tSpace, scaleFactors);
+            
+                                @Override
+                                public void run()
+                                {
+                                    int lSpace,tSpace;
+                                    
+                                    scaleFactors.width = 1.0f;
+                                    scaleFactors.height = 1.0f;
+                                    
+                                    imagePanel.getImageSize(imagePanelSize);
+                                    
+                                    lSpace = (contentPaneSize.width - imagePanelSize.width)/2;
+                                    tSpace = (contentPaneSize.height - imagePanelSize.height)/2;
+                                    if (lSpace < 0)
+                                    {
+                                        lSpace = 0;
+                                    }
+                                    if (tSpace < 0)
+                                    {
+                                        tSpace = 0;
+                                    }
+                                    
+                                    imagePanel.setScaleFactors(lSpace, tSpace, scaleFactors);
+                                }
+                                
+                            });
                         }
-                        
                     });
                 }
             }
@@ -278,13 +301,12 @@ public class MainFrame extends JFrame
             @Override
             public void actionPerformed(ActionEvent ae)
             {
-                if (viewMode == VIEW_MODE.STRETCH)
+                if (!setViewMode(VIEW_MODE.STRETCH))
                 {
                     return;
                 }
-                viewMode = VIEW_MODE.STRETCH;
+                
                 // stretch image to fill width and height
-                disableScrolling();
                 if (imagePanel != null)
                 {
                     stateMachine.handleUserAction(new Runnable()
@@ -311,14 +333,13 @@ public class MainFrame extends JFrame
             @Override
             public void actionPerformed(ActionEvent ae)
             {
-                if (viewMode == VIEW_MODE.STRETCHED_FIT)
+                if (!setViewMode(VIEW_MODE.STRETCHED_FIT))
                 {
                     return;
                 }
-                viewMode = VIEW_MODE.STRETCHED_FIT;
+                
                 // preserve aspect ratio scaling
                 // Only guaranteed to fill one axis, but maybe not both
-                disableScrolling();
                 if (imagePanel != null)
                 {
                     stateMachine.handleUserAction(new Runnable()
@@ -350,18 +371,17 @@ public class MainFrame extends JFrame
             @Override
             public void actionPerformed(ActionEvent ae)
             {
-                if (viewMode == VIEW_MODE.FIT)
+                if (!setViewMode(VIEW_MODE.FIT))
                 {
                     return;
                 }
-                viewMode = VIEW_MODE.FIT;
+                
                 // preserve aspect ratio scaling
                 // Not guaranteed to fill any axis
                 // Only guaranteed to scale down if required to make entire
                 // screen visible in current viewport
                 
                 // To actually see this work, view a small screen on a larger screen
-                disableScrolling();
                 if (imagePanel != null)
                 {
                     stateMachine.handleUserAction(new Runnable()
@@ -389,12 +409,186 @@ public class MainFrame extends JFrame
 		
         
         
-		// TODO: finish
-		
-        
-        
         // trigger default view
         defaultView.actionPerformed(null);
+	}
+	
+	private boolean setViewMode(VIEW_MODE newMode)
+	{
+	    boolean rval = false;
+	    
+	    if (newMode != viewMode)
+	    {
+    	    if (viewMode != null)
+    	    {
+    	        // actions to perform when leaving a mode
+    	        switch (viewMode)
+    	        {
+                    case FIT:
+                    case STRETCH:
+                    case STRETCHED_FIT:
+                        break;
+                    case FULL_SCREEN:
+                        setFullScreen(false);
+                        break;
+                    case NORMAL_SCROLLING:
+                        disableScrolling();
+                        break;
+    	        }
+    	    }
+    	    
+    	    rval = true;
+    	    viewMode = newMode;
+	    }
+	    
+	    return rval;
+	}
+	
+	private void setFullScreen(boolean enabled)
+	{
+	    if (isFullScreen == enabled)
+	    {
+	        if (enabled)
+	        {
+	            Rectangle r = currentFullScreenDevice.getDefaultConfiguration().getBounds();
+	            setLocation(r.x, r.y);
+	            setSize(r.width, r.height);
+	        }
+	        return;
+	    }
+	    try
+        {
+            isChangingFullScreenLock.acquire();
+        }
+        catch (InterruptedException e)
+        {
+            LLog.e(e);
+        }
+	    try
+	    {
+    	    if (isChangingFullScreenStatus)
+            {
+                return;
+            }
+    	    isChangingFullScreenStatus = true;
+	    }
+	    finally {
+	        isChangingFullScreenLock.release();
+	    }
+	    try
+	    {
+    	    isFullScreen = enabled;
+    	    
+    	    GraphicsDevice device;
+    	    boolean handled = false;
+    	    
+    	    if (enabled)
+    	    {
+    	        Integer selection;
+    	        GraphicsDevice[] devices = GraphicsEnvironment
+    	                .getLocalGraphicsEnvironment().getScreenDevices();
+    	        
+    	        if (devices.length < 1)
+    	        {
+    	            selection = 0;
+    	        }
+    	        else
+    	        {
+        	        Integer[] selections = new Integer[devices.length];
+        	        for (int i=0; i<selections.length; i++)
+        	        {
+        	            selections[i] = i;
+        	        }
+        	        selection = (Integer) JOptionPane.showInputDialog(this,
+        	                "Select display device to show full screen",
+        	                "Choose Display Device", JOptionPane.PLAIN_MESSAGE,
+        	                null, selections, null);
+        	        
+        	        if (selection == null)
+        	        {
+        	            selection = 0;
+        	        }
+    	        }
+    	        
+    	        device = devices[selection];
+    	    }
+    	    else
+    	    {
+    	        device = currentFullScreenDevice;
+    	    }
+    	    
+    	    if (device.isFullScreenSupported())
+    	    {
+    	        handled = true;
+    	        
+    	        if (enabled)
+    	        {
+    	            int width, height;
+    	            Rectangle bounds = device.getDefaultConfiguration().getBounds();
+    	            Dimension d = new Dimension();
+    	            
+    	            currentFullScreenDevice = device;
+    	            
+    	            imagePanel.getImageSize(d);
+    	            width = Math.min(d.width, bounds.width);
+    	            height = Math.min(d.height, bounds.height);
+    	            if (device.isDisplayChangeSupported())
+    	            {
+        	            displayMode = device.getDisplayMode();
+        	            DisplayMode newDisplayMode = new DisplayMode(width, height, 32, 60);
+        	            device.setDisplayMode(newDisplayMode);
+    	            }
+    	            setSize(width, height);
+    	            device.setFullScreenWindow(this);
+    	        }
+    	        else
+    	        {
+    	            if (displayMode != null)
+    	            {
+    	                device.setDisplayMode(displayMode);
+    	            }
+    	            device.setFullScreenWindow(null);
+    	            displayMode = null;
+    	        }
+    	    }
+    	    else
+    	    {
+    	        currentFullScreenDevice = null;
+    	    }
+    	    
+    	    if (enabled)
+            {
+                setVisible(false);
+                super.dispose();
+                setUndecorated(true);
+                if (!handled)
+                {
+                    setExtendedState(getExtendedState() | JFrame.MAXIMIZED_BOTH);
+                }
+                setVisible(true);
+            }
+            else
+            {
+                setVisible(false);
+                super.dispose();
+                setUndecorated(false);
+                if (!handled)
+                {
+                    getRootPane().setWindowDecorationStyle(JRootPane.FRAME);
+                    setExtendedState(getExtendedState() ^ JFrame.MAXIMIZED_BOTH);
+                }
+                setVisible(true);
+            }
+    	    
+    	    if (!enabled)
+    	    {
+    	        setLocation(locationBeforeFullScreen);
+    	        setSize(sizeBeforeFullScreen);
+    	    }
+	    }
+	    finally {
+	        isChangingFullScreenStatus = false;
+	    }
 	}
 	
 	
@@ -404,6 +598,13 @@ public class MainFrame extends JFrame
 	    int lastWidth, lastHeight;
 	    
         super.validate();
+        
+        if (viewMode != VIEW_MODE.FULL_SCREEN)
+        {
+            getLocation(locationBeforeFullScreen);
+            sizeBeforeFullScreen.width = getWidth();
+            sizeBeforeFullScreen.height = getHeight();
+        }
 	    
 	    lastWidth = contentPaneSize.width;
         lastHeight = contentPaneSize.height;
@@ -474,11 +675,11 @@ public class MainFrame extends JFrame
             
         });
     }
-	
-	@Override
+    
+    @Override
 	public void dispose()
 	{
-		super.dispose();
+	    super.dispose();
 		client.kill();
 	}
 

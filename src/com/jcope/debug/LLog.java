@@ -58,7 +58,8 @@ public class LLog
 	{
 	    if (event == SERVER_EVENT.SCREEN_SEGMENT_CHANGED
 	            || event == SERVER_EVENT.CURSOR_MOVE
-	            || (event == SERVER_EVENT.SCREEN_SEGMENT_UPDATE && ((Integer)args[0]) != -1))
+                || event == SERVER_EVENT.CURSOR_GONE
+                || (event == SERVER_EVENT.SCREEN_SEGMENT_UPDATE && ((Integer)args[0]) != -1))
 	    {
 	        return;
 	    }
