@@ -1,6 +1,6 @@
 *DONE* 1. Load entire image into client viewspace
 *DONE* 2. Load segments into client viewspace
-3. Enable aspect ratio locking option on client
+*DONE* 3. Enable aspect ratio locking option on client
 *DONE* 4. Track the pointer and communicate its movements to the client
 *DONE* 5. Draw the pointer position on the client
 *DONE* 6. invalidate previously overlapped segments when pointer moves
