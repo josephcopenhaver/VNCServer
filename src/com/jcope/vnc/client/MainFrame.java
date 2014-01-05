@@ -7,7 +7,6 @@ import static com.jcope.util.Scale.factorsThatStretchToFit;
 import java.awt.Dimension;
 import java.awt.DisplayMode;
 import java.awt.GraphicsDevice;
-import java.awt.GraphicsEnvironment;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
@@ -30,6 +29,7 @@ import javax.swing.SwingUtilities;
 import com.jcope.debug.LLog;
 import com.jcope.ui.ImagePanel;
 import com.jcope.util.DimensionF;
+import com.jcope.vnc.shared.ScreenSelector;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
 
 enum VIEW_MODE
@@ -484,33 +484,7 @@ public class MainFrame extends JFrame
     	    
     	    if (enabled)
     	    {
-    	        Integer selection;
-    	        GraphicsDevice[] devices = GraphicsEnvironment
-    	                .getLocalGraphicsEnvironment().getScreenDevices();
-    	        
-    	        if (devices.length < 1)
-    	        {
-    	            selection = 0;
-    	        }
-    	        else
-    	        {
-        	        Integer[] selections = new Integer[devices.length];
-        	        for (int i=0; i<selections.length; i++)
-        	        {
-        	            selections[i] = i;
-        	        }
-        	        selection = (Integer) JOptionPane.showInputDialog(this,
-        	                "Select display device to show full screen",
-        	                "Choose Display Device", JOptionPane.PLAIN_MESSAGE,
-        	                null, selections, null);
-        	        
-        	        if (selection == null)
-        	        {
-        	            selection = 0;
-        	        }
-    	        }
-    	        
-    	        device = devices[selection];
+    	        device = ScreenSelector.selectScreen(this, 0);
     	    }
     	    else
     	    {
