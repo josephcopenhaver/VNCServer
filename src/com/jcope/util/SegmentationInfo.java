@@ -8,6 +8,12 @@ import java.util.Arrays;
 public class SegmentationInfo
 {
     
+    public enum SEGMENT_ALGORITHM
+    {
+        PIXELS,
+        SOLID_COLOR
+    };
+    
     public int
         numHorizontalSegments,
         numVerticalSegments,
@@ -127,46 +133,24 @@ public class SegmentationInfo
         return rval;
     }
 
-    public static boolean updateIntersection(int[] dst, Rectangle dstRect, int[] src, int srcx, int srcy, int srcw,
-            int srch)
+    public static boolean updateIntersection(SEGMENT_ALGORITHM alg, int[] dst, Rectangle dstRect, int srcx, int srcy, int srcw, int srch, Object... args)
     {
         boolean rval = Boolean.FALSE;
+        int[] src = null;
+        int solidPixelColor = 0;
         
-        int top = Math.max(dstRect.y, srcy);
-        int bottom = Math.min(dstRect.y + dstRect.height, srcy + srch);
+        assert_(args.length == 1);
         
-        if (top <= bottom)
+        switch (alg)
         {
-            int left = Math.max(dstRect.x, srcx);
-            int right = Math.min(dstRect.x + dstRect.width, srcx + srcw);
-            
-            if (left <= right)
-            {
-                rval = Boolean.TRUE;
-                
-                int ub = bottom-top;
-                int scanSize = right-left;
-                int srcIdx = left-srcx + (top-srcy)*srcw;
-                int dstIdx = left-dstRect.x + (top-dstRect.y)*dstRect.width;
-                
-                for (int i=0; i<ub; i++)
-                {
-                    System.arraycopy(src, srcIdx, dst, dstIdx, scanSize);
-                    
-                    srcIdx += srcw;
-                    dstIdx += dstRect.width;
-                }
-            }
+            case PIXELS:
+                src = (int[]) args[0];
+                break;
+            case SOLID_COLOR:
+                solidPixelColor = (int) args[0];
+                break;
         }
         
-        return rval;
-    }
-
-    public static boolean updateIntersection(int[] dst, Rectangle dstRect, int solidPixelColor, int srcx, int srcy, int srcw,
-            int srch)
-    {
-        boolean rval = Boolean.FALSE;
-        
         int top = Math.max(dstRect.y, srcy);
         int bottom = Math.min(dstRect.y + dstRect.height, srcy + srch);
         
@@ -181,11 +165,31 @@ public class SegmentationInfo
                 
                 int ub = bottom-top;
                 int scanSize = right-left;
+                int srcIdx = 0;
                 int dstIdx = left-dstRect.x + (top-dstRect.y)*dstRect.width;
+                
+                switch (alg)
+                {
+                    case PIXELS:
+                        srcIdx = left-srcx + (top-srcy)*srcw;
+                        break;
+                    case SOLID_COLOR:
+                        break;
+                }
                 
                 for (int i=0; i<ub; i++)
                 {
-                    Arrays.fill(dst, dstIdx, dstIdx+scanSize, solidPixelColor);
+                    switch (alg)
+                    {
+                        case PIXELS:
+                            System.arraycopy(src, srcIdx, dst, dstIdx, scanSize);
+                            
+                            srcIdx += srcw;
+                            break;
+                        case SOLID_COLOR:
+                            Arrays.fill(dst, dstIdx, dstIdx+scanSize, solidPixelColor);
+                            break;
+                    }
                     
                     dstIdx += dstRect.width;
                 }

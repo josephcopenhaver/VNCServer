@@ -15,6 +15,7 @@ import javax.swing.JPanel;
 
 import com.jcope.util.DimensionF;
 import com.jcope.util.SegmentationInfo;
+import com.jcope.util.SegmentationInfo.SEGMENT_ALGORITHM;
 
 public class ImagePanel extends JPanel
 {
@@ -74,7 +75,7 @@ public class ImagePanel extends JPanel
         int screenHeight = image.getHeight();
         image.setRGB(0, 0, screenWidth, screenHeight, pixels, 0, screenWidth);
         
-        if (cursorVisible && SegmentationInfo.updateIntersection(pixelsUnderCursor, pixelsUnderCursorRect, pixels, 0, 0, screenWidth, screenHeight))
+        if (cursorVisible && SegmentationInfo.updateIntersection(SEGMENT_ALGORITHM.PIXELS, pixelsUnderCursor, pixelsUnderCursorRect, 0, 0, screenWidth, screenHeight, pixels))
         {
             reshowCursor(cursorPosition.x, cursorPosition.y);
         }
@@ -82,12 +83,28 @@ public class ImagePanel extends JPanel
         repaint();
     }
     
-    public void setSegmentPixels(int segmentID, int[] pixels)
+    private void setSegment(int segmentID, SEGMENT_ALGORITHM alg, Object... args)
     {
-        if (segmentID == -1)
+        int solidPixelColor = 0;
+        int[] pixels = null;
+        Object updateArg = null;
+        
+        assert_(args.length == 1);
+        
+        switch (alg)
         {
-            loadScreenPixels(pixels);
-            return;
+            case PIXELS:
+                pixels = (int[]) args[0];
+                if (segmentID == -1)
+                {
+                    loadScreenPixels(pixels);
+                    return;
+                }
+                break;
+            case SOLID_COLOR:
+                assert_(segmentID >= 0);
+                solidPixelColor = (int) args[0];
+                break;
         }
         
         int[] tmp = new int[2];
@@ -99,45 +116,43 @@ public class ImagePanel extends JPanel
         // assert_(tmp[0] * tmp[1] == pixels.length);
         
         
-        image.setRGB(startX, startY, tmp[0], tmp[1], pixels, 0, tmp[0]);
+        switch (alg)
+        {
+            case PIXELS:
+                updateArg = pixels;
+                image.setRGB(startX, startY, tmp[0], tmp[1], pixels, 0, tmp[0]);
+                break;
+            case SOLID_COLOR:
+                updateArg = solidPixelColor;
+                int endX = startX + tmp[0];
+                int endY = startY + tmp[1];
+                
+                for (int x=startX; x<endX; x++)
+                {
+                    for (int y=startY; y<endY; y++)
+                    {
+                        image.setRGB(x, y, solidPixelColor);
+                    }
+                }
+                break;
+        }
         
-        if (cursorVisible && SegmentationInfo.updateIntersection(pixelsUnderCursor, pixelsUnderCursorRect, pixels, startX, startY, tmp[0], tmp[1]))
+        if (cursorVisible && SegmentationInfo.updateIntersection(alg, pixelsUnderCursor, pixelsUnderCursorRect, startX, startY, tmp[0], tmp[1], updateArg))
         {
             reshowCursor(cursorPosition.x, cursorPosition.y);
         }
         
         repaint(startX, startY, tmp[0], tmp[1]);
     }
+    
+    public void setSegmentPixels(int segmentID, int[] pixels)
+    {
+        setSegment(segmentID, SEGMENT_ALGORITHM.PIXELS, pixels);
+    }
 
     public void setSegmentSolidColor(int segmentID, int solidPixelColor)
     {
-        assert_(segmentID >= 0);
-        
-        int[] tmp = new int[2];
-        int startX, startY, endX, endY;
-        segInfo.getPos(segmentID, tmp);
-        startX = tmp[0];
-        startY = tmp[1];
-        segInfo.getDim(segmentID, tmp);
-        // assert_(tmp[0] * tmp[1] == pixels.length);
-        
-        endX = startX + tmp[0];
-        endY = startY + tmp[1];
-        
-        for (int x=startX; x<endX; x++)
-        {
-            for (int y=startY; y<endY; y++)
-            {
-                image.setRGB(x, y, solidPixelColor);
-            }
-        }
-        
-        if (cursorVisible && SegmentationInfo.updateIntersection(pixelsUnderCursor, pixelsUnderCursorRect, solidPixelColor, startX, startY, tmp[0], tmp[1]))
-        {
-            reshowCursor(cursorPosition.x, cursorPosition.y);
-        }
-        
-        repaint(startX, startY, tmp[0], tmp[1]);
+        setSegment(segmentID, SEGMENT_ALGORITHM.SOLID_COLOR, solidPixelColor);
     }
     
     @Override
