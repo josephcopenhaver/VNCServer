@@ -45,6 +45,7 @@ public class Monitor extends Thread
 	private ArrayList<ClientHandler> clients;
 	private DirectRobot dirbot;
 	private int[][] segments;
+	private Integer[][] solidSegments;
 	private boolean[] changedSegments;
 	private volatile boolean stopped = Boolean.FALSE;
 	private volatile boolean joined = Boolean.FALSE;
@@ -74,10 +75,12 @@ public class Monitor extends Thread
 		{
 		    segInfo.loadConfig(screenWidth, screenHeight, segInfo.segmentWidth, segInfo.segmentHeight);
 		    segments = new int[segInfo.numSegments][];
+		    solidSegments = new Integer[segInfo.numSegments][];
 			changedSegments = new boolean[segInfo.numSegments];
 			for (int i=0; i<segInfo.numSegments; i++)
 			{
 				segments[i] = new int[getSegmentPixelCount(i)];
+				solidSegments[i] = new Integer[]{null};
 				changedSegments[i] = Boolean.FALSE;
 			}
 			if (lastWidth != null)
@@ -147,7 +150,7 @@ public class Monitor extends Thread
 					y = segmentDim[1];
 					getSegmentDim(i, segmentDim);
 					dirbot.getRGBPixels(x, y, segmentDim[0], segmentDim[1], buffer);
-					if (copyIntArray(segments[i], buffer, segments[i].length))
+					if (copyIntArray(segments[i], buffer, segments[i].length, solidSegments[i]))
 					{
 						changed = Boolean.TRUE;
 						changedSegments[i] = Boolean.TRUE;
@@ -231,17 +234,43 @@ public class Monitor extends Thread
 	    }
 	}
 	
-	private boolean copyIntArray(int[] dst, int[] src, int length)
+	private boolean copyIntArray(int[] dst, int[] src, int length, Integer[] solidColorOut)
 	{
 		boolean rval = Boolean.FALSE;
+		int solidColor, srcPixel;
+		
+		if (solidColorOut != null && solidColorOut.length > 0 && length > 0)
+		{
+		    solidColor = src[0];
+		}
+		else
+		{
+		    solidColor = 0;
+		    if (solidColorOut.length > 0)
+		    {
+		        solidColorOut[0] = null;
+		    }
+		    solidColorOut = null;
+		}
 		
 		for (int i=0; i<length; i++)
 		{
-			if (dst[i] != src[i])
+		    srcPixel = src[i];
+			if (dst[i] != srcPixel)
 			{
-				dst[i] = src[i];
+				dst[i] = srcPixel;
 				rval = Boolean.TRUE;
 			}
+			if (solidColorOut != null && srcPixel != solidColor)
+			{
+			    solidColorOut[0] = null;
+			    solidColorOut = null;
+			}
+		}
+		
+		if (solidColorOut != null)
+		{
+		    solidColorOut[0] = solidColor;
 		}
 		
 		return rval;
@@ -326,6 +355,34 @@ public class Monitor extends Thread
     public int[] getSegment(int segmentID)
     {
         int[] rval = (segmentID == -1) ? dirbot.getRGBPixels() : segments[segmentID];
+        
+        return rval;
+    }
+
+    public Integer getSegmentSolidColor(int segmentID)
+    {
+        Integer rval;
+        
+        if (segmentID == -1)
+        {
+            rval = null;
+        }
+        else
+        {
+            rval = solidSegments[segmentID][0];
+        }
+        
+        return rval;
+    }
+    
+    public Object getSegmentOptimized(int segmentID)
+    {
+        Object rval = getSegmentSolidColor(segmentID);
+        
+        if (rval == null)
+        {
+            rval = getSegment(segmentID);
+        }
         
         return rval;
     }

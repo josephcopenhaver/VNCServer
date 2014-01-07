@@ -20,17 +20,30 @@ public class ScreenSegmentUpdate extends Handle<StateMachine>
         assert_(args != null);
         assert_(args.length == 2);
         assert_(args[0] instanceof Integer);
-        assert_(args[1] instanceof int[]);
-        
-        int segmentID = (Integer) args[0];
-        int[] pixels = (int[]) args[1];
-        
-        assert_(segmentID >= -1);
-        assert_(pixels != null);
         
         MainFrame frame = stateMachine.getFrame();
-        
         ImagePanel imagePanel = frame.getImagePanel();
-        imagePanel.setSegmentPixels(segmentID, pixels);
+        
+        int segmentID = (Integer) args[0];
+        assert_(segmentID >= -1);
+        
+        if (args[1] instanceof int[])
+        {
+            int[] pixels = (int[]) args[1];
+            assert_(pixels != null);
+            
+            imagePanel.setSegmentPixels(segmentID, pixels);
+        }
+        else if (args[1] instanceof Integer)
+        {
+            Integer solidPixelColor = (Integer) args[1];
+            assert_(solidPixelColor != null);
+            
+            imagePanel.setSegmentSolidColor(segmentID, solidPixelColor);
+        }
+        else
+        {
+            assert_(false);
+        }
     }
 }

@@ -366,9 +366,9 @@ public class ClientHandler extends Thread
 		}
 	}
 	
-	public int[] getSegment(int segmentID)
+	public Object getSegmentOptimized(int segmentID)
 	{
-	    int[] rval = Manager.getInstance().getSegment(dirbot, segmentID);
+	    Object rval = Manager.getInstance().getSegmentOptimized(dirbot, segmentID);
 	    
 	    return rval;
 	}

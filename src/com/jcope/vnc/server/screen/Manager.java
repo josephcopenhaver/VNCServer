@@ -377,14 +377,14 @@ public class Manager extends Thread
 		withLock(actionSendEventToAll, evt, args); 
 	}
 	
-	public int[] getSegment(DirectRobot dirbot, int segmentID)
+	public Object getSegmentOptimized(DirectRobot dirbot, int segmentID)
 	{
-	    int[] rval = null;
+	    Object rval = null;
 	    
 	    Monitor monitor = monitorForGraphicsDevice.get(dirbot.device);
 	    if (monitor != null)
 	    {
-	        rval = monitor.getSegment(segmentID);
+	        rval = monitor.getSegmentOptimized(segmentID);
 	    }
 	    
 	    return rval;

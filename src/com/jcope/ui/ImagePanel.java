@@ -108,6 +108,37 @@ public class ImagePanel extends JPanel
         
         repaint(startX, startY, tmp[0], tmp[1]);
     }
+
+    public void setSegmentSolidColor(int segmentID, int solidPixelColor)
+    {
+        assert_(segmentID >= 0);
+        
+        int[] tmp = new int[2];
+        int startX, startY, endX, endY;
+        segInfo.getPos(segmentID, tmp);
+        startX = tmp[0];
+        startY = tmp[1];
+        segInfo.getDim(segmentID, tmp);
+        // assert_(tmp[0] * tmp[1] == pixels.length);
+        
+        endX = startX + tmp[0];
+        endY = startY + tmp[1];
+        
+        for (int x=startX; x<endX; x++)
+        {
+            for (int y=startY; y<endY; y++)
+            {
+                image.setRGB(x, y, solidPixelColor);
+            }
+        }
+        
+        if (cursorVisible && SegmentationInfo.updateIntersection(pixelsUnderCursor, pixelsUnderCursorRect, solidPixelColor, startX, startY, tmp[0], tmp[1]))
+        {
+            reshowCursor(cursorPosition.x, cursorPosition.y);
+        }
+        
+        repaint(startX, startY, tmp[0], tmp[1]);
+    }
     
     @Override
     public void repaint(final int x, final int y, final int w, final int h)

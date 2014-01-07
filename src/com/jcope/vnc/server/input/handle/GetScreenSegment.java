@@ -15,7 +15,10 @@ public class GetScreenSegment extends Handle
         assert_(args != null);
         assert_(args.length == 1);
         assert_(args[0] instanceof Integer);
-        client.sendEvent(SERVER_EVENT.SCREEN_SEGMENT_UPDATE, args[0], client.getSegment((Integer) args[0]));
+        
+        Object solidColorOrPixelArray = client.getSegmentOptimized((Integer) args[0]);
+        
+        client.sendEvent(SERVER_EVENT.SCREEN_SEGMENT_UPDATE, args[0], solidColorOrPixelArray);
     }
     
 }

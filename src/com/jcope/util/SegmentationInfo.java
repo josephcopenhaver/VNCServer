@@ -3,6 +3,7 @@ package com.jcope.util;
 import static com.jcope.debug.Debug.assert_;
 
 import java.awt.Rectangle;
+import java.util.Arrays;
 
 public class SegmentationInfo
 {
@@ -153,6 +154,39 @@ public class SegmentationInfo
                     System.arraycopy(src, srcIdx, dst, dstIdx, scanSize);
                     
                     srcIdx += srcw;
+                    dstIdx += dstRect.width;
+                }
+            }
+        }
+        
+        return rval;
+    }
+
+    public static boolean updateIntersection(int[] dst, Rectangle dstRect, int solidPixelColor, int srcx, int srcy, int srcw,
+            int srch)
+    {
+        boolean rval = Boolean.FALSE;
+        
+        int top = Math.max(dstRect.y, srcy);
+        int bottom = Math.min(dstRect.y + dstRect.height, srcy + srch);
+        
+        if (top <= bottom)
+        {
+            int left = Math.max(dstRect.x, srcx);
+            int right = Math.min(dstRect.x + dstRect.width, srcx + srcw);
+            
+            if (left <= right)
+            {
+                rval = Boolean.TRUE;
+                
+                int ub = bottom-top;
+                int scanSize = right-left;
+                int dstIdx = left-dstRect.x + (top-dstRect.y)*dstRect.width;
+                
+                for (int i=0; i<ub; i++)
+                {
+                    Arrays.fill(dst, dstIdx, dstIdx+scanSize, solidPixelColor);
+                    
                     dstIdx += dstRect.width;
                 }
             }
