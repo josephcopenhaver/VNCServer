@@ -35,6 +35,10 @@ public class Manager extends Thread
 	private HashMap<GraphicsDevice, ArrayList<ClientHandler>> clientsPerGraphicsDevice;
 	private HashMap<GraphicsDevice, Monitor> monitorForGraphicsDevice;
 	
+	private Semaphore hasMonitorLock = new Semaphore(0, true);
+    private Semaphore stageLock = new Semaphore(1, true);
+    private volatile Object[] stagedArgs = null;
+	
 	private Manager()
 	{
 		super("Screen Manager");
@@ -77,8 +81,6 @@ public class Manager extends Thread
 		return rval;
 	}
 	
-	private Semaphore hasMonitorLock = new Semaphore(0, true);
-	
 	private void decreaseMonitorLock()
 	{
 	    try
@@ -89,6 +91,11 @@ public class Manager extends Thread
         {
             LLog.e(e);
         }
+	}
+	
+	private void increaseMonitorLock()
+	{
+	    hasMonitorLock.release();
 	}
 	
 	public void run()
@@ -148,7 +155,7 @@ public class Manager extends Thread
     			}
 		    }
 		    finally {
-		        hasMonitorLock.release();
+		        increaseMonitorLock();
 		    }
 		}
 	}
@@ -183,8 +190,6 @@ public class Manager extends Thread
 		}
 	}
 	
-	private Semaphore stageLock = new Semaphore(1, true);
-	private volatile Object[] stagedArgs = null;
 	public void withLock(Runnable r, Object... args)
 	{
 		try
@@ -233,7 +238,7 @@ public class Manager extends Thread
 			{
 				return;
 			}
-			hasMonitorLock.release();
+			increaseMonitorLock();
 			if (!newMonitor)
 			{
 			    Monitor monitor = monitorForGraphicsDevice.get(graphicsDevice);

@@ -45,7 +45,7 @@ public class Monitor extends Thread
 	private ArrayList<ClientHandler> clients;
 	private DirectRobot dirbot;
 	private int[][] segments;
-	private Integer[][] solidSegments;
+	private Integer[] solidSegments;
 	private boolean[] changedSegments;
 	private volatile boolean stopped = Boolean.FALSE;
 	private volatile boolean joined = Boolean.FALSE;
@@ -75,12 +75,12 @@ public class Monitor extends Thread
 		{
 		    segInfo.loadConfig(screenWidth, screenHeight, segInfo.segmentWidth, segInfo.segmentHeight);
 		    segments = new int[segInfo.numSegments][];
-		    solidSegments = new Integer[segInfo.numSegments][];
+		    solidSegments = new Integer[segInfo.numSegments];
 			changedSegments = new boolean[segInfo.numSegments];
 			for (int i=0; i<segInfo.numSegments; i++)
 			{
 				segments[i] = new int[getSegmentPixelCount(i)];
-				solidSegments[i] = new Integer[]{null};
+				solidSegments[i] = null;
 				changedSegments[i] = Boolean.FALSE;
 			}
 			if (lastWidth != null)
@@ -126,6 +126,7 @@ public class Monitor extends Thread
 		boolean changed;
 		
 		int[] buffer = new int[segInfo.maxSegmentNumPixels];
+		Integer[] solidSegmentRef = new Integer[]{null};
 		int[] segmentDim = new int[2];
 		int x, y;
 		long startAt, timeConsumed;
@@ -150,11 +151,12 @@ public class Monitor extends Thread
 					y = segmentDim[1];
 					getSegmentDim(i, segmentDim);
 					dirbot.getRGBPixels(x, y, segmentDim[0], segmentDim[1], buffer);
-					if (copyIntArray(segments[i], buffer, segments[i].length, solidSegments[i]))
+					if (copyIntArray(segments[i], buffer, segments[i].length, solidSegmentRef))
 					{
 						changed = Boolean.TRUE;
 						changedSegments[i] = Boolean.TRUE;
 					}
+					solidSegments[i] = solidSegmentRef[0];
 				}
 				
 				for (ClientHandler client : clients)
@@ -369,7 +371,7 @@ public class Monitor extends Thread
         }
         else
         {
-            rval = solidSegments[segmentID][0];
+            rval = solidSegments[segmentID];
         }
         
         return rval;
