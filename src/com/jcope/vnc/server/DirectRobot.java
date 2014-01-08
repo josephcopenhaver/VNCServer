@@ -29,7 +29,25 @@ import com.jcope.ui.DirectBufferedImage;
 
 public final class DirectRobot
 {
-	public DirectRobot() throws AWTException
+    public final GraphicsDevice device;
+    
+    private Object getRGBPixelsMethodParam;
+    private int getRGBPixelsMethodType;
+    private Method getRGBPixelsMethod;
+    private final RobotPeer peer;
+    private static boolean hasMouseInfoPeer;
+    private static MouseInfoPeer mouseInfoPeer;
+    private WeakHashMap<int[],BufferedImage> nonAlphaCache = new WeakHashMap<int[],BufferedImage>();
+    private WeakHashMap<int[],BufferedImage> alphaCache = new WeakHashMap<int[],BufferedImage>();
+    private boolean isDirty = true, usedEfficientMethod;
+    private int[] pixelCache;
+    private int width, height, numPixels;
+    
+    private Semaphore getPixelsSema = new Semaphore(1, true);
+    private ReentrantLock methLock = new ReentrantLock(true);
+    private ReentrantLock cacheSyncLock = new ReentrantLock(true);
+    
+    public DirectRobot() throws AWTException
 	{
 		this(null);
 	}
@@ -277,8 +295,7 @@ public final class DirectRobot
 		else
 		{
 		    int device = mouseInfoPeer.fillPointWithCoords(point != null ? point : new Point());
-            GraphicsDevice[] devices = GraphicsEnvironment.getLocalGraphicsEnvironment().
-getScreenDevices();
+            GraphicsDevice[] devices = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices();
             
             rval = devices[device];
 		}
@@ -407,8 +424,6 @@ getScreenDevices();
 		isDirty = true;
 	}
 	
-	private Semaphore getPixelsSema = new Semaphore(1, true);
-	
 	public boolean getRGBPixels(int x, int y, int width, int height, int[] pixels)
 	{
 	    try
@@ -440,7 +455,6 @@ getScreenDevices();
 	    }
 	}
 	
-	private ReentrantLock methLock = new ReentrantLock(true);
 	private boolean _getRGBPixels()
 	{
 		Rectangle r = getScreenBounds();
@@ -560,8 +574,6 @@ getScreenDevices();
 		}
 	}
 	
-	ReentrantLock cacheSyncLock = new ReentrantLock(true);
-	
 	public void clearBufferedImage(int[] pixels)
 	{
 		cacheSyncLock.lock();
@@ -577,7 +589,8 @@ getScreenDevices();
 		}
 	}
 	
-	public BufferedImage getBufferedImage(int[] pixels, int size, int width, int height, boolean hasAlpha) {
+	public BufferedImage getBufferedImage(int[] pixels, int size, int width, int height, boolean hasAlpha)
+	{
 		BufferedImage image = null;
 		
 		assert_(size > 0);
@@ -626,17 +639,4 @@ getScreenDevices();
             getPixelsSema.release();
         }
     }
-	
-	private Object getRGBPixelsMethodParam;
-	private int getRGBPixelsMethodType;
-	public final GraphicsDevice device;
-	private Method getRGBPixelsMethod;
-	private final RobotPeer peer;
-	private static boolean hasMouseInfoPeer;
-	private static MouseInfoPeer mouseInfoPeer;
-	private WeakHashMap<int[],BufferedImage> nonAlphaCache = new WeakHashMap<int[],BufferedImage>();
-	private WeakHashMap<int[],BufferedImage> alphaCache = new WeakHashMap<int[],BufferedImage>();
-	private boolean isDirty = true, usedEfficientMethod;
-	private int[] pixelCache;
-	private int width, height, numPixels;
 }
