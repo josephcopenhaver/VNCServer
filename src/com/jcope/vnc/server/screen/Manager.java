@@ -14,6 +14,8 @@ import java.util.concurrent.Semaphore;
 import com.jcope.debug.LLog;
 import com.jcope.vnc.server.ClientHandler;
 import com.jcope.vnc.server.DirectRobot;
+import com.jcope.vnc.server.SecurityPolicy.ACCESS_MODE;
+import com.jcope.vnc.server.VncServer;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
 /**
@@ -347,9 +349,17 @@ public class Manager extends Thread
 		
 	};
 	
-	public void bind(ClientHandler client, GraphicsDevice graphicsDevice)
+	public boolean bind(ClientHandler client, GraphicsDevice graphicsDevice, ACCESS_MODE accessMode, String passwordHash)
 	{
-		withLock(actionBind, client, graphicsDevice);
+	    boolean rval = false;
+	    
+	    if (VncServer.securityPolicy.checkAuth(graphicsDevice, accessMode, passwordHash))
+	    {
+	        withLock(actionBind, client, graphicsDevice);
+	        rval = true;
+	    }
+	    
+	    return rval;
 	}
 	
 	public void unbind(ClientHandler client)

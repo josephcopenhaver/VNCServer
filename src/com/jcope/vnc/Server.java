@@ -1,16 +1,26 @@
 package com.jcope.vnc;
 
+import static com.jcope.debug.Debug.assert_;
+
 import java.awt.AWTException;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.UnknownHostException;
 import java.nio.channels.FileLock;
 import java.util.ArrayList;
+import java.util.Properties;
+
+import javax.xml.parsers.ParserConfigurationException;
+
+import org.xml.sax.SAXException;
 
 import com.jcope.debug.LLog;
 import com.jcope.util.CurrentProcessInfo;
+import com.jcope.util.EnumPropertyInterface;
 import com.jcope.util.Platform;
 import com.jcope.vnc.server.VncServer;
 
@@ -24,16 +34,101 @@ import com.jcope.vnc.server.VncServer;
 
 public class Server
 {
+    public static enum SERVER_PROPERTIES implements EnumPropertyInterface
+    {
+        SERVER_BIND_ADDRESS("localhost"),
+        SERVER_PORT(1987),
+        SERVER_LISTEN_BACKLOG(0),
+        SERVER_SECURITY_POLICY("VncSecurityPolicy.xml")
+        
+        ;
+        
+        Object value;
+        
+        SERVER_PROPERTIES(final Object defaultValue)
+        {
+            this.value = defaultValue;
+        }
+        
+        public void assertType(Object obj)
+        {
+            assert_(obj != null);
+            switch (this)
+            {
+                case SERVER_BIND_ADDRESS:
+                case SERVER_SECURITY_POLICY:
+                    assert_(obj instanceof String);
+                    break;
+                case SERVER_LISTEN_BACKLOG:
+                case SERVER_PORT:
+                    assert_(obj instanceof Integer);
+                    break;
+            }
+        }
+        
+        public Object getValue()
+        {
+            return value;
+        }
+        
+        public void setValue(Object value)
+        {
+            switch (this)
+            {
+                case SERVER_BIND_ADDRESS:
+                case SERVER_SECURITY_POLICY:
+                    break;
+                case SERVER_LISTEN_BACKLOG:
+                case SERVER_PORT:
+                    if (value instanceof String)
+                    {
+                        value = Integer.parseInt((String) value);
+                    }
+                    break;
+            }
+            assertType(value);
+            this.value = value;
+        }
+        
+        public void load(Properties prop)
+        {
+            Object value = prop.get(name());
+            if (value != null)
+            {
+                setValue(value);
+            }
+        }
+        
+        public static void loadConfig(String properyFile) throws FileNotFoundException, IOException
+        {
+            if (properyFile == null)
+            {
+                System.out.println("No property file loaded.");
+                return;
+            }
+            Properties prop = new Properties();
+            prop.load(new FileInputStream(properyFile));
+            for (SERVER_PROPERTIES iprop : SERVER_PROPERTIES.values())
+            {
+                iprop.load(prop);
+            }
+        }
+    }
 	
-	public static void main(String[] args) throws UnknownHostException, IOException, InterruptedException, AWTException
+	public static void main(String[] args) throws UnknownHostException, IOException, InterruptedException, AWTException, ParserConfigurationException, SAXException
 	{
-		RandomAccessFile serverFileRAF = null;
+	    RandomAccessFile serverFileRAF = null;
 		FileLock serverFileLock = null;
 		RandomAccessFile pidFileRAF = null;
 		FileLock pidFileLock = null;
 		FileOutputStream pidFileFOS = null;
 		boolean forceStop = Boolean.FALSE;
 		ArrayList<File> lockFiles = new ArrayList<File>(2);
+		int serverPort, listenBacklog;
+		String serverBindAddress;
+		
+		SERVER_PROPERTIES.loadConfig(args.length > 0 ? args[0] : null);
+		
 		try
 		{
 			
@@ -70,7 +165,11 @@ public class Server
 			
 			// end single instance logic
 			
-			VncServer vncServer = new VncServer(1979, 0, "localhost");
+			serverPort = (int) SERVER_PROPERTIES.SERVER_PORT.getValue();
+			listenBacklog = (int) SERVER_PROPERTIES.SERVER_LISTEN_BACKLOG.getValue();
+			serverBindAddress = (String) SERVER_PROPERTIES.SERVER_BIND_ADDRESS.getValue();
+			
+			VncServer vncServer = new VncServer(serverPort, listenBacklog, serverBindAddress);
 			
 			System.out.println("VNCServer is running!");
 			vncServer.run();

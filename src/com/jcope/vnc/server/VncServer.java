@@ -2,19 +2,27 @@ package com.jcope.vnc.server;
 
 import static com.jcope.debug.Debug.DEBUG;
 
+import java.io.File;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.concurrent.Semaphore;
 
+import javax.xml.parsers.ParserConfigurationException;
+
+import org.xml.sax.SAXException;
+
 import com.jcope.debug.LLog;
+import com.jcope.vnc.Server.SERVER_PROPERTIES;
 
 public class VncServer implements Runnable
 {
 	
 	private static final boolean _DEBUG = Boolean.TRUE || DEBUG;
+	
+	public static final SecurityPolicy securityPolicy = new SecurityPolicy();
 	
 	private InetAddress serverBindAddress;
 	private int listenBacklog, serverPort;
@@ -22,7 +30,7 @@ public class VncServer implements Runnable
 	
 	ServerSocket serverSocket;
 	
-	public VncServer(int serverPort, int listenBacklog, String serverBindAddress) throws UnknownHostException
+	public VncServer(int serverPort, int listenBacklog, String serverBindAddress) throws ParserConfigurationException, SAXException, IOException
 	{
 		if (serverBindAddress == null)
 		{
@@ -34,6 +42,9 @@ public class VncServer implements Runnable
 		}
 		this.listenBacklog = listenBacklog;
 		this.serverPort = serverPort;
+		securityPolicy.clear();
+	    File file = new File((String) SERVER_PROPERTIES.SERVER_SECURITY_POLICY.getValue());
+	    securityPolicy.readPolicy(file);
 	}
 	
 	public void run()

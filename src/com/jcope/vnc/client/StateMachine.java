@@ -10,10 +10,12 @@ import java.net.UnknownHostException;
 import java.util.concurrent.Semaphore;
 
 import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 
 import com.jcope.debug.LLog;
 import com.jcope.util.TaskDispatcher;
 import com.jcope.vnc.client.input.Handler;
+import com.jcope.vnc.server.SecurityPolicy.ACCESS_MODE;
 import com.jcope.vnc.shared.Msg;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
@@ -21,8 +23,9 @@ import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 public class StateMachine implements Runnable
 {
 	private MainFrame frame;
-	private String serverAddress;
+	private String serverAddress, password;
 	private int serverPort;
+	private Integer selectedScreenNum;
 	
 	private Socket socket;
 	private volatile ObjectOutputStream out;
@@ -35,13 +38,58 @@ public class StateMachine implements Runnable
 	private Semaphore sendSema = new Semaphore(1, true);
     private TaskDispatcher<Integer> dispatcher = new TaskDispatcher<Integer>("Client output dispatcher");
 	
-	public StateMachine(String serverAddress, int serverPort) throws UnknownHostException, IOException
+	public StateMachine(String serverAddress, int serverPort, Integer selectedScreenNum, String password) throws UnknownHostException, IOException
 	{
 		this.serverAddress = serverAddress;
 		this.serverPort = serverPort;
+		this.selectedScreenNum = selectedScreenNum;
+		this.password = password;
 		
 		frame = new MainFrame(this);
 		frame.setVisible(true);
+	}
+	
+	public Integer getSelectedScreen()
+	{
+	    Integer rval = selectedScreenNum;
+	    
+	    selectedScreenNum = null;
+	    
+	    if (rval == null)
+	    {
+	        String tmp = (String) JOptionPane.showInputDialog(frame, "Select screen", "0");
+	        if (tmp != null)
+	        {
+	            try
+	            {
+	                rval = Integer.parseInt(tmp);
+	            }
+	            catch (NumberFormatException e)
+	            {
+	                // Do Nothing
+	            }
+	        }
+	    }
+	    
+	    return rval;
+	}
+	
+	public String getPasswordHash()
+	{
+	    String rval = password;
+	    
+	    password = null;
+	    
+	    if (rval == null)
+	    {
+	        rval = (String) JOptionPane.showInputDialog(frame, "Password?", "");
+	        if (rval != null && rval.equals(""))
+	        {
+	            rval = null;
+	        }
+	    }
+	    
+	    return rval;
 	}
 	
 	private void setWhyFailed(Exception exception)
@@ -102,12 +150,32 @@ public class StateMachine implements Runnable
 			ObjectInputStream in = null;
 			try
 			{
+			    Integer tmpSelectedScreen = getSelectedScreen();
+			    if (tmpSelectedScreen == null)
+			    {
+			        tmpSelectedScreen = 0;
+			    }
+			    final int selectedScreen = tmpSelectedScreen;
+			    final String password = getPasswordHash();
+			    final String accessModeStr = ACCESS_MODE.VIEW_ONLY.commonName();
+			    
 				socket = new Socket(serverAddress, serverPort);
 				wasConnected = Boolean.TRUE;
 				os = socket.getOutputStream();
 				out = new ObjectOutputStream(os);
 				is = socket.getInputStream();
 				in = new ObjectInputStream(is);
+				
+				SwingUtilities.invokeLater(new Runnable() {
+
+                    @Override
+                    public void run()
+                    {
+                        sendEvent(CLIENT_EVENT.SELECT_SCREEN, selectedScreen, accessModeStr, password);
+                    }
+				    
+				});
+				
 				Object obj;
 				while ((obj = in.readObject()) != null)
 				{
@@ -238,7 +306,7 @@ public class StateMachine implements Runnable
         dispatcher.dispatch(event == CLIENT_EVENT.GET_SCREEN_SEGMENT ? -(((Integer)args[0]) + 2) : event.ordinal(), r);
 	}
 	
-	private void disconnect()
+	public void disconnect()
 	{
 	    try
 	    {

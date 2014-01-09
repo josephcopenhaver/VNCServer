@@ -293,8 +293,6 @@ public class Monitor extends Thread
 	public void getSegmentPos(int segmentID, int[] absPos)
 	{
 	    segInfo.getPos(segmentID, absPos);
-	    absPos[0] += screenX;
-	    absPos[1] += screenY;
 	}
 	
 	public void getSegmentIdxPos(int segmentID, int[] pos)

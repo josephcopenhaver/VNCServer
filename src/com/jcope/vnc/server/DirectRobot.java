@@ -465,7 +465,6 @@ public final class DirectRobot
 		{
 			pixelCache = new int[numPixels];
 		}
-		int x = 0, y = 0;
 		if (getRGBPixelsMethod != null)
 		{
 			try
@@ -483,16 +482,16 @@ public final class DirectRobot
 						switch(getRGBPixelsMethodType)
 						{
 							case 0:
-								getRGBPixelsMethod.invoke(peer, new Object[] { Integer.valueOf(x), Integer.valueOf(y), Integer.valueOf(width), Integer.valueOf(height), pixelCache });
+								getRGBPixelsMethod.invoke(peer, new Object[] { Integer.valueOf(r.x), Integer.valueOf(r.y), Integer.valueOf(width), Integer.valueOf(height), pixelCache });
 								break;
 							case 1:
-								getRGBPixelsMethod.invoke(peer, new Object[] { new Rectangle(x, y, width, height), pixelCache });
+								getRGBPixelsMethod.invoke(peer, new Object[] { new Rectangle(r.x, r.y, width, height), pixelCache });
 								break;
 							case 2:
-								getRGBPixelsMethod.invoke(peer, new Object[] { getRGBPixelsMethodParam, new Rectangle(x, y, width, height), pixelCache });
+								getRGBPixelsMethod.invoke(peer, new Object[] { getRGBPixelsMethodParam, new Rectangle(r.x, r.y, width, height), pixelCache });
 								break;
 							default:
-								getRGBPixelsMethod.invoke(peer, new Object[] { getRGBPixelsMethodParam, Integer.valueOf(x), Integer.valueOf(y), Integer.valueOf(width), Integer.valueOf(height), pixelCache });
+								getRGBPixelsMethod.invoke(peer, new Object[] { getRGBPixelsMethodParam, Integer.valueOf(r.x), Integer.valueOf(r.y), Integer.valueOf(width), Integer.valueOf(height), pixelCache });
 								break;
 						}
 					}
@@ -517,7 +516,7 @@ public final class DirectRobot
 			}
 		}
 		
-		int[] tmp = getRGBPixels(new Rectangle(x, y, width, height));
+		int[] tmp = getRGBPixels(r);
 		System.arraycopy(tmp, 0, pixelCache, 0, numPixels);
 		return false;
 	}

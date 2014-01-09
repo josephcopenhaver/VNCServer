@@ -10,8 +10,11 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.concurrent.Semaphore;
 
+import javax.swing.SwingUtilities;
+
 import com.jcope.debug.LLog;
 import com.jcope.util.TaskDispatcher;
+import com.jcope.vnc.server.SecurityPolicy.ACCESS_MODE;
 import com.jcope.vnc.server.screen.Manager;
 import com.jcope.vnc.server.screen.ScreenListener;
 import com.jcope.vnc.shared.Msg;
@@ -20,7 +23,6 @@ import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 public class ClientHandler extends Thread
 {
 	
-	private GraphicsDevice graphicsDevice = null;
 	private Socket socket;
 	private ObjectInputStream in = null;
 	private ObjectOutputStream out = null;
@@ -34,6 +36,12 @@ public class ClientHandler extends Thread
 	private TaskDispatcher<Integer> unserializedDispatcher;
     private TaskDispatcher<Integer> serializedDispatcher;
     private boolean isNewFlag = Boolean.TRUE;
+    
+    private ScreenListener[] screenListenerRef = new ScreenListener[]{null};
+    
+    private Semaphore sendSema = new Semaphore(1, true);
+    private Semaphore serialSema = new Semaphore(1, true);
+    volatile int tid = -1;
 	
 	public ClientHandler(Socket socket) throws IOException
 	{
@@ -136,8 +144,6 @@ public class ClientHandler extends Thread
 		{
 			addOnDestroyAction(killIOAction);
 			addOnDestroyAction(getUnbindAliasAction(this));
-			graphicsDevice = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
-			Manager.getInstance().bind(this, graphicsDevice);
 			while (!dying)
 			{
 				Object obj = null;
@@ -166,6 +172,18 @@ public class ClientHandler extends Thread
 		}
 	}
 
+	public boolean selectGraphicsDevice(int graphicsDeviceID, ACCESS_MODE accessMode, String password)
+	{
+	    boolean rval;
+	    
+	    GraphicsDevice[] devices = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices();
+	    GraphicsDevice graphicsDevice = devices[graphicsDeviceID];
+        
+	    rval = Manager.getInstance().bind(this, graphicsDevice, accessMode, password);
+	    
+	    return rval;
+	}
+	
 	public void addOnDestroyAction(Runnable r)
 	{
 		onDestroyActions.add(r);
@@ -239,7 +257,6 @@ public class ClientHandler extends Thread
 		clientState = new ClientState();
 	}
 
-	private ScreenListener[] screenListenerRef = new ScreenListener[]{null};
 	public ScreenListener getScreenListener(final DirectRobot dirbot)
 	{
 		ScreenListener l = screenListenerRef[0];
@@ -260,11 +277,7 @@ public class ClientHandler extends Thread
 		
 	}
 	
-	private Semaphore sendSema = new Semaphore(1, true);
-	private Semaphore serialSema = new Semaphore(1, true);
-    volatile int tid = -1;
-    
-    public void sendEvent(SERVER_EVENT event)
+	public void sendEvent(SERVER_EVENT event)
     {
         sendEvent(event, (Object[]) null);
     }
@@ -344,6 +357,42 @@ public class ClientHandler extends Thread
 	                    try
 	                    {
 	                        Msg.send(out, event, args);
+	                        switch(event)
+	                        {
+                                case AUTHORIZATION_UPDATE:
+                                    if (!((boolean) args[0]))
+                                    {
+                                        SwingUtilities.invokeLater(new Runnable() {
+
+                                            @Override
+                                            public void run()
+                                            {
+                                                kill();
+                                            }
+                                            
+                                        });
+                                    }
+                                    break;
+                                case ALIAS_CHANGED:
+                                case ALIAS_DISCONNECTED:
+                                case ALIAS_REGISTERED:
+                                case ALIAS_UNREGISTERED:
+                                case CHAT_MSG_TO_ALL:
+                                case CHAT_MSG_TO_USER:
+                                case CLIENT_ALIAS_UPDATE:
+                                case CONNECTION_CLOSED:
+                                case CONNECTION_ESTABLISHED:
+                                case CURSOR_GONE:
+                                case CURSOR_MOVE:
+                                case FAILED_AUTHORIZATION:
+                                case NUM_SCREENS_CHANGED:
+                                case SCREEN_GONE:
+                                case SCREEN_RESIZED:
+                                case SCREEN_SEGMENT_CHANGED:
+                                case SCREEN_SEGMENT_SIZE_UPDATE:
+                                case SCREEN_SEGMENT_UPDATE:
+                                    break;
+	                        }
 	                    }
 	                    catch (IOException e)
 	                    {

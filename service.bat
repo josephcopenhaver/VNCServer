@@ -1,9 +1,21 @@
 @echo off
 set OPT_RESTART=n
+set OPT_SETUP=n
 if "%1"=="restart" goto restart
 if "%1"=="stop" goto stop
 if "%1"=="start" goto start
+if "%1"=="setup" goto setup
 goto unknown_command
+
+
+:setup
+set OPT_SETUP=y
+del server.lock>NUL 2>&1
+IF EXIST server.lock set OPT_RESTART=y
+IF EXIST server.lock goto stop
+:setup1
+cmd /c "java -cp bin com.jcope.vnc.ServerSetup 2>&1 | tee setup.log 2>&1"
+goto setup2
 
 
 :restart
@@ -20,6 +32,8 @@ del server.lock>NUL 2>&1
 del server.pid>NUL 2>&1
 echo.
 echo Service terminated.
+IF "%OPT_SETUP%"=="y" goto setup1
+:setup2
 rem wait 2 seconds (3 pings)
 if "%OPT_RESTART%"=="y" ping 127.0.0.1 -n 3 > nul
 if "%OPT_RESTART%"=="y" goto start

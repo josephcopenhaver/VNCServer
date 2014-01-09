@@ -11,7 +11,11 @@ public class NumScreensChanged extends Handle
     @Override
     public void handle(StateMachine stateMachine, Object[] args)
     {
-        assert_(true); // TODO: remove me and finish
+        assert_(args != null);
+        assert_(args.length == 1);
+        assert_(args[0] instanceof Integer);
+        
+        // TODO: do something with this inforamtion?
     }
     
 }

@@ -1,7 +1,8 @@
 #!/bin/bash
 OPT_RESTART=n
 OPT_RUNNING=n
-function detect_if_runningf {
+OPT_RESUME_AFTER_SETUP=n
+function detect_if_running() {
     OPT_RUNNING=n
     if [ -f "server.lock" ] && [ -f "server.pid" ]; then
         pid=$(head -1 server.pid)
@@ -11,8 +12,8 @@ function detect_if_runningf {
         fi
     fi
 }
-function startf {
-    detect_if_runningf
+function start() {
+    detect_if_running()
     if [ "$OPT_RUNNING" == "y" ]; then
         echo Service already running.
     else
@@ -20,11 +21,11 @@ function startf {
         echo Service started.
     fi
 }
-function stopf {
-    detect_if_runningf
+function stop() {
+    detect_if_running()
     if [ "$OPT_RUNNING" == "n" ]; then
         if [ "$OPT_RESTART" == "y" ]; then
-            startf
+            start()
         else
             echo Service already terminated.
         fi
@@ -35,24 +36,37 @@ function stopf {
         rm "server.pid" >/dev/null 2>&1
         echo Service terminated.
         if [ "$OPT_RESTART" == "y" ]; then
-            startf
+            start()
         fi
     fi
 }
-function restartf {
+function restart() {
     OPT_RESTART=y
-    stopf
+    stop()
 }
-function unknownf {
+function unknown() {
     echo Unknown command \"$1\"
+}
+function setup() {
+	detect_if_running()
+	OPT_RESUME_AFTER_SETUP="$OPT_RUNNING"
+	if [ "$OPT_RESUME_AFTER_SETUP" == "y" ]; then
+		stop()
+	fi
+	(java -cp bin com.jcope.vnc.ServerSetup 2>&1 | tee setup.log 2>&1)
+	if [ "$OPT_RESUME_AFTER_SETUP" == "y" ]; then
+		start()
+	fi
 }
 
 if [ "$1" == "start" ]; then
-    startf
+    start()
 elif [ "$1" == "stop" ]; then
-    stopf
+    stop()
 elif [ "$1" == "restart" ]; then
-    restartf
+    restart()
+elif [ "$1" == "setup" ]; then
+    setup()
 else
-    unknownf
+    unknown()
 fi
