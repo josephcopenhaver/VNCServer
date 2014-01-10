@@ -244,7 +244,6 @@ public class TaskDispatcher<T> extends Thread
 				
 				while ((d = _remove()) != null)
 				{
-					//System.out.println("Dropping task!");
 					ns = d.s;
 					d.dispose();
 					if (releaseLocks && ns != null)
@@ -293,13 +292,11 @@ public class TaskDispatcher<T> extends Thread
     
     public void pause()
 	{
-		//System.out.println("Signaling pause");
 		paused = true;
 	}
 	
 	public void unpause()
 	{
-		//System.out.println("Signaling unpause");
 		paused = false;
 		pauseLock.release();
 	}
@@ -399,7 +396,6 @@ public class TaskDispatcher<T> extends Thread
 		{
 			while ((d = inQueue.remove()) != null)
 			{
-				//System.out.println("Adding to active queue");
 				_dispatch(d);
 			}
 		}
@@ -453,7 +449,6 @@ public class TaskDispatcher<T> extends Thread
 		{
 			if (paused)
 			{
-				//System.out.println("Handling pause signal");
 				pauseLock.drainPermits();
 				try
 				{
@@ -517,7 +512,6 @@ public class TaskDispatcher<T> extends Thread
 				}
 				if (isNullTask)
 				{
-					//System.out.println("Going to sleep");
 					sleepLock.acquire();
 					if (disposed)
 	                {
@@ -526,7 +520,6 @@ public class TaskDispatcher<T> extends Thread
 				}
 				else
 				{
-					//System.out.println("Running...");
 					mapSet.remove(curTask.k);
 					try
 					{
@@ -581,7 +574,6 @@ public class TaskDispatcher<T> extends Thread
 		{
 			if (isMutable(k))
 			{
-				//System.out.println("Is mutable");
 				updateNode(d, r, s);
 			}
 			else
@@ -672,7 +664,6 @@ public class TaskDispatcher<T> extends Thread
 			listLock.acquire();
 			try
 			{
-				//System.out.println("Adding to input queue");
 				_dispatch(k, r, null);
 			}
 			finally {
@@ -761,35 +752,5 @@ public class TaskDispatcher<T> extends Thread
 			unpause();
 		}
 	}
-	
-	/*
-	public static void main(String[] args)
-	{
-		TaskDispatcher<Integer> disp = new TaskDispatcher<Integer>();
-		disp.pause();
-		//final Semaphore s = new Semaphore(0,true);
-		disp.dispatch(1, new Runnable(){public void run(){
-			//try {
-			//s.acquire();
-			//} catch(InterruptedException e){e.printStackTrace();}
-			System.out.println("rawr");
-		}});
-		disp.dispatch(2, new Runnable(){public void run(){
-			System.out.println("rawr2");
-		}});
-		disp.dispatch(3, new Runnable(){public void run(){
-			System.out.println("rawr3");
-		}});
-		disp.dispatch(3, new Runnable(){public void run(){
-			System.out.println("rawr3-2");
-		}});
-		//s.release();
-		disp.dispatch(4, new Runnable(){public void run(){
-			System.out.println("rawr4");
-		}});
-		//disp.clear();
-		disp.unpause();
-	}
-	*/
 
 }
