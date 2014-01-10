@@ -115,8 +115,10 @@ public class MainFrame extends JFrame
 		actionMenu.add(refreshScreen);
 		JMenuItem setAlias = new JMenuItem("Set Alias");
 		actionMenu.add(setAlias);
-		JMenuItem clearAlias = new JMenuItem("Clear Alias");
-		actionMenu.add(clearAlias);
+        JMenuItem clearAlias = new JMenuItem("Clear Alias");
+        actionMenu.add(clearAlias);
+        JMenuItem disconnect = new JMenuItem("Disconnect");
+        actionMenu.add(disconnect);
 		
         JMenuItem normalScrollingScreen = new JMenuItem("Normal");
         viewMenu.add(normalScrollingScreen);
@@ -183,6 +185,17 @@ public class MainFrame extends JFrame
                 }
             }
         });
+		
+		// TODO: define accelerator
+		disconnect.addActionListener(new ActionListener() {
+
+            @Override
+            public void actionPerformed(ActionEvent arg0)
+            {
+                client.disconnect();
+            }
+		    
+		});
 		
 		
 		
