@@ -20,6 +20,7 @@ public class StateMachine
 
     public static void handleClientInput(ClientHandler client, Object obj)
 	{
+        obj = Msg.decompress(obj);
 		if (obj instanceof CLIENT_EVENT)
 		{
 			_handleClientInput(client, (CLIENT_EVENT) obj, null);

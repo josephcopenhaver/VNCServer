@@ -240,6 +240,7 @@ public class StateMachine implements Runnable
 	
 	private void handleServerEvent(Object obj)
 	{
+	    obj = Msg.decompress(obj);
 		if (obj instanceof SERVER_EVENT)
 		{
 			_handleServerEvent((SERVER_EVENT) obj, null);
