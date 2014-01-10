@@ -14,7 +14,7 @@ import javax.swing.SwingUtilities;
 
 import com.jcope.debug.LLog;
 import com.jcope.util.TaskDispatcher;
-import com.jcope.vnc.server.SecurityPolicy.ACCESS_MODE;
+import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
 import com.jcope.vnc.server.screen.Manager;
 import com.jcope.vnc.server.screen.ScreenListener;
 import com.jcope.vnc.shared.Msg;

@@ -14,7 +14,7 @@ import java.util.concurrent.Semaphore;
 import com.jcope.debug.LLog;
 import com.jcope.vnc.server.ClientHandler;
 import com.jcope.vnc.server.DirectRobot;
-import com.jcope.vnc.server.SecurityPolicy.ACCESS_MODE;
+import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
 import com.jcope.vnc.server.VncServer;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 

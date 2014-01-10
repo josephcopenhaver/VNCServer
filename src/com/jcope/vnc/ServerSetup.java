@@ -17,7 +17,7 @@ import org.xml.sax.SAXException;
 
 import com.jcope.vnc.Server.SERVER_PROPERTIES;
 import com.jcope.vnc.server.SecurityPolicy;
-import com.jcope.vnc.server.SecurityPolicy.ACCESS_MODE;
+import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
 import com.jcope.vnc.shared.ScreenSelector;
 
 /**

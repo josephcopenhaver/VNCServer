@@ -3,7 +3,7 @@ package com.jcope.vnc.server.input.handle;
 import static com.jcope.debug.Debug.assert_;
 
 import com.jcope.vnc.server.ClientHandler;
-import com.jcope.vnc.server.SecurityPolicy.ACCESS_MODE;
+import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
 import com.jcope.vnc.server.input.Handle;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
