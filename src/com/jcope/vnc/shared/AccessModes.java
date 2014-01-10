@@ -19,6 +19,7 @@ public class AccessModes
         
         private static ACCESS_MODE[] sortedList = null;
         private static HashMap<String, ACCESS_MODE> modesByName = null;
+        
         public static ACCESS_MODE[] sorted()
         {
             if (sortedList == null)

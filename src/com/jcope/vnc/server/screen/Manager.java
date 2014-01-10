@@ -367,25 +367,10 @@ public class Manager extends Thread
 		withLock(actionUnbind, client);
 	}
 	
-	/*
-	// Have no use for this yet
-	public void unbindAll(GraphicsDevice graphicsDevice)
-	{
-		withLock(actionUnbindAll, graphicsDevice);
-	}
-	*/
-	
 	private void unbindSet(GraphicsDevice[] set)
 	{
 		withLock(actionUnbindAllSet, (Object[]) set);
 	}
-	
-	/*
-	private void sendToAll(SERVER_EVENT evt)
-	{
-		sendToAll(evt, null);
-	}
-	*/
 	
 	private void sendToAll(SERVER_EVENT evt, Object... args)
 	{

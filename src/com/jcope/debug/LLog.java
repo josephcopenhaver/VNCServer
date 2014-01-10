@@ -1,9 +1,9 @@
 package com.jcope.debug;
 
+import static com.jcope.debug.Debug.DEBUG;
+
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
-
-//import static com.jcope.debug.Debug.DEBUG;
 
 public class LLog
 {
@@ -19,6 +19,7 @@ public class LLog
 	
 	public static void e(Throwable e, boolean rethrow, boolean hardStop)
 	{
+	    if (!DEBUG){if(!hardStop && !rethrow){return;}}
 		e.printStackTrace(rethrow ? System.err : System.out);
 		if (hardStop)
 		{
@@ -37,25 +38,21 @@ public class LLog
 		}
 	}
 	
-	/*
-	public static void e(String err_msg)
-	{
-		e(new Exception(err_msg));
-	}
-	*/
-	
 	public static void i(String info_msg)
 	{
+	    if (!DEBUG){return;}
 		System.out.println(info_msg);
 	}
 	
 	public static void w(String warn_msg)
 	{
-		System.err.println(warn_msg);
+	    if (!DEBUG){return;}
+        System.err.println(warn_msg);
 	}
 	
 	public static void logEvent(String source, SERVER_EVENT event, Object[] args)
 	{
+	    if (!DEBUG){return;}
 	    if (event == SERVER_EVENT.SCREEN_SEGMENT_CHANGED
 	            || event == SERVER_EVENT.CURSOR_MOVE
                 || event == SERVER_EVENT.CURSOR_GONE
@@ -68,6 +65,7 @@ public class LLog
 
 	public static void logEvent(String source, CLIENT_EVENT event, Object[] args)
 	{
+	    if (!DEBUG){return;}
 	    if (event == CLIENT_EVENT.GET_SCREEN_SEGMENT && ((Integer)args[0]) != -1)
 	    {
 	        return;

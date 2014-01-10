@@ -24,6 +24,11 @@ public class AliasRegistry
     private HashMap<ClientHandler, String> aliasPerClient;
     private HashMap<String, ClientHandler> clientPerAlias;
     
+    private Semaphore stageLock = new Semaphore(1, true);
+    private Object[] stagedArgs = null;
+    
+    private boolean actionWorked;
+    
     private AliasRegistry()
     {
         aliasPerClient = new HashMap<ClientHandler, String>();
@@ -70,8 +75,6 @@ public class AliasRegistry
         return rval;
     }
     
-    private Semaphore stageLock = new Semaphore(1, true);
-    private Object[] stagedArgs = null;
     public void withLock(Runnable r, Object... args)
     {
         try
@@ -96,7 +99,6 @@ public class AliasRegistry
         }
     }
     
-    private boolean actionWorked;
     private Runnable actionBind = new Runnable()
     {
 

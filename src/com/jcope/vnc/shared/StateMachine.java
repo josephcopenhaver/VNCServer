@@ -4,7 +4,7 @@ import static com.jcope.debug.Debug.assert_;
 
 public class StateMachine
 {
-	public enum CONNECTION_STATE
+	public static enum CONNECTION_STATE
 	{
 		INIT,
 		SELECTING_SESSION_TYPE,
@@ -16,7 +16,7 @@ public class StateMachine
 		VIEW_ONLY
 	};
 	
-	public enum CLIENT_EVENT
+	public static enum CLIENT_EVENT
 	{
 		SELECT_SCREEN,
 		GET_SCREEN_SEGMENT,
@@ -27,7 +27,7 @@ public class StateMachine
 		ENABLE_CONNECTION_MONITOR
 	};
 	
-	public enum SERVER_EVENT
+	public static enum SERVER_EVENT
 	{
 	    AUTHORIZATION_UPDATE,
 	    CLIENT_ALIAS_UPDATE, // Response to client event REQUEST_ALIAS
@@ -56,8 +56,12 @@ public class StateMachine
 		// for monitoring connections to the server
 		CONNECTION_ESTABLISHED, // server socket was bound
 		FAILED_AUTHORIZATION, // a user failed to log in
-		CONNECTION_CLOSED;
-
+		CONNECTION_CLOSED
+		
+		;
+	    
+	    private static Integer maxOrdinal = null;
+        
         public boolean isSerial()
         {
             Boolean rval = null;
@@ -138,19 +142,20 @@ public class StateMachine
             return rval;
         }
 
-        private static Integer maxOrdinal = null;
         public static int getMaxOrdinal()
         {
             int rval;
             
             if (maxOrdinal == null)
             {
+                int ordVal;
                 rval = -1;
+                
                 for (SERVER_EVENT event : SERVER_EVENT.values())
                 {
-                    if (rval < event.ordinal())
+                    if (rval < (ordVal = event.ordinal()))
                     {
-                        rval = event.ordinal();
+                        rval = ordVal;
                     }
                 }
                 

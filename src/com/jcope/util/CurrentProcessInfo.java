@@ -35,6 +35,7 @@ public class CurrentProcessInfo
 		}
 		return rval;
 	}
+	
 	private static String getWindowsPID()
 	{
 	    // something like '<pid>@<hostname>', at least in SUN / Oracle JVMs

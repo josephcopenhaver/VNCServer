@@ -30,7 +30,10 @@ public class VncServer implements Runnable
 	
 	ServerSocket serverSocket;
 	
-	public VncServer(int serverPort, int listenBacklog, String serverBindAddress) throws ParserConfigurationException, SAXException, IOException
+	private Semaphore stageLock = new Semaphore(1, true);
+    private volatile Object[] stagedArgs;
+    
+    public VncServer(int serverPort, int listenBacklog, String serverBindAddress) throws ParserConfigurationException, SAXException, IOException
 	{
 		if (serverBindAddress == null)
 		{
@@ -149,8 +152,6 @@ public class VncServer implements Runnable
 		withLock(removeClientAction, client);
 	}
 	
-	private Semaphore stageLock = new Semaphore(1, true);
-	private volatile Object[] stagedArgs;
 	public void withLock(Runnable r, Object... args)
 	{
 		try
