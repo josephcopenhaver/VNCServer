@@ -18,8 +18,6 @@ public class StateMachine
 	
 	public enum CLIENT_EVENT
 	{
-		SELECT_SESSION_TYPE,
-		OFFER_SECURITY_TOKEN,
 		SELECT_SCREEN,
 		GET_SCREEN_SEGMENT,
 		OFFER_INPUT,
@@ -31,7 +29,7 @@ public class StateMachine
 	
 	public enum SERVER_EVENT
 	{
-	    AUTHORIZATION_UPDATE, // Response to client event OFFER_SECURITY_TOKEN
+	    AUTHORIZATION_UPDATE,
 	    CLIENT_ALIAS_UPDATE, // Response to client event REQUEST_ALIAS
 	    
 	    
