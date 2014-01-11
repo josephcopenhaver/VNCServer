@@ -3,15 +3,18 @@ package com.jcope.vnc.shared;
 import static com.jcope.debug.Debug.assert_;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.lang.ref.WeakReference;
+import java.util.HashMap;
+import java.util.WeakHashMap;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import com.jcope.debug.LLog;
+import com.jcope.util.ReusableByteArrayOutputStream;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
@@ -22,6 +25,9 @@ public class Msg implements Serializable
 	
 	public final Object event;
 	public final Object[] args;
+	
+	private static WeakHashMap<ObjectOutputStream, ReusableByteArrayOutputStream> compressionCache = new WeakHashMap<ObjectOutputStream, ReusableByteArrayOutputStream>(1);
+	private static WeakHashMap<ObjectOutputStream, HashMap<Integer,WeakReference<byte[]>>> compressionResultCache = new WeakHashMap<ObjectOutputStream, HashMap<Integer,WeakReference<byte[]>>>(1);
 	
 	private Msg(Object event, Object[] args)
 	{
@@ -66,14 +72,26 @@ public class Msg implements Serializable
 	    return rval;
 	}
 	
-	private static Object compress(Object obj)
+	private static Object compress(ObjectOutputStream out, Object obj)
 	{
-	    Object rval = null;
+	    byte[] rval = null;
+	    int resultSize;
+	    HashMap<Integer,WeakReference<byte[]>> resultCache;
 	    
-	    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+	    ReusableByteArrayOutputStream rbos = compressionCache.get(out);
+	    if (rbos == null)
+	    {
+	        rbos = new ReusableByteArrayOutputStream();
+	        compressionCache.put(out, rbos);
+	    }
+	    else
+	    {
+	        rbos.reset();
+	    }
+	    
 	    try
         {
-	        GZIPOutputStream gzip_out = new GZIPOutputStream(bos);
+	        GZIPOutputStream gzip_out = new GZIPOutputStream(rbos);
             ObjectOutputStream oos = new ObjectOutputStream(gzip_out);
             oos.writeObject(obj);
             oos.flush();
@@ -81,16 +99,26 @@ public class Msg implements Serializable
             oos.close();
             gzip_out.close();
             
-            rval = bos.toByteArray();
-        }
-        catch (IOException e)
-        {
-            LLog.e(e);
-        }
-        
-        try
-        {
-            bos.close();
+            resultSize = rbos.size();
+            resultCache = compressionResultCache.get(out);
+            if (resultCache == null)
+            {
+                resultCache = new HashMap<Integer,WeakReference<byte[]>>(1);
+                compressionResultCache.put(out, resultCache);
+                rval = new byte[resultSize];
+                resultCache.put(resultSize, new WeakReference<byte[]>(rval));
+            }
+            else
+            {
+                WeakReference<byte[]> ref = resultCache.get(resultSize);
+                rval = (ref == null) ? null : ref.get();
+                if (rval == null)
+                {
+                    rval = new byte[resultSize];
+                    resultCache.put(resultSize, new WeakReference<byte[]>(rval));
+                }
+            }
+            rbos.toByteArray(rval);
         }
         catch (IOException e)
         {
@@ -114,11 +142,11 @@ public class Msg implements Serializable
 	{
 		if (args == null)
 		{
-			out.writeObject(compress(event));
+			out.writeObject(compress(out, event));
 		}
 		else
 		{
-			out.writeObject(compress(new Msg(event, args)));
+			out.writeObject(compress(out, new Msg(event, args)));
 		}
 		out.flush();
 		out.reset();

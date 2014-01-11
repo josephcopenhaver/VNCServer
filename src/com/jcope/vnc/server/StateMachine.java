@@ -38,8 +38,7 @@ public class StateMachine
 		Handler.getInstance().handle(client, event, args);
 	}
 	
-	// TODO: make thread safe!
-    public static void handleServerEvent(ClientHandler client, SERVER_EVENT event)
+	public static void handleServerEvent(ClientHandler client, SERVER_EVENT event)
     {
         client.sendEvent(event);
     }
