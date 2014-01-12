@@ -277,12 +277,22 @@ public class ClientHandler extends Thread
 		
 	}
 	
+	public void sendPreCompressed(SERVER_EVENT event, byte[] preCmpressed)
+    {
+        _sendEvent(event, preCmpressed, (Object[]) null);
+    }
+	
 	public void sendEvent(SERVER_EVENT event)
     {
         sendEvent(event, (Object[]) null);
     }
-
+	
 	public void sendEvent(final SERVER_EVENT event, final Object... args)
+	{
+	    _sendEvent(event, null, args);
+	}
+
+	public void _sendEvent(final SERVER_EVENT event, final byte[] preCompressed, final Object... args)
 	{
 	    int tidTmp;
 	    TaskDispatcher<Integer> dispatcher;
@@ -356,7 +366,7 @@ public class ClientHandler extends Thread
 	                    }
 	                    try
 	                    {
-	                        Msg.send(out, event, args);
+	                        Msg.send(out, preCompressed, event, args);
 	                        switch(event)
 	                        {
                                 case AUTHORIZATION_UPDATE:

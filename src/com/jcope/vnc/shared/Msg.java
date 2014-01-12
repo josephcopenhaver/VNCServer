@@ -10,6 +10,7 @@ import java.io.Serializable;
 import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.WeakHashMap;
+import java.util.concurrent.Semaphore;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -28,6 +29,8 @@ public class Msg implements Serializable
 	
 	private static WeakHashMap<ObjectOutputStream, ReusableByteArrayOutputStream> compressionCache = new WeakHashMap<ObjectOutputStream, ReusableByteArrayOutputStream>(1);
 	private static WeakHashMap<ObjectOutputStream, HashMap<Integer,WeakReference<byte[]>>> compressionResultCache = new WeakHashMap<ObjectOutputStream, HashMap<Integer,WeakReference<byte[]>>>(1);
+	private static volatile ReusableByteArrayOutputStream precompRBOS = null;
+	private static Semaphore precompSema = new Semaphore(1, true);
 	
 	private Msg(Object event, Object[] args)
 	{
@@ -72,21 +75,55 @@ public class Msg implements Serializable
 	    return rval;
 	}
 	
+	public static byte[] getCompressed(SERVER_EVENT event, Object... args)
+	{
+	    try
+	    {
+	        precompSema.acquire();
+	    }
+	    catch (InterruptedException e)
+	    {
+	        LLog.e(e);
+	    }
+	    try
+	    {
+	        return (byte[]) compress(null, (args == null) ? event : new Msg(event, args));
+	    }
+	    finally {
+	        precompSema.release();
+	    }
+	}
+	
 	private static Object compress(ObjectOutputStream out, Object obj)
 	{
 	    byte[] rval = null;
+	    ReusableByteArrayOutputStream rbos;
 	    int resultSize;
-	    HashMap<Integer,WeakReference<byte[]>> resultCache;
 	    
-	    ReusableByteArrayOutputStream rbos = compressionCache.get(out);
-	    if (rbos == null)
+	    if (out == null)
 	    {
-	        rbos = new ReusableByteArrayOutputStream();
-	        compressionCache.put(out, rbos);
+	        if (precompRBOS == null)
+	        {
+	            precompRBOS = new ReusableByteArrayOutputStream();
+	        }
+	        else
+	        {
+	            precompRBOS.reset();
+	        }
+	        rbos = precompRBOS;
 	    }
 	    else
 	    {
-	        rbos.reset();
+    	    rbos = compressionCache.get(out);
+    	    if (rbos == null)
+    	    {
+    	        rbos = new ReusableByteArrayOutputStream();
+    	        compressionCache.put(out, rbos);
+    	    }
+    	    else
+    	    {
+    	        rbos.reset();
+    	    }
 	    }
 	    
 	    try
@@ -100,25 +137,32 @@ public class Msg implements Serializable
             gzip_out.close();
             
             resultSize = rbos.size();
-            resultCache = compressionResultCache.get(out);
-            if (resultCache == null)
+            if (out == null)
             {
-                resultCache = new HashMap<Integer,WeakReference<byte[]>>(1);
-                compressionResultCache.put(out, resultCache);
-                rval = new byte[resultSize];
-                resultCache.put(resultSize, new WeakReference<byte[]>(rval));
+                rval = rbos.toByteArray();
             }
             else
             {
-                WeakReference<byte[]> ref = resultCache.get(resultSize);
-                rval = (ref == null) ? null : ref.get();
-                if (rval == null)
+                HashMap<Integer,WeakReference<byte[]>> resultCache = compressionResultCache.get(out);
+                if (resultCache == null)
                 {
+                    resultCache = new HashMap<Integer,WeakReference<byte[]>>(1);
+                    compressionResultCache.put(out, resultCache);
                     rval = new byte[resultSize];
                     resultCache.put(resultSize, new WeakReference<byte[]>(rval));
                 }
+                else
+                {
+                    WeakReference<byte[]> ref = resultCache.get(resultSize);
+                    rval = (ref == null) ? null : ref.get();
+                    if (rval == null)
+                    {
+                        rval = new byte[resultSize];
+                        resultCache.put(resultSize, new WeakReference<byte[]>(rval));
+                    }
+                }
+                rbos.toByteArray(rval);
             }
-            rbos.toByteArray(rval);
         }
         catch (IOException e)
         {
@@ -128,19 +172,23 @@ public class Msg implements Serializable
 	    return rval;
 	}
 	
-	public static void send(ObjectOutputStream out, SERVER_EVENT event, Object... args) throws IOException
+	public static void send(ObjectOutputStream out, byte[] preCompressed, SERVER_EVENT event, Object... args) throws IOException
 	{
-		_send(out, event, args);
+		_send(out, preCompressed, event, args);
 	}
 	
 	public static void send(ObjectOutputStream out, CLIENT_EVENT event, Object... args) throws IOException
 	{
-		_send(out, event, args);
+		_send(out, null, event, args);
 	}
 	
-	private static void _send(ObjectOutputStream out, Object event, Object... args) throws IOException
+	private static void _send(ObjectOutputStream out, byte[] preCompressed, Object event, Object... args) throws IOException
 	{
-		if (args == null)
+	    if (preCompressed != null)
+	    {
+	        out.writeObject(preCompressed);
+	    }
+	    else if (args == null)
 		{
 			out.writeObject(compress(out, event));
 		}

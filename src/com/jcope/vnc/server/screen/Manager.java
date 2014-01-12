@@ -15,6 +15,7 @@ import com.jcope.debug.LLog;
 import com.jcope.vnc.server.ClientHandler;
 import com.jcope.vnc.server.DirectRobot;
 import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
+import com.jcope.vnc.shared.Msg;
 import com.jcope.vnc.server.VncServer;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
@@ -315,6 +316,7 @@ public class Manager extends Thread
 			{
 				try
 				{
+				    // TODO: work out a way to pre compress
 					for (ClientHandler client : clientsToSignal)
 					{
 						handleServerEvent(client, SERVER_EVENT.SCREEN_GONE);
@@ -338,12 +340,10 @@ public class Manager extends Thread
 		{
 			SERVER_EVENT evt = (SERVER_EVENT) stagedArgs[0];
 			Object[] evtArgs = (Object[]) stagedArgs[1];
+			byte[] preCmpressed = Msg.getCompressed(evt, evtArgs); 
 			for (ArrayList<ClientHandler> clientList : clientsPerGraphicsDevice.values())
 			{
-				for (ClientHandler client : clientList)
-				{
-					handleServerEvent(client, evt, evtArgs);
-				}
+			    handleServerEvent(clientList, preCmpressed, evt);
 			}
 		}
 		

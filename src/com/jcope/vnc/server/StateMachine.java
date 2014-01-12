@@ -1,5 +1,7 @@
 package com.jcope.vnc.server;
 
+import java.util.ArrayList;
+
 import com.jcope.debug.LLog;
 import com.jcope.vnc.server.input.Handler;
 import com.jcope.vnc.shared.Msg;
@@ -38,12 +40,44 @@ public class StateMachine
 		Handler.getInstance().handle(client, event, args);
 	}
 	
-	public static void handleServerEvent(ClientHandler client, SERVER_EVENT event)
+    public static void handleServerEvent(ArrayList<ClientHandler> clients, byte[] preCmpressed, SERVER_EVENT event)
+    {
+        for (ClientHandler client : clients)
+        {
+            client.sendPreCompressed(event, preCmpressed);
+        }
+    }
+    
+    public static void handleServerEvent(ArrayList<ClientHandler> clients, SERVER_EVENT event)
+    {
+        handleServerEvent(clients, event, (Object[]) null);
+    }
+    
+    public static void handleServerEvent(ArrayList<ClientHandler> clients, SERVER_EVENT event, Object... args)
+    {
+        if (clients.size() > 1)
+        {
+            byte[] preCmpressed = Msg.getCompressed(event, args);
+            for (ClientHandler client : clients)
+            {
+                client.sendPreCompressed(event, preCmpressed);
+            }
+        }
+        else
+        {
+            for (ClientHandler client : clients) // just in case something shift
+            {
+                handleServerEvent(client, event, args);
+            }
+        }
+    }
+    
+    public static void handleServerEvent(ClientHandler client, SERVER_EVENT event)
     {
         client.sendEvent(event);
     }
     
-	public static void handleServerEvent(ClientHandler client, SERVER_EVENT event, Object... args)
+    public static void handleServerEvent(ClientHandler client, SERVER_EVENT event, Object... args)
 	{
 		client.sendEvent(event, args);
 	}

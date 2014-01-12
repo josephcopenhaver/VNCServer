@@ -86,10 +86,7 @@ public class Monitor extends Thread
 			if (lastWidth != null)
 			{
 				// TODO: provide ability to lock a set of clients
-				for (ClientHandler client : clients)
-				{
-					StateMachine.handleServerEvent(client, SERVER_EVENT.SCREEN_RESIZED, screenWidth, screenHeight);
-				}
+				StateMachine.handleServerEvent(clients, SERVER_EVENT.SCREEN_RESIZED, screenWidth, screenHeight);
 			}
 		}
 	}
@@ -103,18 +100,12 @@ public class Monitor extends Thread
 	    {
 	        if (mouseWasOnMyScreen == null || lastX != mouseLocation.x || lastY != mouseLocation.y)
 	        {
-    	        for (ClientHandler client : clients)
-    	        {
-    	            StateMachine.handleServerEvent(client, SERVER_EVENT.CURSOR_MOVE, Integer.valueOf(mouseLocation.x), Integer.valueOf(mouseLocation.y));
-    	        }
+    	        StateMachine.handleServerEvent(clients, SERVER_EVENT.CURSOR_MOVE, Integer.valueOf(mouseLocation.x), Integer.valueOf(mouseLocation.y));
 	        }
 	    }
 	    else if (mouseWasOnMyScreen != null && mouseWasOnMyScreen)
 	    {
-	        for (ClientHandler client : clients)
-            {
-                StateMachine.handleServerEvent(client, SERVER_EVENT.CURSOR_GONE);
-            }
+	        StateMachine.handleServerEvent(clients, SERVER_EVENT.CURSOR_GONE);
 	    }
 	}
 	
