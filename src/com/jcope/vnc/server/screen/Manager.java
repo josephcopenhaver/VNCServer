@@ -316,10 +316,18 @@ public class Manager extends Thread
 			{
 				try
 				{
-				    // TODO: work out a way to pre compress
-					for (ClientHandler client : clientsToSignal)
+				    SERVER_EVENT event = SERVER_EVENT.SCREEN_GONE;
+				    byte[] preCmpressed = (clientsToSignal.size() > 1) ? Msg.getCompressed(event, (Object[]) null) : null;
+				    for (ClientHandler client : clientsToSignal)
 					{
-						handleServerEvent(client, SERVER_EVENT.SCREEN_GONE);
+					    if (preCmpressed != null)
+					    {
+					        client.sendPreCompressed(event, preCmpressed);
+					    }
+					    else
+					    {
+					        handleServerEvent(client, event);
+					    }
 						decreaseMonitorLock();
 					}
 				}
