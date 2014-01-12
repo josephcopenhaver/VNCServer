@@ -157,7 +157,7 @@ public class StateMachine implements Runnable
 			    }
 			    final int selectedScreen = tmpSelectedScreen;
 			    final String password = getPasswordHash();
-			    final String accessModeStr = ACCESS_MODE.VIEW_ONLY.commonName();
+			    final ACCESS_MODE accessMode = ACCESS_MODE.VIEW_ONLY;
 			    
 				socket = new Socket(serverAddress, serverPort);
 				wasConnected = Boolean.TRUE;
@@ -171,7 +171,7 @@ public class StateMachine implements Runnable
                     @Override
                     public void run()
                     {
-                        sendEvent(CLIENT_EVENT.SELECT_SCREEN, selectedScreen, accessModeStr, password);
+                        sendEvent(CLIENT_EVENT.SELECT_SCREEN, selectedScreen, accessMode, password);
                     }
 				    
 				});

@@ -16,15 +16,15 @@ public class SelectScreen extends Handle
         assert_(args != null);
         assert_(args.length == 3);
         assert_(args[0] instanceof Integer);
-        assert_(args[1] instanceof String);
+        assert_(args[1] instanceof ACCESS_MODE);
         assert_(args[2] == null || args[2] instanceof String);
         
         int deviceID = (int) args[0];
-        String accessModeStr = (String) args[1];
+        ACCESS_MODE accessMode = (ACCESS_MODE) args[1];
         String passwordHash = (String) args[2];
-        ACCESS_MODE accessMode = ACCESS_MODE.get(accessModeStr);
         
         assert_(accessMode != null);
+        assert_(accessMode != ACCESS_MODE.ALL);
         
         boolean clientBound = client.selectGraphicsDevice(deviceID, accessMode, passwordHash);
         
