@@ -310,12 +310,13 @@ public class ClientHandler extends Thread
             }
 		    try
 		    {
-                tid++;
-                if (tid<0)
+		        tidTmp = tid;
+		        tidTmp++;
+                if (tidTmp < 0)
                 {
-                    tid=0;
+                    tidTmp = 0;
                 }
-                tidTmp = tid;
+                tid = tidTmp;
             }
     		finally {
     		    serialSema.release();
