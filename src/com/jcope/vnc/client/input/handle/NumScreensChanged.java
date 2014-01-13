@@ -15,7 +15,7 @@ public class NumScreensChanged extends Handle
         assert_(args.length == 1);
         assert_(args[0] instanceof Integer);
         
-        // TODO: do something with this inforamtion?
+        // TODO: do something with this information?
     }
     
 }

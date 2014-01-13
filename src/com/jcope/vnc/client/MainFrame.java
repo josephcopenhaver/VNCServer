@@ -29,6 +29,7 @@ import javax.swing.SwingUtilities;
 import com.jcope.debug.LLog;
 import com.jcope.ui.ImagePanel;
 import com.jcope.util.DimensionF;
+import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
 import com.jcope.vnc.shared.ScreenSelector;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
 
@@ -424,6 +425,8 @@ public class MainFrame extends JFrame
         
         // trigger default view
         defaultView.actionPerformed(null);
+        
+        EventListenerDecorator.stateMachine = stateMachine;
 	}
 	
 	private boolean setViewMode(VIEW_MODE newMode)
@@ -642,6 +645,22 @@ public class MainFrame extends JFrame
             scrollPane.remove(this.imagePanel);
         }
         this.imagePanel = imagePanel;
+        ACCESS_MODE accessMode = client.getAccessMode();
+        ImagePanel panelToDecorate = null;
+        if (accessMode != null)
+        {
+            switch(accessMode)
+            {
+                case FULL_CONTROL:
+                    panelToDecorate = imagePanel;
+                    break;
+                case ALL:
+                case VIEW_AND_CHAT:
+                case VIEW_ONLY:
+                    break;
+            }
+        }
+        EventListenerDecorator.decorate(panelToDecorate);
         scrollPane.setViewportView(imagePanel);
         SwingUtilities.invokeLater(new Runnable() {
 

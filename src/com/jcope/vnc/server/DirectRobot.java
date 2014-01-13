@@ -10,6 +10,7 @@ import java.awt.MouseInfo;
 import java.awt.Point;
 import java.awt.PointerInfo;
 import java.awt.Rectangle;
+import java.awt.Robot;
 import java.awt.Toolkit;
 import java.awt.image.BufferedImage;
 import java.awt.peer.MouseInfoPeer;
@@ -30,6 +31,7 @@ import com.jcope.ui.DirectBufferedImage;
 public final class DirectRobot
 {
     public final GraphicsDevice device;
+    public final Robot robot;
     
     private Object getRGBPixelsMethodParam;
     private int getRGBPixelsMethodType;
@@ -58,6 +60,7 @@ public final class DirectRobot
 		{
 			device = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
 		}
+		robot = new Robot(device);
 		
 		ArrayList<Exception> exceptions = new ArrayList<Exception>();
 

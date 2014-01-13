@@ -56,7 +56,8 @@ public class LLog
 	    if (event == SERVER_EVENT.SCREEN_SEGMENT_CHANGED
 	            || event == SERVER_EVENT.CURSOR_MOVE
                 || event == SERVER_EVENT.CURSOR_GONE
-                || (event == SERVER_EVENT.SCREEN_SEGMENT_UPDATE && ((Integer)args[0]) != -1))
+                || (event == SERVER_EVENT.SCREEN_SEGMENT_UPDATE && ((Integer)args[0]) != -1)
+                || event == SERVER_EVENT.READ_INPUT_EVENTS)
 	    {
 	        return;
 	    }
@@ -66,7 +67,8 @@ public class LLog
 	public static void logEvent(String source, CLIENT_EVENT event, Object[] args)
 	{
 	    if (!DEBUG){return;}
-	    if (event == CLIENT_EVENT.GET_SCREEN_SEGMENT && ((Integer)args[0]) != -1)
+	    if ((event == CLIENT_EVENT.GET_SCREEN_SEGMENT && ((Integer)args[0]) != -1)
+	            || event == CLIENT_EVENT.OFFER_INPUT)
 	    {
 	        return;
 	    }

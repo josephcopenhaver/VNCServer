@@ -397,4 +397,18 @@ public class Manager extends Thread
 	    
 	    return rval;
 	}
+	
+	public void getOrigin(DirectRobot dirbot, int[] pos)
+	{
+	    assert_(pos != null);
+	    assert_(pos.length > 1);
+        pos[0] = 0;
+        pos[1] = 0;
+        
+        Monitor monitor = monitorForGraphicsDevice.get(dirbot.device);
+        if (monitor != null)
+        {
+            monitor.getOrigin(pos);
+        }
+	}
 }

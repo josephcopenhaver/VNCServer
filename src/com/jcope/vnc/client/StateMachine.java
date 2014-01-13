@@ -1,5 +1,7 @@
 package com.jcope.vnc.client;
 
+import static com.jcope.vnc.shared.InputEvent.MAX_QUEUE_SIZE;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -7,6 +9,7 @@ import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.concurrent.Semaphore;
 
 import javax.swing.JOptionPane;
@@ -16,6 +19,7 @@ import com.jcope.debug.LLog;
 import com.jcope.util.TaskDispatcher;
 import com.jcope.vnc.client.input.Handler;
 import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
+import com.jcope.vnc.shared.InputEvent;
 import com.jcope.vnc.shared.Msg;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
@@ -37,6 +41,10 @@ public class StateMachine implements Runnable
 	
 	private Semaphore sendSema = new Semaphore(1, true);
     private TaskDispatcher<Integer> dispatcher = new TaskDispatcher<Integer>("Client output dispatcher");
+    
+    private Semaphore queueAccessSema = new Semaphore(1, true);
+    private volatile ArrayList<InputEvent> outQueue = null;
+    private ACCESS_MODE accessMode = null;
 	
 	public StateMachine(String serverAddress, int serverPort, Integer selectedScreenNum, String password) throws UnknownHostException, IOException
 	{
@@ -165,6 +173,8 @@ public class StateMachine implements Runnable
 				out = new ObjectOutputStream(os);
 				is = socket.getInputStream();
 				in = new ObjectInputStream(is);
+				
+				this.accessMode = accessMode;
 				
 				SwingUtilities.invokeLater(new Runnable() {
 
@@ -340,4 +350,99 @@ public class StateMachine implements Runnable
 	{
 		System.exit(0);
 	}
+	
+	public InputEvent[] popEvents(int avail)
+	{
+	    InputEvent[] rval = null;
+	    ArrayList<InputEvent> list;
+	    int size;
+	    
+	    try
+        {
+            queueAccessSema.acquire();
+        }
+        catch (InterruptedException e)
+        {
+            LLog.e(e);
+        }
+        try
+        {
+            list = outQueue;
+            if (list != null && (size = list.size()) > 0)
+            {
+                rval = new InputEvent[Math.min(avail, size)];
+                for (int i=0; i<rval.length; i++)
+                {
+                    rval[i] = list.remove(0);
+                }
+                list.clear();
+            }
+        }
+        finally {
+            queueAccessSema.release();
+        }
+        
+        return rval;
+	}
+
+    public void addInput(InputEvent event)
+    {
+        ArrayList<InputEvent> list;
+        
+        try
+        {
+            queueAccessSema.acquire();
+        }
+        catch (InterruptedException e)
+        {
+            LLog.e(e);
+        }
+        try
+        {
+            list = outQueue;
+            if (list == null)
+            {
+                list = new ArrayList<InputEvent>(MAX_QUEUE_SIZE);
+                list.add(event);
+                outQueue = list;
+                sendEvent(CLIENT_EVENT.OFFER_INPUT, Boolean.TRUE, 1);
+            }
+            else
+            {
+                int size = list.size();
+                if (size >= MAX_QUEUE_SIZE)
+                {
+                    // Do Nothing
+                }
+                else if (size > 0)
+                {
+                    boolean pop = false;
+                    InputEvent prev = list.get(size - 1);
+                    
+                    if (!prev.merge(event, true) && (size < 2 || !(pop = list.get(size - 2).merge(prev, false))))
+                    {
+                        list.add(event);
+                        sendEvent(CLIENT_EVENT.OFFER_INPUT, Boolean.TRUE, size + 1);
+                    }
+                    if (pop)
+                    {
+                        list.remove(size - 1);
+                    }
+                }
+                else
+                {
+                    list.add(event);
+                    sendEvent(CLIENT_EVENT.OFFER_INPUT, Boolean.TRUE, 1);
+                }
+            }
+        }
+        finally {
+            queueAccessSema.release();
+        }
+    }
+
+    public ACCESS_MODE getAccessMode()
+    {
+        return accessMode;
+    }
 }

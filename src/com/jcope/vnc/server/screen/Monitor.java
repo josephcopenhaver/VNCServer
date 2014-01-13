@@ -1,5 +1,7 @@
 package com.jcope.vnc.server.screen;
 
+import static com.jcope.debug.Debug.assert_;
+
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.util.ArrayList;
@@ -376,6 +378,15 @@ public class Monitor extends Thread
         }
         
         return rval;
+    }
+
+    public void getOrigin(int[] pos)
+    {
+        assert_(pos != null);
+        assert_(pos.length > 1);
+        
+        pos[0] = screenX;
+        pos[1] = screenY;
     }
 
 }

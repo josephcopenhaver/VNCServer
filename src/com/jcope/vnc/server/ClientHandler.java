@@ -402,6 +402,7 @@ public class ClientHandler extends Thread
                                 case SCREEN_SEGMENT_CHANGED:
                                 case SCREEN_SEGMENT_SIZE_UPDATE:
                                 case SCREEN_SEGMENT_UPDATE:
+                                case READ_INPUT_EVENTS:
                                     break;
 	                        }
 	                    }
@@ -431,5 +432,10 @@ public class ClientHandler extends Thread
 	    Object rval = Manager.getInstance().getSegmentOptimized(dirbot, segmentID);
 	    
 	    return rval;
+	}
+	
+	public DirectRobot getDirbot()
+	{
+	    return dirbot;
 	}
 }

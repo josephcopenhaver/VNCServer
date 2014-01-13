@@ -29,6 +29,8 @@ public class StateMachine
 	
 	public static enum SERVER_EVENT
 	{
+	    READ_INPUT_EVENTS, // response to client event OFFER_INPUT
+	    
 	    AUTHORIZATION_UPDATE,
 	    CLIENT_ALIAS_UPDATE, // Response to client event REQUEST_ALIAS
 	    
@@ -80,6 +82,7 @@ public class StateMachine
                 case AUTHORIZATION_UPDATE:
                 case SCREEN_SEGMENT_SIZE_UPDATE:
                 case CLIENT_ALIAS_UPDATE:
+                case READ_INPUT_EVENTS:
                     rval = false;
                     break;
                 
@@ -126,6 +129,7 @@ public class StateMachine
                 case AUTHORIZATION_UPDATE:
                 case SCREEN_SEGMENT_SIZE_UPDATE:
                 case CLIENT_ALIAS_UPDATE:
+                case READ_INPUT_EVENTS:
                     rval = true;
                     break;
                 
