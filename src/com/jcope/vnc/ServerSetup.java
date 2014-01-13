@@ -223,7 +223,6 @@ public class ServerSetup
                 }
                 
                 
-                // TODO: include a mechanism for hashing passwords
                 String defaultPasswordHash = securityPolicy.getPassHash(deviceID, accessMode);
                 if (null == defaultPasswordHash)
                 {
