@@ -361,4 +361,13 @@ public class ImagePanel extends JPanel
         return rval;
     }
     
+    public void worldToScale(Point p)
+    {
+        p.x -= offX;
+        p.y -= offY;
+        
+        p.x = Math.round(((float)p.x)/scaleFactors.width);
+        p.y = Math.round(((float)p.y)/scaleFactors.height);
+    }
+    
 }

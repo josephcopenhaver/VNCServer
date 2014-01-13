@@ -1,7 +1,7 @@
 package com.jcope.vnc.server.input.handle;
 
 import static com.jcope.debug.Debug.assert_;
-import static com.jcope.vnc.shared.InputEvent.MAX_QUEUE_SIZE;
+import static com.jcope.vnc.shared.InputEventInfo.MAX_QUEUE_SIZE;
 
 import java.util.concurrent.Semaphore;
 

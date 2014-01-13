@@ -1,5 +1,6 @@
 package com.jcope.vnc.client;
 
+import java.awt.Point;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
@@ -9,18 +10,46 @@ import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.util.concurrent.Semaphore;
 
-import javax.swing.JPanel;
-
 import com.jcope.debug.LLog;
+import com.jcope.ui.ImagePanel;
 import com.jcope.vnc.shared.InputEvent;
-import com.jcope.vnc.shared.InputEvent.INPUT_TYPE;
+import com.jcope.vnc.shared.InputEventInfo.INPUT_TYPE;
 
 public class EventListenerDecorator
 {
     public static StateMachine stateMachine = null;
     
-    private static volatile JPanel currentFrame = null;
+    private static volatile ImagePanel currentPanel = null;
     private static final Semaphore accessSema = new Semaphore(1, true);
+    private static Point point = new Point();
+    
+    public static void decorate(ImagePanel panel)
+    {
+        try
+        {
+            accessSema.acquire();
+        }
+        catch (InterruptedException e)
+        {
+            LLog.e(e);
+        }
+        try
+        {
+            ImagePanel oldFrame = currentPanel;
+            currentPanel = panel;
+            if (oldFrame != null)
+            {
+                undecorate(oldFrame);
+            }
+            if (panel != null)
+            {
+                _decorate(panel);
+            }
+        }
+        finally {
+            accessSema.release();
+        }
+    }
     
     private static KeyListener keyListener = new KeyListener() {
         
@@ -76,14 +105,16 @@ public class EventListenerDecorator
         @Override
         public void mouseMoved(MouseEvent e)
         {
-            InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_MOVE, e);
+            readPoint(e);
+            InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_MOVE, e, point.x, point.y);
             stateMachine.addInput(event);
         }
         
         @Override
         public void mouseDragged(MouseEvent e)
         {
-            InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_DRAG, e);
+            readPoint(e);
+            InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_DRAG, e, point.x, point.y);
             stateMachine.addInput(event);
         }
         
@@ -112,14 +143,16 @@ public class EventListenerDecorator
         @Override
         public void mousePressed(MouseEvent e)
         {
-            InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_DOWN, e);
+            readPoint(e);
+            InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_DOWN, e, point.x, point.y);
             stateMachine.addInput(event);
         }
 
         @Override
         public void mouseReleased(MouseEvent e)
         {
-            InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_UP, e);
+            readPoint(e);
+            InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_UP, e, point.x, point.y);
             stateMachine.addInput(event);
         }
         
@@ -136,35 +169,17 @@ public class EventListenerDecorator
         
     };
     
-    public static void decorate(JPanel panel)
+    private static void readPoint(MouseEvent e)
     {
-        try
-        {
-            accessSema.acquire();
-        }
-        catch (InterruptedException e)
-        {
-            LLog.e(e);
-        }
-        try
-        {
-            JPanel oldFrame = currentFrame;
-            currentFrame = panel;
-            if (oldFrame != null)
-            {
-                undecorate(oldFrame);
-            }
-            if (panel != null)
-            {
-                _decorate(panel);
-            }
-        }
-        finally {
-            accessSema.release();
-        }
+        Point t = e.getPoint();
+        
+        point.x = t.x;
+        point.y = t.y;
+        
+        currentPanel.worldToScale(point);
     }
     
-    private static void _decorate(JPanel panel)
+    private static void _decorate(ImagePanel panel)
     {
         panel.addKeyListener(keyListener);
         panel.addMouseMotionListener(mouseMotionListener);
@@ -172,7 +187,7 @@ public class EventListenerDecorator
         panel.addMouseWheelListener(mouseWheelListener);
     }
     
-    private static void undecorate(JPanel panel)
+    private static void undecorate(ImagePanel panel)
     {
         panel.removeKeyListener(keyListener);
         panel.removeMouseMotionListener(mouseMotionListener);

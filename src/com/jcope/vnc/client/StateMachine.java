@@ -1,6 +1,6 @@
 package com.jcope.vnc.client;
 
-import static com.jcope.vnc.shared.InputEvent.MAX_QUEUE_SIZE;
+import static com.jcope.vnc.shared.InputEventInfo.MAX_QUEUE_SIZE;
 
 import java.io.IOException;
 import java.io.InputStream;

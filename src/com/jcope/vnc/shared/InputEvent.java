@@ -2,7 +2,6 @@ package com.jcope.vnc.shared;
 
 import static com.jcope.debug.Debug.assert_;
 
-import java.awt.Point;
 import java.awt.Robot;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
@@ -12,26 +11,12 @@ import java.util.Arrays;
 
 import com.jcope.vnc.server.DirectRobot;
 import com.jcope.vnc.server.screen.Manager;
+import com.jcope.vnc.shared.InputEventInfo.INPUT_TYPE;
 
 public class InputEvent implements Serializable
 {
     // Generated: serialVersionUID
     private static final long serialVersionUID = 85047497862213637L;
-    public static final int MAX_QUEUE_SIZE = 50;
-    private static final int[] origin = new int[]{0,0};
-    
-    public static enum INPUT_TYPE
-    {
-        KEY_DOWN,      // prevent subsequent same events
-        KEY_UP,        // prevent subsequent same events
-        KEY_PRESSED,   // replace previous key_down, i.f.f.
-        MOUSE_DOWN,    // prevent subsequent same events
-        MOUSE_UP,      // prevent subsequent same events
-        MOUSE_PRESSED, // replace previous mouse_down, i.f.f.
-        MOUSE_MOVE,    // collapse by replacing old with newest
-        MOUSE_DRAG,    // ??? // TODO: for now just treat it like MOUSE_MOVE
-        WHEEL_SCROLL   // collapse on same directional summation of magnitude
-    };
     
     
     private INPUT_TYPE type;
@@ -71,15 +56,16 @@ public class InputEvent implements Serializable
             case MOUSE_UP:
             {
                 assert_(args != null);
-                assert_(args.length == 1);
+                assert_(args.length == 3);
                 assert_(args[0] instanceof MouseEvent);
+                assert_(args[1] instanceof Integer);
+                assert_(args[2] instanceof Integer);
                 
                 MouseEvent e = (MouseEvent) args[0];
                 mult = e.getClickCount();
-                Point p = e.getPoint();
                 mod = e.getModifiers();
                 modex = e.getModifiersEx();
-                typeProps = new int[]{p.x, p.y, e.getButton()};
+                typeProps = new int[]{(int) args[1], (int) args[2], e.getButton()};
                 
                 break;
             }
@@ -87,14 +73,15 @@ public class InputEvent implements Serializable
             case MOUSE_DRAG:
             {
                 assert_(args != null);
-                assert_(args.length == 1);
+                assert_(args.length == 3);
                 assert_(args[0] instanceof MouseEvent);
+                assert_(args[1] instanceof Integer);
+                assert_(args[2] instanceof Integer);
                 
                 MouseEvent e = (MouseEvent) args[0];
-                Point p = e.getPoint();
                 mod = e.getModifiers();
                 modex = e.getModifiersEx();
-                typeProps = new int[]{p.x, p.y};
+                typeProps = new int[]{(int) args[1], (int) args[2]};
                 
                 break;
             }
@@ -205,6 +192,7 @@ public class InputEvent implements Serializable
             case MOUSE_PRESSED:
             case MOUSE_UP:
             case WHEEL_SCROLL:
+                assert_(false);
                 break;
         }
         
@@ -228,6 +216,7 @@ public class InputEvent implements Serializable
             case MOUSE_DRAG:
             case MOUSE_MOVE:
             case WHEEL_SCROLL:
+                assert_(false);
                 break;
         }
         
@@ -240,17 +229,17 @@ public class InputEvent implements Serializable
         
         switch(event.type)
         {
+            case MOUSE_DOWN:
+            case MOUSE_UP:
+            case MOUSE_PRESSED:
+            case MOUSE_MOVE:
+            case MOUSE_DRAG:
+                Manager.getInstance().getOrigin(dirbot, InputEventInfo.ORIGIN);
+                break;
             case KEY_DOWN:
             case KEY_PRESSED:
             case KEY_UP:
             case WHEEL_SCROLL:
-                break;
-            case MOUSE_DOWN:
-            case MOUSE_UP:
-            case MOUSE_DRAG:
-            case MOUSE_MOVE:
-            case MOUSE_PRESSED:
-                Manager.getInstance().getOrigin(dirbot, origin);
                 break;
         }
         
@@ -280,14 +269,14 @@ public class InputEvent implements Serializable
                     case MOUSE_DRAG:
                     {
                         i = EOM;
-                        moveMouse(dirbot, origin, event); // TODO: verify drag
+                        moveMouse(dirbot, event); // TODO: verify drag
                         
                         break;
                     }
                     case MOUSE_MOVE:
                     {
                         i = EOM;
-                        moveMouse(dirbot, origin, event);
+                        moveMouse(dirbot, event);
                         
                         break;
                     }
@@ -296,7 +285,7 @@ public class InputEvent implements Serializable
                     {
                         if (i == 0)
                         {
-                            moveMouse(dirbot, origin, event);
+                            moveMouse(dirbot, event);
                         }
                         dirbot.mousePress(event.mbutton());
                         
@@ -309,7 +298,7 @@ public class InputEvent implements Serializable
                     {
                         if (i == 0 && event.type == INPUT_TYPE.MOUSE_UP)
                         {
-                            moveMouse(dirbot, origin, event);
+                            moveMouse(dirbot, event);
                         }
                         dirbot.mouseRelease(event.mbutton());
                         
@@ -330,15 +319,15 @@ public class InputEvent implements Serializable
         }
     }
     
-    private static void moveMouse(DirectRobot dirbot, int[] origin, InputEvent event)
+    private static void moveMouse(DirectRobot dirbot, InputEvent event)
     {
         int x, y;
         
-        x = origin[0];
-        y = origin[1];
+        x = event.x();
+        y = event.y();
         
-        x += event.x();
-        y += event.y();
+        x += InputEventInfo.ORIGIN[0];
+        y += InputEventInfo.ORIGIN[1];
         
         dirbot.mouseMove(x, y);
     }
