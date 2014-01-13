@@ -1,6 +1,7 @@
 package com.jcope.vnc.client;
 
 import static com.jcope.debug.Debug.DEBUG;
+import static com.jcope.debug.Debug.assert_;
 import static com.jcope.util.Scale.factorsThatShrinkToFitWithin;
 import static com.jcope.util.Scale.factorsThatStretchToFit;
 
@@ -637,15 +638,10 @@ public class MainFrame extends JFrame
 	{
 	    return imagePanel;
 	}
-
-    public void setImagePanel(ImagePanel imagePanel)
-    {
-        if (this.imagePanel != null)
-        {
-            scrollPane.remove(this.imagePanel);
-        }
-        this.imagePanel = imagePanel;
-        ACCESS_MODE accessMode = client.getAccessMode();
+	
+	public void onReconnect()
+	{
+	    ACCESS_MODE accessMode = client.getAccessMode();
         ImagePanel panelToDecorate = null;
         if (accessMode != null)
         {
@@ -654,13 +650,25 @@ public class MainFrame extends JFrame
                 case FULL_CONTROL:
                     panelToDecorate = imagePanel;
                     break;
-                case ALL:
                 case VIEW_AND_CHAT:
                 case VIEW_ONLY:
+                    break;
+                case ALL:
+                    assert_(false);
                     break;
             }
         }
         EventListenerDecorator.decorate(panelToDecorate);
+	}
+
+    public void setImagePanel(ImagePanel imagePanel)
+    {
+        if (this.imagePanel != null)
+        {
+            scrollPane.remove(this.imagePanel);
+        }
+        this.imagePanel = imagePanel;
+        onReconnect();
         scrollPane.setViewportView(imagePanel);
         SwingUtilities.invokeLater(new Runnable() {
 

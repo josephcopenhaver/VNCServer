@@ -30,6 +30,10 @@ public class ScreenResized extends Handle
             frame.invalidate();
             frame.repaint();
         }
+        else if (imagePanel != null)
+        {
+            frame.onReconnect();
+        }
     }
     
 }

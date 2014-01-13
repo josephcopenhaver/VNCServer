@@ -158,14 +158,24 @@ public class StateMachine implements Runnable
 			ObjectInputStream in = null;
 			try
 			{
-			    Integer tmpSelectedScreen = getSelectedScreen();
+			    ACCESS_MODE defaultAccessMode = ACCESS_MODE.VIEW_ONLY;
+			    ACCESS_MODE tmpAccessMode;
+			    Integer tmpSelectedScreen;
+			    
+			    tmpAccessMode = (ACCESS_MODE) JOptionPane.showInputDialog(frame, "Select access mode", "Select Access Mode", JOptionPane.QUESTION_MESSAGE, null, ACCESS_MODE.selectable(), defaultAccessMode);
+			    if (tmpAccessMode == null)
+			    {
+			        tmpAccessMode = defaultAccessMode;
+			    }
+			    tmpSelectedScreen = getSelectedScreen();
 			    if (tmpSelectedScreen == null)
 			    {
 			        tmpSelectedScreen = 0;
 			    }
+			    
 			    final int selectedScreen = tmpSelectedScreen;
 			    final String password = getPasswordHash();
-			    final ACCESS_MODE accessMode = ACCESS_MODE.VIEW_ONLY;
+			    final ACCESS_MODE accessMode = tmpAccessMode;
 			    
 				socket = new Socket(serverAddress, serverPort);
 				wasConnected = Boolean.TRUE;
