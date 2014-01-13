@@ -18,6 +18,7 @@ import org.xml.sax.SAXException;
 import com.jcope.vnc.Server.SERVER_PROPERTIES;
 import com.jcope.vnc.server.SecurityPolicy;
 import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
+import com.jcope.vnc.shared.HashFactory;
 import com.jcope.vnc.shared.ScreenSelector;
 
 /**
@@ -233,6 +234,11 @@ public class ServerSetup
                 if (null == passwordHash || passwordHash.equals(""))
                 {
                     break;
+                }
+                
+                if (!passwordHash.equals(defaultPasswordHash) && !defaultPasswordHash.equals(SecurityPolicy.ALL_TOKEN))
+                {
+                    passwordHash = HashFactory.hash(passwordHash);
                 }
                 
                 securityPolicy.whitelist(deviceID, accessMode, passwordHash);

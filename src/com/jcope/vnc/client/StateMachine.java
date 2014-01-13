@@ -21,6 +21,7 @@ import com.jcope.vnc.client.input.Handler;
 import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
 import com.jcope.vnc.shared.InputEvent;
 import com.jcope.vnc.shared.Msg;
+import com.jcope.vnc.shared.HashFactory;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
@@ -91,9 +92,16 @@ public class StateMachine implements Runnable
 	    if (rval == null)
 	    {
 	        rval = (String) JOptionPane.showInputDialog(frame, "Password?", "");
-	        if (rval != null && rval.equals(""))
+	        if (rval != null)
 	        {
-	            rval = null;
+	            if (rval.equals(""))
+	            {
+	                rval = null;
+	            }
+	            else
+	            {
+	                rval = HashFactory.hash(rval);
+	            }
 	        }
 	    }
 	    
