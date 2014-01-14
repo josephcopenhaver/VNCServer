@@ -452,21 +452,20 @@ public class StateMachine implements Runnable
                 }
                 else if (size > 0)
                 {
-                    boolean pop = false;
                     InputEvent prev = list.get(size - 1);
                     
-                    if (!prev.merge(event, true, true) && (size < 2 || !(pop = list.get(size - 2).merge(prev, false, true))))
+                    if (!prev.merge(event, true))
                     {
+                        // Could not merge
                         list.add(event);
                         sendEvent(CLIENT_EVENT.OFFER_INPUT, Boolean.TRUE, size + 1);
                     }
-                    if (pop)
+                    else if (size > 1 && list.get(size - 2).merge(prev, false))
                     {
+                        // A merge occurred, the event 'prev' may have become something else
+                        // e.g. a pressed event...
+                        // turns out the 'new' event was merge'able with it's previous event
                         list.remove(size - 1);
-                        if (size > 2 && list.remove(size - 3).merge(list.get(size - 2), false, false))
-                        {
-                            list.remove(size - 2);
-                        }
                     }
                 }
                 else

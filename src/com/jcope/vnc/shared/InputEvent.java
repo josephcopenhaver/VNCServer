@@ -411,7 +411,7 @@ public class InputEvent implements Serializable
         }
     }
     
-    public boolean merge(InputEvent next, boolean isFirstCollapse, boolean supportBasicMerge)
+    public boolean merge(InputEvent next, boolean isFirstCollapse)
     {
         boolean rval = false;
         
@@ -419,60 +419,57 @@ public class InputEvent implements Serializable
         {
             if (type == next.type)
             {
-                if (supportBasicMerge)
+                if (isFirstCollapse)
                 {
-                    if (isFirstCollapse)
+                    switch (type)
                     {
-                        switch (type)
-                        {
-                            case KEY_PRESSED:
-                            case MOUSE_PRESSED:
-                                assert_(false);
-                                break;
-                            case KEY_DOWN:
-                            case KEY_UP:
-                            case MOUSE_DOWN:
-                            case MOUSE_UP:
-                                // Hidden collapsing of nonsensical sequences
-                                rval = true;
-                                break;
-                            case MOUSE_MOVE:
-                                System.arraycopy(next.typeProps, 0, typeProps, 0, typeProps.length);
+                        case KEY_PRESSED:
+                        case MOUSE_PRESSED:
+                            assert_(false);
+                            break;
+                        case KEY_DOWN:
+                        case KEY_UP:
+                        case MOUSE_DOWN:
+                        case MOUSE_UP:
+                            // Hidden collapsing of nonsensical sequences
+                            rval = true;
+                            break;
+                        case MOUSE_MOVE:
+                            System.arraycopy(next.typeProps, 0, typeProps, 0, typeProps.length);
+                            mult++;
+                            rval = true;
+                            break;
+                        case WHEEL_SCROLL:
+                            if ((magnitude > 0) == (next.magnitude > 0) &&
+                                    ((magnitude > 0 && magnitude + next.magnitude > 0) ||
+                                            (magnitude < 0 && magnitude + next.magnitude < 0)))
+                            {
+                                magnitude += next.magnitude;
                                 mult++;
                                 rval = true;
-                                break;
-                            case WHEEL_SCROLL:
-                                if ((magnitude > 0) == (next.magnitude > 0) &&
-                                        ((magnitude > 0 && magnitude + next.magnitude > 0) ||
-                                                (magnitude < 0 && magnitude + next.magnitude < 0)))
-                                {
-                                    magnitude += next.magnitude;
-                                    mult++;
-                                    rval = true;
-                                }
-                                break;
-                        }
+                            }
+                            break;
                     }
-                    else
+                }
+                else
+                {
+                    switch (type)
                     {
-                        switch (type)
-                        {
-                            case KEY_PRESSED:
-                            case MOUSE_PRESSED:
-                                if (Arrays.equals(typeProps, next.typeProps))
-                                {
-                                    mult++;
-                                    rval = true;
-                                }
-                                break;
-                            case KEY_DOWN:
-                            case KEY_UP:
-                            case MOUSE_DOWN:
-                            case MOUSE_MOVE:
-                            case MOUSE_UP:
-                            case WHEEL_SCROLL:
-                                break;
-                       }
+                        case KEY_PRESSED:
+                        case MOUSE_PRESSED:
+                            if (Arrays.equals(typeProps, next.typeProps))
+                            {
+                                mult++;
+                                rval = true;
+                            }
+                            break;
+                        case KEY_DOWN:
+                        case KEY_UP:
+                        case MOUSE_DOWN:
+                        case MOUSE_MOVE:
+                        case MOUSE_UP:
+                        case WHEEL_SCROLL:
+                            break;
                     }
                 }
             }
@@ -492,7 +489,7 @@ public class InputEvent implements Serializable
                                 type = INPUT_TYPE.MOUSE_PRESSED;
                                 break;
                             case MOUSE_MOVE:
-                                case KEY_PRESSED:
+                            case KEY_PRESSED:
                             case MOUSE_PRESSED:
                             case KEY_DOWN:
                             case MOUSE_DOWN:
@@ -505,8 +502,7 @@ public class InputEvent implements Serializable
                 }
                 else if (type == INPUT_TYPE.MOUSE_MOVE
                         && (next.type == INPUT_TYPE.MOUSE_DOWN
-                            || next.type == INPUT_TYPE.MOUSE_UP
-                            || next.type == INPUT_TYPE.MOUSE_PRESSED)
+                            || next.type == INPUT_TYPE.MOUSE_UP)
                         && typeProps[0] == next.typeProps[0]
                         && typeProps[1] == next.typeProps[1])
                 {
