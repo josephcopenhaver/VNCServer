@@ -463,7 +463,7 @@ public class StateMachine implements Runnable
                     if (pop)
                     {
                         list.remove(size - 1);
-                        if (size > 2 && list.remove(size - 3).merge(list.get(size - 2), false, false))
+                        if (size > 2 && list.get(size - 3).merge(list.get(size - 2), false, false))
                         {
                             list.remove(size - 2);
                         }
