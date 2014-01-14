@@ -361,13 +361,25 @@ public class ImagePanel extends JPanel
         return rval;
     }
     
-    public void worldToScale(Point p)
+    public boolean worldToScale(Point p)
     {
+        boolean valid = false;
+        
         p.x -= offX;
         p.y -= offY;
         
-        p.x = Math.round(((float)p.x)/scaleFactors.width);
-        p.y = Math.round(((float)p.y)/scaleFactors.height);
+        if (p.x >= 0 && p.y >= 0)
+        {
+            p.x = Math.round(((float)p.x)/scaleFactors.width);
+            p.y = Math.round(((float)p.y)/scaleFactors.height);
+            
+            if (p.x < (image.getWidth()) && p.y < (image.getHeight()))
+            {
+                valid = true;
+            }
+        }
+        
+        return valid;
     }
     
 }

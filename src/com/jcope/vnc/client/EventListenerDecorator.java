@@ -116,17 +116,21 @@ public class EventListenerDecorator
         @Override
         public void mouseMoved(MouseEvent e)
         {
-            readPoint(e);
-            InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_MOVE, e, point.x, point.y);
-            stateMachine.addInput(event);
+            if (readPoint(e))
+            {
+                InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_MOVE, e, point.x, point.y);
+                stateMachine.addInput(event);
+            }
         }
         
         @Override
         public void mouseDragged(MouseEvent e)
         {
-            readPoint(e);
-            InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_DRAG, e, point.x, point.y);
-            stateMachine.addInput(event);
+            if (readPoint(e))
+            {
+                InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_DRAG, e, point.x, point.y);
+                stateMachine.addInput(event);
+            }
         }
         
     };
@@ -154,17 +158,21 @@ public class EventListenerDecorator
         @Override
         public void mousePressed(MouseEvent e)
         {
-            readPoint(e);
-            InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_DOWN, e, point.x, point.y);
-            stateMachine.addInput(event);
+            if (readPoint(e))
+            {
+                InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_DOWN, e, point.x, point.y);
+                stateMachine.addInput(event);
+            }
         }
 
         @Override
         public void mouseReleased(MouseEvent e)
         {
-            readPoint(e);
-            InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_UP, e, point.x, point.y);
-            stateMachine.addInput(event);
+            if (readPoint(e))
+            {
+                InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_UP, e, point.x, point.y);
+                stateMachine.addInput(event);
+            }
         }
         
     };
@@ -180,14 +188,14 @@ public class EventListenerDecorator
         
     };
     
-    private static void readPoint(MouseEvent e)
+    private static boolean readPoint(MouseEvent e)
     {
         Point t = e.getPoint();
         
         point.x = t.x;
         point.y = t.y;
         
-        currentPanel.worldToScale(point);
+        return currentPanel.worldToScale(point);
     }
     
     private static void _decorate(JFrame parent, ImagePanel panel)
