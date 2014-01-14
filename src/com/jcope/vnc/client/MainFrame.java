@@ -670,12 +670,14 @@ public class MainFrame extends JFrame
         this.imagePanel = imagePanel;
         onReconnect();
         scrollPane.setViewportView(imagePanel);
+        final VIEW_MODE fViewMode = viewMode;
+        setViewMode(null);
         SwingUtilities.invokeLater(new Runnable() {
 
             @Override
             public void run()
             {
-                ActionListener action = viewModeActions.get(viewMode);
+                ActionListener action = viewModeActions.get(fViewMode);
                 if (action != null)
                 {
                     action.actionPerformed(null);
