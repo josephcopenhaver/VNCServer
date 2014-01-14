@@ -501,7 +501,14 @@ public class MainFrame extends JFrame
     	    
     	    if (enabled)
     	    {
-    	        device = ScreenSelector.selectScreen(this, 0);
+    	        if (currentFullScreenDevice == null)
+    	        {
+    	            device = ScreenSelector.selectScreen(this, 0);
+    	        }
+    	        else
+    	        {
+    	            device = currentFullScreenDevice;
+    	        }
     	    }
     	    else
     	    {
@@ -575,6 +582,7 @@ public class MainFrame extends JFrame
     	    {
     	        setLocation(locationBeforeFullScreen);
     	        setSize(sizeBeforeFullScreen);
+    	        currentFullScreenDevice = null;
     	    }
 	    }
 	    finally {
@@ -671,6 +679,7 @@ public class MainFrame extends JFrame
         onReconnect();
         scrollPane.setViewportView(imagePanel);
         final VIEW_MODE fViewMode = viewMode;
+        final GraphicsDevice fDevice = currentFullScreenDevice;
         setViewMode(null);
         SwingUtilities.invokeLater(new Runnable() {
 
@@ -680,6 +689,7 @@ public class MainFrame extends JFrame
                 ActionListener action = viewModeActions.get(fViewMode);
                 if (action != null)
                 {
+                    currentFullScreenDevice = fDevice;
                     action.actionPerformed(null);
                 }
                 else
