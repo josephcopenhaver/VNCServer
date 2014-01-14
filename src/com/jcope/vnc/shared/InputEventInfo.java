@@ -14,7 +14,6 @@ public class InputEventInfo
         MOUSE_UP,      // prevent subsequent same events
         MOUSE_PRESSED, // replace previous mouse_down, i.f.f.
         MOUSE_MOVE,    // collapse by replacing old with newest
-        MOUSE_DRAG,    // ??? // TODO: for now just treat it like MOUSE_MOVE
         WHEEL_SCROLL   // collapse on same directional summation of magnitude
     };
 }

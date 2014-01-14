@@ -128,7 +128,7 @@ public class EventListenerDecorator
         {
             if (readPoint(e))
             {
-                InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_DRAG, e, point.x, point.y);
+                InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_MOVE, e, point.x, point.y);
                 stateMachine.addInput(event);
             }
         }

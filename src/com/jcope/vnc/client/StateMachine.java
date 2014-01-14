@@ -455,7 +455,7 @@ public class StateMachine implements Runnable
                     boolean pop = false;
                     InputEvent prev = list.get(size - 1);
                     
-                    if (!prev.merge(event, true) && (size < 2 || !(pop = list.get(size - 2).merge(prev, false))))
+                    if (!prev.merge(event, true, true) && (size < 2 || !(pop = list.get(size - 2).merge(prev, false, true))))
                     {
                         list.add(event);
                         sendEvent(CLIENT_EVENT.OFFER_INPUT, Boolean.TRUE, size + 1);
@@ -463,6 +463,10 @@ public class StateMachine implements Runnable
                     if (pop)
                     {
                         list.remove(size - 1);
+                        if (size > 2 && list.remove(size - 3).merge(list.get(size - 2), false, false))
+                        {
+                            list.remove(size - 2);
+                        }
                     }
                 }
                 else
