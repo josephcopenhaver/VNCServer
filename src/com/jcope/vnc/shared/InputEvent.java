@@ -509,6 +509,7 @@ public class InputEvent implements Serializable
                     mult = next.mult;
                     type = next.type;
                     typeProps = next.typeProps;
+                    next.typeProps = null; // So old parent can be GarbageCollected
                     rval = true;
                 }
             }
