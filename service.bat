@@ -14,7 +14,7 @@ del server.lock>NUL 2>&1
 IF EXIST server.lock set OPT_RESTART=y
 IF EXIST server.lock goto stop
 :setup1
-cmd /c "java -cp bin com.jcope.vnc.ServerSetup 2>&1 | tee setup.log 2>&1"
+cmd /c "java -cp bin com.jcope.vnc.ServerSetup server.properties 2>&1 | tee setup.log 2>&1"
 goto setup2
 
 
@@ -43,7 +43,7 @@ goto end
 :start
 del server.lock>NUL 2>&1
 IF EXIST server.lock goto already_running
-start "VNC Server" cmd /c "java -cp bin com.jcope.vnc.Server 2>&1 | tee server.log 2>&1"
+start "VNC Server" cmd /c "java -cp bin com.jcope.vnc.Server server.properties 2>&1 | tee server.log 2>&1"
 echo.
 echo Service started.
 goto end

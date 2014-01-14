@@ -6,8 +6,8 @@
 *DONE* 6. invalidate previously overlapped segments when pointer moves
 *DONE* 7. Implement alias registration and cleanup actions when a client disconnects
 8. Implement text chat for users with a registered alias
-9. Implement password config and entry on connect as well as connection type handling
-10. Implement screen selection dialog
+*DONE* 9. Implement password config and entry on connect as well as connection type handling
+*DONE* 10. Implement screen selection dialog
 11. Gracefully handle a screen disappearing
 12. Gracefully handle a screen resize
 13. Along the way implement the client spying on others feature for remote admins
@@ -18,7 +18,7 @@
 
 
 
-O1. deflate/inflate objects before/after sending/receiving over ObjectStreams
+*DONE* O1. deflate/inflate objects before/after sending/receiving over ObjectStreams
 O2. Optimize to use a lossy but still clear pixel format when transmitting image segments
 O3. integrate the lossy format fetching directly with the DirectRobot class
 O4. Use secure sockets (SSH tunnels)
