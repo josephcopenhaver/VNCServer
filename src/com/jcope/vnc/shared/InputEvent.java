@@ -62,10 +62,26 @@ public class InputEvent implements Serializable
                 assert_(args[2] instanceof Integer);
                 
                 MouseEvent e = (MouseEvent) args[0];
+                int button = e.getButton();
+                switch(button)
+                {
+                    case MouseEvent.BUTTON1:
+                        button = java.awt.event.InputEvent.BUTTON1_MASK;
+                        break;
+                    case MouseEvent.BUTTON2:
+                        button = java.awt.event.InputEvent.BUTTON2_MASK;
+                        break;
+                    case MouseEvent.BUTTON3:
+                        button = java.awt.event.InputEvent.BUTTON3_MASK;
+                        break;
+                    default:
+                        assert_(false);
+                        break;
+                }
                 mult = e.getClickCount();
                 mod = e.getModifiers();
                 modex = e.getModifiersEx();
-                typeProps = new int[]{(int) args[1], (int) args[2], e.getButton()};
+                typeProps = new int[]{(int) args[1], (int) args[2], button};
                 
                 break;
             }

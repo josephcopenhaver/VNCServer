@@ -658,7 +658,7 @@ public class MainFrame extends JFrame
                     break;
             }
         }
-        EventListenerDecorator.decorate(panelToDecorate);
+        EventListenerDecorator.decorate(this, panelToDecorate);
 	}
 
     public void setImagePanel(ImagePanel imagePanel)

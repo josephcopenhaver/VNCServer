@@ -1,5 +1,7 @@
 package com.jcope.vnc.client;
 
+import static com.jcope.debug.Debug.assert_;
+
 import java.awt.Point;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
@@ -9,6 +11,8 @@ import java.awt.event.MouseMotionListener;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.util.concurrent.Semaphore;
+
+import javax.swing.JFrame;
 
 import com.jcope.debug.LLog;
 import com.jcope.ui.ImagePanel;
@@ -20,11 +24,13 @@ public class EventListenerDecorator
     public static StateMachine stateMachine = null;
     
     private static volatile ImagePanel currentPanel = null;
+    private static volatile JFrame currentParent = null;
     private static final Semaphore accessSema = new Semaphore(1, true);
     private static Point point = new Point();
     
-    public static void decorate(ImagePanel panel)
+    public static void decorate(JFrame parent, ImagePanel panel)
     {
+        assert_(parent != null);
         try
         {
             accessSema.acquire();
@@ -35,15 +41,20 @@ public class EventListenerDecorator
         }
         try
         {
-            ImagePanel oldFrame = currentPanel;
+            ImagePanel oldPanel = currentPanel;
             currentPanel = panel;
-            if (oldFrame != null)
+            if (oldPanel != null)
             {
-                undecorate(oldFrame);
+                undecorate(currentParent, oldPanel);
             }
             if (panel != null)
             {
-                _decorate(panel);
+                currentParent = parent;
+                _decorate(parent, panel);
+            }
+            else
+            {
+                currentParent = null;
             }
         }
         finally {
@@ -179,17 +190,17 @@ public class EventListenerDecorator
         currentPanel.worldToScale(point);
     }
     
-    private static void _decorate(ImagePanel panel)
+    private static void _decorate(JFrame parent, ImagePanel panel)
     {
-        panel.addKeyListener(keyListener);
+        parent.addKeyListener(keyListener);
         panel.addMouseMotionListener(mouseMotionListener);
         panel.addMouseListener(mouseListener);
         panel.addMouseWheelListener(mouseWheelListener);
     }
     
-    private static void undecorate(ImagePanel panel)
+    private static void undecorate(JFrame parent, ImagePanel panel)
     {
-        panel.removeKeyListener(keyListener);
+        parent.removeKeyListener(keyListener);
         panel.removeMouseMotionListener(mouseMotionListener);
         panel.removeMouseListener(mouseListener);
         panel.removeMouseWheelListener(mouseWheelListener);
