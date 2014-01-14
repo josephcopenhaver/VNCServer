@@ -169,8 +169,26 @@ public class StateMachine implements Runnable
 			    ACCESS_MODE defaultAccessMode = ACCESS_MODE.VIEW_ONLY;
 			    ACCESS_MODE tmpAccessMode;
 			    Integer tmpSelectedScreen;
+			    String tmp;
 			    
-			    tmpAccessMode = (ACCESS_MODE) JOptionPane.showInputDialog(frame, "Select access mode", "Select Access Mode", JOptionPane.QUESTION_MESSAGE, null, ACCESS_MODE.selectable(), defaultAccessMode);
+			    tmp = (String) JOptionPane.showInputDialog(frame, "Enter server address", "Server Address", JOptionPane.QUESTION_MESSAGE, null, null, serverAddress);
+			    if (tmp != null && !tmp.equals(""))
+			    {
+			        serverAddress = tmp;
+			    }
+			    tmp = (String) JOptionPane.showInputDialog(frame, "Enter server port", "Server Port", JOptionPane.QUESTION_MESSAGE, null, null, (new Integer(serverPort)).toString());
+			    if (tmp != null && !tmp.equals(""))
+                {
+			        try
+			        {
+			            serverPort = Integer.parseInt(tmp);
+			        }
+			        catch (NumberFormatException e)
+			        {
+			            // Do Nothing
+			        }
+                }
+                tmpAccessMode = (ACCESS_MODE) JOptionPane.showInputDialog(frame, "Select access mode", "Select Access Mode", JOptionPane.QUESTION_MESSAGE, null, ACCESS_MODE.selectable(), defaultAccessMode);
 			    if (tmpAccessMode == null)
 			    {
 			        tmpAccessMode = defaultAccessMode;
