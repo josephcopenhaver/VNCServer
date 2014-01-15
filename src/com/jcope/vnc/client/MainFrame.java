@@ -4,6 +4,7 @@ import static com.jcope.debug.Debug.DEBUG;
 import static com.jcope.debug.Debug.assert_;
 import static com.jcope.util.Scale.factorsThatShrinkToFitWithin;
 import static com.jcope.util.Scale.factorsThatStretchToFit;
+import static java.awt.event.InputEvent.CTRL_DOWN_MASK;
 
 import java.awt.Dimension;
 import java.awt.DisplayMode;
@@ -12,7 +13,6 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.util.HashMap;
 import java.util.concurrent.Semaphore;
@@ -31,6 +31,8 @@ import com.jcope.debug.LLog;
 import com.jcope.ui.ImagePanel;
 import com.jcope.util.DimensionF;
 import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
+import com.jcope.vnc.shared.InputEvent;
+import com.jcope.vnc.shared.InputEventInfo.INPUT_TYPE;
 import com.jcope.vnc.shared.ScreenSelector;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
 
@@ -113,9 +115,15 @@ public class MainFrame extends JFrame
         JMenu viewMenu = new JMenu("View");
         menuBar.add(viewMenu);
         
+        JMenu sendSpecial = new JMenu("Send Special");
+        actionMenu.add(sendSpecial);
+        final JMenuItem sendSpecialCAD = new JMenuItem("Control-Alt-Delete");
+        sendSpecial.add(sendSpecialCAD);
+        
+        
         JMenuItem refreshScreen = new JMenuItem("Refresh");
-		actionMenu.add(refreshScreen);
-		JMenuItem setAlias = new JMenuItem("Set Alias");
+        actionMenu.add(refreshScreen);
+        JMenuItem setAlias = new JMenuItem("Set Alias");
 		actionMenu.add(setAlias);
         JMenuItem clearAlias = new JMenuItem("Clear Alias");
         actionMenu.add(clearAlias);
@@ -142,7 +150,24 @@ public class MainFrame extends JFrame
         // Actions Menu
 		
         
-		refreshScreen.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_R, InputEvent.CTRL_DOWN_MASK)); 
+        // TODO: define accelerator
+        sendSpecialCAD.addActionListener(new ActionListener() {
+            
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                boolean merged;
+                KeyEvent keyEvent = new KeyEvent(sendSpecialCAD, 0, 0L, KeyEvent.CTRL_DOWN_MASK | KeyEvent.ALT_DOWN_MASK, KeyEvent.VK_DELETE, (char) 127);
+                
+                InputEvent event = new InputEvent(INPUT_TYPE.KEY_DOWN, keyEvent);
+                merged = event.merge(new InputEvent(INPUT_TYPE.KEY_UP, keyEvent), true);
+                assert_(merged);
+                
+                stateMachine.addInput(event);
+            }
+        });
+        
+        refreshScreen.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_R, CTRL_DOWN_MASK)); 
 		refreshScreen.addActionListener(new ActionListener() {
             
             @Override

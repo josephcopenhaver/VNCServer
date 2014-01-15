@@ -424,6 +424,8 @@ public class InputEvent implements Serializable
                     switch (type)
                     {
                         case KEY_PRESSED:
+                            // Can now send pre-merged special
+                            break;
                         case MOUSE_PRESSED:
                             assert_(false);
                             break;
