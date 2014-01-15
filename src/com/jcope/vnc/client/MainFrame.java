@@ -156,14 +156,20 @@ public class MainFrame extends JFrame
             @Override
             public void actionPerformed(ActionEvent e)
             {
-                boolean merged;
+                StateMachine thisStateMachine = stateMachine;
                 KeyEvent keyEvent = new KeyEvent(sendSpecialCAD, 0, 0L, KeyEvent.CTRL_DOWN_MASK | KeyEvent.ALT_DOWN_MASK, KeyEvent.VK_DELETE, (char) 127);
+                InputEvent eventDown = new InputEvent(INPUT_TYPE.KEY_DOWN, keyEvent);
+                InputEvent eventUp = new InputEvent(INPUT_TYPE.KEY_UP, keyEvent);
                 
-                InputEvent event = new InputEvent(INPUT_TYPE.KEY_DOWN, keyEvent);
-                merged = event.merge(new InputEvent(INPUT_TYPE.KEY_UP, keyEvent), true);
-                assert_(merged);
-                
-                stateMachine.addInput(event);
+                thisStateMachine.nts_acquireInputqueue();
+                try
+                {
+                    thisStateMachine.nts_addInput(eventDown);
+                    thisStateMachine.nts_addInput(eventUp);
+                }
+                finally {
+                    thisStateMachine.nts_releaseInputqueue();
+                }
             }
         });
         

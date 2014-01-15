@@ -420,11 +420,9 @@ public class StateMachine implements Runnable
         
         return rval;
 	}
-
-    public void addInput(InputEvent event)
+    
+    public void nts_acquireInputqueue()
     {
-        ArrayList<InputEvent> list;
-        
         try
         {
             queueAccessSema.acquire();
@@ -433,50 +431,65 @@ public class StateMachine implements Runnable
         {
             LLog.e(e);
         }
-        try
+    }
+    
+    public void nts_releaseInputqueue()
+    {
+        queueAccessSema.release();
+    }
+    
+    public void nts_addInput(InputEvent event)
+    {
+        ArrayList<InputEvent> list = outQueue;
+        if (list == null)
         {
-            list = outQueue;
-            if (list == null)
+            list = new ArrayList<InputEvent>(MAX_QUEUE_SIZE);
+            list.add(event);
+            outQueue = list;
+            sendEvent(CLIENT_EVENT.OFFER_INPUT, Boolean.TRUE, 1);
+        }
+        else
+        {
+            int size = list.size();
+            if (size >= MAX_QUEUE_SIZE)
             {
-                list = new ArrayList<InputEvent>(MAX_QUEUE_SIZE);
-                list.add(event);
-                outQueue = list;
-                sendEvent(CLIENT_EVENT.OFFER_INPUT, Boolean.TRUE, 1);
+                // Do Nothing
+            }
+            else if (size > 0)
+            {
+                InputEvent prev = list.get(size - 1);
+                
+                if (!prev.merge(event, true))
+                {
+                    // Could not merge
+                    list.add(event);
+                    sendEvent(CLIENT_EVENT.OFFER_INPUT, Boolean.TRUE, size + 1);
+                }
+                else if (size > 1 && list.get(size - 2).merge(prev, false))
+                {
+                    // A merge occurred, the event 'prev' may have become something else
+                    // e.g. a pressed event...
+                    // turns out the 'new' event was merge'able with it's previous event
+                    list.remove(size - 1);
+                }
             }
             else
             {
-                int size = list.size();
-                if (size >= MAX_QUEUE_SIZE)
-                {
-                    // Do Nothing
-                }
-                else if (size > 0)
-                {
-                    InputEvent prev = list.get(size - 1);
-                    
-                    if (!prev.merge(event, true))
-                    {
-                        // Could not merge
-                        list.add(event);
-                        sendEvent(CLIENT_EVENT.OFFER_INPUT, Boolean.TRUE, size + 1);
-                    }
-                    else if (size > 1 && list.get(size - 2).merge(prev, false))
-                    {
-                        // A merge occurred, the event 'prev' may have become something else
-                        // e.g. a pressed event...
-                        // turns out the 'new' event was merge'able with it's previous event
-                        list.remove(size - 1);
-                    }
-                }
-                else
-                {
-                    list.add(event);
-                    sendEvent(CLIENT_EVENT.OFFER_INPUT, Boolean.TRUE, 1);
-                }
+                list.add(event);
+                sendEvent(CLIENT_EVENT.OFFER_INPUT, Boolean.TRUE, 1);
             }
         }
+    }
+
+    public void addInput(InputEvent event)
+    {
+        nts_acquireInputqueue();
+        try
+        {
+            nts_addInput(event);
+        }
         finally {
-            queueAccessSema.release();
+            nts_releaseInputqueue();
         }
     }
 
