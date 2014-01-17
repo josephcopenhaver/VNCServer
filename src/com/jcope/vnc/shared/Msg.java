@@ -1,6 +1,10 @@
 package com.jcope.vnc.shared;
 
 import static com.jcope.debug.Debug.assert_;
+import static com.jcope.vnc.shared.MsgCache.compressionCache;
+import static com.jcope.vnc.shared.MsgCache.compressionResultCache;
+import static com.jcope.vnc.shared.MsgCache.precompRBOS;
+import static com.jcope.vnc.shared.MsgCache.precompSema;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -9,8 +13,6 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.lang.ref.WeakReference;
 import java.util.HashMap;
-import java.util.WeakHashMap;
-import java.util.concurrent.Semaphore;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -26,11 +28,6 @@ public class Msg implements Serializable
 	
 	public final Object event;
 	public final Object[] args;
-	
-	private static WeakHashMap<ObjectOutputStream, ReusableByteArrayOutputStream> compressionCache = new WeakHashMap<ObjectOutputStream, ReusableByteArrayOutputStream>(1);
-	private static WeakHashMap<ObjectOutputStream, HashMap<Integer,WeakReference<byte[]>>> compressionResultCache = new WeakHashMap<ObjectOutputStream, HashMap<Integer,WeakReference<byte[]>>>(1);
-	private static volatile ReusableByteArrayOutputStream precompRBOS = null;
-	private static Semaphore precompSema = new Semaphore(1, true);
 	
 	private Msg(Object event, Object[] args)
 	{

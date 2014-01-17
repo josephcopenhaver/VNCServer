@@ -1,5 +1,9 @@
 package com.jcope.vnc.shared;
 
+import static com.jcope.vnc.shared.AccessModesCache.modesByName;
+import static com.jcope.vnc.shared.AccessModesCache.selectableList;
+import static com.jcope.vnc.shared.AccessModesCache.sortedList;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -48,22 +52,22 @@ public class AccessModes
         
         public static ACCESS_MODE[] sorted()
         {
-            if (AccessModesCache.sortedList == null)
+            if (sortedList == null)
             {
-                AccessModesCache.sortedList = sorted(null);
+                sortedList = sorted(null);
             }
             
-            return AccessModesCache.sortedList;
+            return sortedList;
         }
         
         public static ACCESS_MODE[] selectable()
         {
-            if (AccessModesCache.selectableList == null)
+            if (selectableList == null)
             {
-                AccessModesCache.selectableList = sorted(ACCESS_MODE.ALL);
+                selectableList = sorted(ACCESS_MODE.ALL);
             }
             
-            return AccessModesCache.selectableList;
+            return selectableList;
         }
         
         public String commonName()
@@ -77,18 +81,18 @@ public class AccessModes
         {
             ACCESS_MODE rval;
             
-            if (AccessModesCache.modesByName == null)
+            if (modesByName == null)
             {
                 ACCESS_MODE[] values = ACCESS_MODE.values();
-                AccessModesCache.modesByName = new HashMap<String, ACCESS_MODE>(values.length);
+                modesByName = new HashMap<String, ACCESS_MODE>(values.length);
                 for (ACCESS_MODE value : values)
                 {
                     String name = value.commonName();
-                    AccessModesCache.modesByName.put(name, value);
+                    modesByName.put(name, value);
                 }
             }
             
-            rval = AccessModesCache.modesByName.get(accessModeStr);
+            rval = modesByName.get(accessModeStr);
             
             return rval;
         }
