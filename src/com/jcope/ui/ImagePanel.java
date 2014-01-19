@@ -103,7 +103,7 @@ public class ImagePanel extends JPanel
                 break;
             case SOLID_COLOR:
                 assert_(segmentID >= 0);
-                solidPixelColor = (int) args[0];
+                solidPixelColor = (Integer) args[0];
                 break;
         }
         

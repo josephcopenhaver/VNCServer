@@ -1,0 +1,51 @@
+<project name="JCope VNC Server" default="compile" basedir=".">
+    <description>JCope VNCServer build file</description>
+  <!-- set global properties for this build -->
+  <property name="logdir" location="build.log"/>
+  <property name="src" location="src"/>
+  <property name="build" location="bin"/>
+  <property name="dist"  location="dist"/>
+
+  <target name="initlog" >
+    <mkdir dir="${logdir}"/>
+  </target>
+  
+  <target name="init" depends="initlog">
+  	<record name="${logdir}/init.txt" action="start" append="false" />
+    <!-- Create the time stamp -->
+    <tstamp/>
+    <!-- Create the build directory structure used by compile -->
+    <mkdir dir="${build}"/>
+    <record name="${logdir}/init.txt" action="stop" />
+  </target>
+
+  <target name="compile" depends="init"
+        description="compile the source " >
+  	<record name="${logdir}/compile.txt" action="start" append="false" />
+    <!-- Compile the java code from ${src} into ${build} -->
+    <javac target="1.6" srcdir="${src}" destdir="${build}">
+      <compilerarg value="-Xlint:unchecked"/>
+    </javac>
+  	<record name="${logdir}/compile.txt" action="stop"/>
+  </target>
+
+  <target name="dist" depends="compile"
+        description="generate the distribution" >
+  	<record name="${logdir}/dist.txt" action="start" append="false" />
+    <!-- Create the distribution directory -->
+    <mkdir dir="${dist}/lib"/>
+
+    <!-- Put everything in ${build} into the MyProject-${DSTAMP}.jar file -->
+    <jar jarfile="${dist}/lib/MyProject-${DSTAMP}.jar" basedir="${build}"/>
+  	<record name="${logdir}/dist.txt" action="stop"/>
+  </target>
+
+  <target name="clean"
+        description="clean up" depends="initlog" >
+  	<record name="${logdir}/clean.txt" action="start" append="false" />
+    <!-- Delete the ${build} and ${dist} directory trees -->
+    <delete dir="${build}"/>
+    <delete dir="${dist}"/>
+  	<record name="${logdir}/clean.txt" action="stop"/>
+  </target>
+</project>

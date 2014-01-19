@@ -19,7 +19,7 @@ public class SelectScreen extends Handle
         assert_(args[1] instanceof ACCESS_MODE);
         assert_(args[2] == null || args[2] instanceof String);
         
-        int deviceID = (int) args[0];
+        int deviceID = (Integer) args[0];
         ACCESS_MODE accessMode = (ACCESS_MODE) args[1];
         String passwordHash = (String) args[2];
         

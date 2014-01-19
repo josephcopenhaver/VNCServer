@@ -17,7 +17,7 @@ public class ReadInputEvents extends Handle
         assert_(args.length == 1);
         assert_(args[0] instanceof Integer);
         
-        int avail = (int) args[0];
+        int avail = (Integer) args[0];
         
         InputEvent[] eventArgs = stateMachine.popEvents(avail);
         

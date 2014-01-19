@@ -81,7 +81,7 @@ public class InputEvent implements Serializable
                 mult = e.getClickCount();
                 mod = e.getModifiers();
                 modex = e.getModifiersEx();
-                typeProps = new int[]{(int) args[1], (int) args[2], button};
+                typeProps = new int[]{(Integer) args[1], (Integer) args[2], button};
                 
                 break;
             }
@@ -96,7 +96,7 @@ public class InputEvent implements Serializable
                 MouseEvent e = (MouseEvent) args[0];
                 mod = e.getModifiers();
                 modex = e.getModifiersEx();
-                typeProps = new int[]{(int) args[1], (int) args[2]};
+                typeProps = new int[]{(Integer) args[1], (Integer) args[2]};
                 
                 break;
             }
@@ -109,7 +109,8 @@ public class InputEvent implements Serializable
                 MouseWheelEvent e = (MouseWheelEvent) args[0];
                 mod = e.getModifiers();
                 modex = e.getModifiersEx();
-                magnitude = e.getPreciseWheelRotation();
+                //magnitude = e.getPreciseWheelRotation(); // TODO: use this function when on Java 1.7
+                magnitude = (double) e.getWheelRotation();
                 break;
             }
         }
@@ -164,7 +165,7 @@ public class InputEvent implements Serializable
         return rval;
     }
     
-    private double mwheel()
+    public double mwheel()
     {
         double rval = 0.0d;
         

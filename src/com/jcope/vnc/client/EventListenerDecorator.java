@@ -183,7 +183,10 @@ public class EventListenerDecorator
         public void mouseWheelMoved(MouseWheelEvent e)
         {
             InputEvent event = new InputEvent(INPUT_TYPE.WHEEL_SCROLL, e);
-            stateMachine.addInput(event);
+            if (event.mwheel() != 0.0d)
+            {
+            	stateMachine.addInput(event);
+            }
         }
         
     };

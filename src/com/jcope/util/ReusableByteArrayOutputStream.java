@@ -5,7 +5,7 @@ import java.io.Flushable;
 import java.io.OutputStream;
 import java.util.ArrayList;
 
-public class ReusableByteArrayOutputStream extends OutputStream implements Closeable, Flushable, AutoCloseable
+public class ReusableByteArrayOutputStream extends OutputStream implements Closeable, Flushable
 {
     
     private ArrayList<Byte> buffer;

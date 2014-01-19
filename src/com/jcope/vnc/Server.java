@@ -165,8 +165,8 @@ public class Server
 			
 			// end single instance logic
 			
-			serverPort = (int) SERVER_PROPERTIES.SERVER_PORT.getValue();
-			listenBacklog = (int) SERVER_PROPERTIES.SERVER_LISTEN_BACKLOG.getValue();
+			serverPort = (Integer) SERVER_PROPERTIES.SERVER_PORT.getValue();
+			listenBacklog = (Integer) SERVER_PROPERTIES.SERVER_LISTEN_BACKLOG.getValue();
 			serverBindAddress = (String) SERVER_PROPERTIES.SERVER_BIND_ADDRESS.getValue();
 			
 			VncServer vncServer = new VncServer(serverPort, listenBacklog, serverBindAddress);

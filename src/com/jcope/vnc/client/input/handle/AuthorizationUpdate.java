@@ -17,7 +17,7 @@ public class AuthorizationUpdate extends Handle
         assert_(args.length == 1);
         assert_(args[0] instanceof Boolean);
         
-        boolean isAuthorized = (boolean) args[0];
+        boolean isAuthorized = (Boolean) args[0];
         
         if (!isAuthorized)
         {

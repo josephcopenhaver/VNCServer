@@ -371,7 +371,7 @@ public class ClientHandler extends Thread
 	                        switch(event)
 	                        {
                                 case AUTHORIZATION_UPDATE:
-                                    if (!((boolean) args[0]))
+                                    if (!((Boolean) args[0]))
                                     {
                                         SwingUtilities.invokeLater(new Runnable() {
 

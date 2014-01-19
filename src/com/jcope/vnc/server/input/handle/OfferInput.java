@@ -27,14 +27,14 @@ public class OfferInput extends Handle
         assert_(args.length == 2);
         assert_(args[0] instanceof Boolean);
         
-        boolean isNotification = (boolean) args[0];
+        boolean isNotification = (Boolean) args[0];
         
         if (isNotification)
         {
             assert_(args[1] instanceof Integer);
             
             int numEventsQueued, numCanRead;
-            numEventsQueued = (int) args[1];
+            numEventsQueued = (Integer) args[1];
             assert_(numEventsQueued > 0);
             numCanRead = MAX_QUEUE_SIZE - queueSize;
             

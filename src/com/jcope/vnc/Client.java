@@ -113,7 +113,7 @@ public class Client
 		
 		CLIENT_PROPERTIES.loadConfig(args.length > 0 ? args[0] : null);
 		remoteAddress = (String) CLIENT_PROPERTIES.REMOTE_ADDRESS.getValue();
-		remotePort = (int) CLIENT_PROPERTIES.REMOTE_PORT.getValue();
+		remotePort = (Integer) CLIENT_PROPERTIES.REMOTE_PORT.getValue();
 		remoteDisplayNum = (Integer) CLIENT_PROPERTIES.REMOTE_DISPLAY_NUM.getValue();
 		password = null;
 		

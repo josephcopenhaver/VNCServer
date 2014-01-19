@@ -147,7 +147,7 @@ public class SegmentationInfo
                 src = (int[]) args[0];
                 break;
             case SOLID_COLOR:
-                solidPixelColor = (int) args[0];
+                solidPixelColor = (Integer) args[0];
                 break;
         }
         
