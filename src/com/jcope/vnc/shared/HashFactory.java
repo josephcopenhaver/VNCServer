@@ -6,7 +6,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 import com.jcope.debug.LLog;
-import com.sun.org.apache.xml.internal.security.utils.Base64;
+import com.jcope.util.Base64;
 
 public class HashFactory
 {
