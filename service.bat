@@ -1,4 +1,5 @@
 @echo off
+SETLOCAL
 set OPT_RESTART=n
 set OPT_SETUP=n
 if "%1"=="restart" goto restart
