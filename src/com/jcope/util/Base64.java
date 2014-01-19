@@ -2,14 +2,31 @@ package com.jcope.util;
 
 import static com.jcope.debug.Debug.assert_;
 
+import java.util.ArrayList;
+
 public class Base64
 {
 	private static final class Encoder
 	{
 		StringBuffer sb;
 		private byte remainder = 0x00;
-		private int state = 0;
+		private byte state = 0;
 		private boolean isFinalized = Boolean.FALSE;
+		
+		private static final byte[] offsets = new byte[] {
+			(byte)'A',
+			((byte)'a')-26,
+			((byte)'0')-52,
+			((byte)'+')-62,
+			((byte)'/')-63
+		};
+		
+		private static final byte[] bounds = new byte[] {
+			25,
+			51,
+			61,
+			62
+		};
 		
 		public Encoder(int size)
 		{
@@ -35,7 +52,6 @@ public class Base64
 					// top 2, bot 6;
 					sb.append(get((byte)((b >> 6) & 0x03 | remainder)));
 					sb.append(get((byte)(b & 0x3F)));
-					remainder = 0x00;
 					break;
 				default:
 					assert_(false);
@@ -47,6 +63,8 @@ public class Base64
 		
 		public String getFinalized()
 		{
+			String rval;
+			
 			if (!isFinalized)
 			{
 				isFinalized = Boolean.TRUE;
@@ -56,7 +74,6 @@ public class Base64
 						// Do Nothing
 						break;
 					case 1:
-						// Fall Through
 					case 2:
 						sb.append(get(remainder));
 						break;
@@ -81,36 +98,186 @@ public class Base64
 				}
 			}
 			
-			return sb.toString();
+			rval = sb.toString();
+			
+			return rval;
 		}
 		
 		private static char get(byte b)
 		{
-			char rval;
+			byte rval = 0;
 			
 			assert_(b >= 0);
 			assert_(b <= 63);
 			
-			if (b <= 25)
+			while (rval<bounds.length)
 			{
-				rval = (char) (((byte)'A') + b);
+				if (b <= bounds[rval])
+				{
+					break;
+				}
+				rval++;
 			}
-			else if (b <= 51)
+			
+			rval = offsets[rval];
+			
+			rval += b;
+			
+			return (char) rval;
+		}
+	}
+	
+	private static final class Decoder
+	{
+		private ArrayList<Byte> bb;
+		private byte remainder = 0x00;
+		private byte padCount = 0;
+		private byte state = 0;
+		private boolean isFinalized = Boolean.FALSE;
+		
+		public Decoder(int size)
+		{
+			bb = new ArrayList<Byte>(size);
+		}
+		
+		public void update(byte b)
+		{
+			assert_(!isFinalized);
+			switch (state)
 			{
-				rval = (char) (((byte)'a') + (b-26));
+				case 0:
+				case 1:
+					assert_(b != '=');
+					break;
+				case 2:
+					if (b == '=')
+					{
+						assert_(padCount <= 1);
+						padCount++;
+						return;
+					}
+					break;
+				case 3:
+					if (b == '=')
+					{
+						assert_(padCount == 0);
+						padCount++;
+						return;
+					}
+					break;
+				default:
+					assert_(false);
 			}
-			else if (b <= 61)
+			
+			b = get(b);
+			
+			switch (state)
 			{
-				rval = (char) (((byte)'0') + (b-52));
+				case 0:
+					// nothing, store bot 6
+					remainder = (byte) ((b << 2) & 0xFC);
+					break;
+				case 1:
+					// top 2, store bot 4
+					bb.add((byte) (remainder | ((b >> 4) & 0x03)));
+					remainder = (byte) ((b << 4) & 0xF0);
+					break;
+				case 2:
+					// top 4, store bot 2
+					bb.add((byte) (remainder | ((b >> 2) & 0x0F)));
+					remainder = (byte) ((b << 6) & 0xC0);
+					break;
+				case 3:
+					// top 6, store nothing
+					bb.add((byte) (remainder | (b & 0x3F)));
+					break;
+				default:
+					assert_(false);
 			}
-			else if (b == 62)
+			
+			state++;
+			state %= 4;
+		}
+		
+		public byte[] getFinalized()
+		{
+			byte[] rval;
+			int idx;
+			
+			if (!isFinalized)
 			{
-				rval = '+';
+				isFinalized = Boolean.TRUE;
+				switch (state)
+				{
+					case 0:
+						assert_(padCount == 0);
+						break;
+					case 2:
+						assert_(padCount == 2);
+						break;
+					case 3:
+						assert_(padCount == 1);
+						break;
+					default:
+						assert_(false);
+				}
+				switch (state)
+				{
+					case 0:
+						break;
+					case 2:
+					case 3:
+						assert_(remainder == 0x00);
+						break;
+					default:
+						assert_(false);
+				}
+			}
+			
+			rval = new byte[bb.size()];
+			
+			idx=0;
+			for (Byte b : bb)
+			{
+				rval[idx] = b;
+				idx++;
+			}
+			
+			return rval;
+		}
+		
+		private static byte get(byte b)
+		{
+			byte rval = 0;
+			
+			if (b == '/')
+			{
+				rval = 4;
+			}
+			else if (b == '+')
+			{
+				rval = 3;
+			}
+			else if (b >= '0' && b <= '9')
+			{
+				rval = 2;
+			}
+			else if (b >= 'a' && b <= 'z')
+			{
+				rval = 1;
+			}
+			else if (b >= 'A' && b <= 'Z')
+			{
+				// Do Nothing
 			}
 			else
 			{
-				rval = '/';
+				assert_(false);
 			}
+			
+			rval = Encoder.offsets[rval];
+			
+			rval = (byte) (b - rval);
 			
 			return rval;
 		}
@@ -118,12 +285,39 @@ public class Base64
 	
 	public static String encode(byte[] b)
 	{
-		Encoder encoder = new Encoder((b.length/3)*4 + (b.length%3==0 ? 0 : 3));
+		Encoder encoder = new Encoder(((b.length+2)/3)*4);
+		
 		for (byte x : b)
 		{
 			encoder.update(x);
 		}
 		
 		return encoder.getFinalized();
+	}
+	
+	public static byte[] decode(byte[] b)
+	{
+		assert_(b.length%4 == 0);
+		
+		int size = (b.length/4)*3;
+		
+		if (b.length > 1 && b[b.length-2] == '=')
+		{
+			assert_(b[b.length-1] == '=');
+			size -= 2;
+		}
+		else if (b.length > 0 && b[b.length-1] == '=')
+		{
+			size--;
+		}
+		
+		Decoder decoder = new Decoder(size);
+		
+		for (byte x : b)
+		{
+			decoder.update(x);
+		}
+		
+		return decoder.getFinalized();
 	}
 }
