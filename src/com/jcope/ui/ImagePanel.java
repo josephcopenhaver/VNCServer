@@ -172,19 +172,17 @@ public class ImagePanel extends JPanel
             }
             else
             {
-                final float _xScaled = ((float)scaleFactors.width*((float)x));
-                final float _yScaled = ((float)scaleFactors.height*((float)y));
-                final int xScaled = (int) Math.floor((double)_xScaled);
-                final int yScaled = (int) Math.floor((double)_yScaled);
-                final int wScaled = (int) Math.ceil((double)(((float)(scaleFactors.width*((float)(x+w))))-_xScaled));
-                final int hScaled = (int) Math.ceil((double)(((float)(scaleFactors.height*((float)(y+h))))-_yScaled));
-                
-                // pull the region out and place into scaledImageCache
+                final int x2src = x+w;
+                final int y2src = y+h;
+                final int x1dst = Math.round(scaleFactors.width*((float)x));
+                final int y1dst = Math.round(scaleFactors.height*((float)y));
+                final int x2dst = Math.round(scaleFactors.width*((float)x2src));
+                final int y2dst = Math.round(scaleFactors.height*((float)y2src));
                 Graphics2D g2d = scaledImageCache.createGraphics();
                 g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-                g2d.drawImage(image, xScaled, yScaled, xScaled+wScaled, yScaled+hScaled, x, y, x+w, y+h, null);
+                g2d.drawImage(image, x1dst, y1dst, x2dst, y2dst, x, y, x2src, y2src, null);
                 g2d.dispose();
-                super.repaint(offX + xScaled, offY + yScaled, wScaled, hScaled);
+                super.repaint(offX + x1dst, offY + y1dst, x2dst - x1dst, y2dst - y1dst);
             }
         }
         else
@@ -199,6 +197,8 @@ public class ImagePanel extends JPanel
         int screenHeight = image.getHeight();
         segInfo.loadConfig(screenWidth, screenHeight, segmentWidth, segmentHeight);
     }
+    
+    // TODO: figure out why cursor hide/showing/moving is causing 1 pixel artifacts
     
     public void hideCursor()
     {
