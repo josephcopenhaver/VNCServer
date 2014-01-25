@@ -10,6 +10,7 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferInt;
 
 import javax.swing.JPanel;
 
@@ -24,13 +25,13 @@ public class ImagePanel extends JPanel
     private static final long serialVersionUID = -4538018101380490678L;
     private static final int cursorSideLength = 32;
     private static final int halfCursorSideLength = cursorSideLength/2;
-    private static final int invalRectOffset = 1;
-    private int[] pixelsUnderCursor = new int[ (cursorSideLength + invalRectOffset) * (cursorSideLength + invalRectOffset) ];
+    private int[] pixelsUnderCursor = new int[ (int) Math.pow(cursorSideLength+2, 2) ];
     
     private BufferedImage image;
     private SegmentationInfo segInfo;
     
     private boolean cursorVisible = false;
+    private boolean suppressCursorRepaint = false;
     private volatile boolean isScaling = false;
     private Point cursorPosition = new Point();
     private Dimension preferredSize = new Dimension();
@@ -52,20 +53,44 @@ public class ImagePanel extends JPanel
         syncPreferredSize();
     }
     
+    private static void setRenderingHints(Graphics2D g2d)
+    {
+        setRenderingHints(g2d, Boolean.FALSE);
+    }
+    
+    private static void setRenderingHints(Graphics2D g2d, boolean withIntentToScale)
+    {
+        if (withIntentToScale)
+        {
+            g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        }
+        g2d.setRenderingHint(RenderingHints.KEY_DITHERING, RenderingHints.VALUE_DITHER_DISABLE);
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+        g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        g2d.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_QUALITY);
+        g2d.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+    }
+    
     @Override
     protected void paintComponent(Graphics g)
     {
+        Graphics2D g2d;
+        g2d = (Graphics2D) g;
+        setRenderingHints(g2d);
+        
         super.paintComponent(g);
+        //setRenderingHints(g2d);// TODO: see if required
+        
         if (isScaling)
         {
             if (scaledImageCache != null)
             {
-                g.drawImage(scaledImageCache, offX, offY, null);
+                g2d.drawImage(scaledImageCache, offX, offY, null);
             }
         }
         else
         {
-            g.drawImage(image, offX, offY, null);
+            g2d.drawImage(image, offX, offY, null);
         }
     }
     
@@ -73,11 +98,20 @@ public class ImagePanel extends JPanel
     {
         int screenWidth = image.getWidth();
         int screenHeight = image.getHeight();
-        image.setRGB(0, 0, screenWidth, screenHeight, pixels, 0, screenWidth);
+        setRGB(image, 0, 0, pixels, 0, 0, screenWidth, screenHeight, screenWidth, screenHeight);
         
-        if (cursorVisible && SegmentationInfo.updateIntersection(SEGMENT_ALGORITHM.PIXELS, pixelsUnderCursor, pixelsUnderCursorRect, 0, 0, screenWidth, screenHeight, pixels))
+        if (cursorVisible)
         {
-            reshowCursor(cursorPosition.x, cursorPosition.y);
+            cursorVisible = false;
+            boolean prevSuppressCursorRepaint = suppressCursorRepaint;
+            suppressCursorRepaint = true;
+            try
+            {
+                reshowCursor(cursorPosition.x, cursorPosition.y);
+            }
+            finally {
+                suppressCursorRepaint = prevSuppressCursorRepaint;
+            }
         }
         
         repaint();
@@ -120,7 +154,7 @@ public class ImagePanel extends JPanel
         {
             case PIXELS:
                 updateArg = pixels;
-                image.setRGB(startX, startY, tmp[0], tmp[1], pixels, 0, tmp[0]);
+                setRGB(image, startX, startY, pixels, 0, 0, tmp[0], tmp[1], tmp[0], tmp[1]);
                 break;
             case SOLID_COLOR:
                 updateArg = solidPixelColor;
@@ -165,7 +199,7 @@ public class ImagePanel extends JPanel
                 // pull the entire image out and place into scaledImageCache
                 scaledImageCache = new BufferedImage(preferredSize.width, preferredSize.height, image.getType());
                 Graphics2D g2d = scaledImageCache.createGraphics();
-                g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                setRenderingHints(g2d, Boolean.TRUE);
                 g2d.drawImage(image, 0, 0, scaledImageCache.getWidth(), scaledImageCache.getHeight(), 0, 0, image.getWidth(), image.getHeight(), null);
                 g2d.dispose();
                 repaint();
@@ -179,7 +213,7 @@ public class ImagePanel extends JPanel
                 final int x2dst = Math.round(scaleFactors.width*((float)x2src));
                 final int y2dst = Math.round(scaleFactors.height*((float)y2src));
                 Graphics2D g2d = scaledImageCache.createGraphics();
-                g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                setRenderingHints(g2d, Boolean.TRUE);
                 g2d.drawImage(image, x1dst, y1dst, x2dst, y2dst, x, y, x2src, y2src, null);
                 g2d.dispose();
                 super.repaint(offX + x1dst, offY + y1dst, x2dst - x1dst, y2dst - y1dst);
@@ -206,46 +240,93 @@ public class ImagePanel extends JPanel
         {
             cursorVisible = false;
             
-            image.setRGB(pixelsUnderCursorRect.x, pixelsUnderCursorRect.y, pixelsUnderCursorRect.width, pixelsUnderCursorRect.height, pixelsUnderCursor, 0, pixelsUnderCursorRect.width);
+            setRGB(image, pixelsUnderCursorRect.x, pixelsUnderCursorRect.y, pixelsUnderCursor, 0, 0, pixelsUnderCursorRect.width, pixelsUnderCursorRect.height, pixelsUnderCursorRect.width, pixelsUnderCursorRect.height);
             
             repaint(pixelsUnderCursorRect.x, pixelsUnderCursorRect.y, pixelsUnderCursorRect.width, pixelsUnderCursorRect.height);
         }
     }
     
-    private void storePixelsUnderCursor(int x, int y)
+    private static void setRGB(BufferedImage dstimg, int dstx, int dsty,
+            int[] srcPixels, int srcx, int srcy, int srcw, int srch, int srcScanWidth, int srcScanHeight)
     {
-        int w = cursorSideLength + (x < 0 ? x : 0) + invalRectOffset;
-        int h = cursorSideLength + (y < 0 ? y : 0) + invalRectOffset;
+        int dstw = dstimg.getWidth();
+        int dsth = dstimg.getHeight();
+        assert_(srcx + srcw <= srcScanWidth);
+        assert_(srcy + srch <= srcScanHeight);
+        assert_(srcw + dstx <= dstw);
+        assert_(srch + dsty <= dsth);
         
-        if (x < 0)
+        int[] dstPixels = ((DataBufferInt) dstimg.getRaster().getDataBuffer()).getData();
+        
+        int dst = dsty * dstw + dstx;
+        int dstBlock = dst;
+        int src = srcy * srcScanWidth + srcx;
+        int srcBlock = src;
+        int yub = dsty+srch;
+        int xub = dstx+srcw;
+        int x,y;
+        
+        for (y=dsty; y<yub; y++)
         {
-            x = 0;
+            for (x=dstx; x<xub; x++)
+            {
+                dstPixels[dst] = srcPixels[src];
+                dst++;
+                src++;
+            }
+            dstBlock += dstw;
+            dst = dstBlock;
+            srcBlock += srcScanWidth;
+            src = srcBlock;
         }
-        if (y < 0)
+    }
+
+    private void storePixelsUnderCursor(int x1, int y1, int x2, int y2)
+    {
+        final int[] ints;
+        final int scanSize;
+        int outIdx,scanStart,pos,y,x,pix;
+        
+        if (x1 < 0)
         {
-            y = 0;
+            x1 = 0;
         }
-        
-        if (x + w > image.getWidth())
+        if (y1 < 0)
         {
-            w = image.getWidth() - x;
+            y1 = 0;
         }
-        if (y + h > image.getHeight())
+        
+        if (x2 > image.getWidth())
         {
-            h = image.getHeight() - y;
+            x2 = image.getWidth();
+        }
+        if (y2 > image.getHeight())
+        {
+            y2 = image.getHeight();
         }
         
-        assert_(x >= 0);
-        assert_(y >= 0);
-        assert_(w > 0);
-        assert_(h > 0);
+        pixelsUnderCursorRect.x = x1;
+        pixelsUnderCursorRect.y = y1;
+        pixelsUnderCursorRect.width = x2-x1;
+        pixelsUnderCursorRect.height = y2-y1;
         
-        pixelsUnderCursorRect.x = x;
-        pixelsUnderCursorRect.y = y;
-        pixelsUnderCursorRect.width = w;
-        pixelsUnderCursorRect.height = h;
-        
-        image.getRGB(x, y, w, h, pixelsUnderCursor, 0, w);
+        outIdx = image.getHeight();
+        outIdx = 0;
+        scanSize = image.getWidth();
+        scanStart = (y1 * scanSize) + x1;
+        ints = ((DataBufferInt) image.getRaster().getDataBuffer()).getData();
+        for (y=y1; y<y2; y++)
+        {
+            pos = scanStart;
+            for (x=x1; x<x2; x++)
+            {
+                pix = ints[pos];
+                pos++;
+                pixelsUnderCursor[outIdx] = pix;
+                outIdx++;
+            }
+            scanStart += scanSize;
+        }
     }
     
     private void drawCursor(int x, int y)
@@ -260,15 +341,20 @@ public class ImagePanel extends JPanel
             final int endY = y+halfCursorSideLength;
             
             // store the old cursor before drawing
-            storePixelsUnderCursor(startX, startY);
+            storePixelsUnderCursor(startX-1, startY-1, endX+1, endY+1);
             
-            final Graphics g = image.getGraphics();
+            final Graphics2D g2d = image.createGraphics();
+            setRenderingHints(g2d);
             
-            g.setColor(Color.BLACK);
-            g.drawLine(startX, startY, endX, endY);
-            g.drawLine(startX, endY, endX, startY);
+            g2d.setColor(Color.BLACK);
+            g2d.drawLine(startX, startY, endX, endY);
+            g2d.drawLine(startX, endY, endX, startY);
+            g2d.dispose();
             
-            repaint(startX, startY, cursorSideLength, cursorSideLength);
+            if (!suppressCursorRepaint)
+            {
+                repaint(startX-1, startY-1, endX-startX+2, endY-startY+2);
+            }
             
             cursorPosition.x = x;
             cursorPosition.y = y;
