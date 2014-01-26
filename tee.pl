@@ -1,0 +1,276 @@
+use FileHandle;
+use Getopt::Long;
+use Getopt::Std;
+use IO::Socket::INET;
+use IO::Select;
+use feature 'state';
+use threads;
+use threads::shared;
+use IO::Handle;
+
+STDOUT->autoflush(1);
+
+sub numCanRead($)
+{
+	state $FIONREAD = 0x4004667f;
+	our $numbytes = pack('L', 0);
+	
+	ioctl($_[0], $FIONREAD, unpack('I', pack('P', $numbytes)));
+	my $rval = unpack('I', $numbytes);
+	
+	return $rval;
+}
+
+
+my %SELECT_INFO = ();
+initIOSelect(2);
+
+
+my %opts = ();
+getopts('a', \%opts);
+my $append = $opts{'a'};
+my $lAppend = undef;
+
+if (!defined($append))
+{
+	$append = 0;
+}
+
+GetOptions ('append!' => \$append);
+if (defined($lAppend))
+{
+	$append = $lAppend;
+}
+
+
+
+if ($#ARGV != 0)
+{
+	die "Usage: perl tee.pl [-a|--append] <file_out>"
+}
+
+my $file = $ARGV[0];
+
+my $fh = FileHandle->new($file, ($append ? '>>' : '>')) || die;
+binmode($fh);
+my $stdIn = newSelIn(STDIN) || die;
+my $stdErr = newSelIn(STDERR) || die;
+my $io = IO::Select->new();
+$io->add($stdIn);
+$io->add($stdErr);
+my @canRead = ();
+my ($curFH, $nin, $nout);
+
+if (selEOF($stdIn))
+{
+	die "wtf?";
+}
+else
+{
+	while (1)
+	{
+		while (@canRead = $io->can_read(1))
+		{
+			foreach (@canRead)
+			{
+				$curFH = $_;
+				$_ = undef;
+				$nin = numCanRead($curFH);
+				while ($nin > 0)
+				{
+					$nout = read($curFH, $_, $nin);
+					#print "Got '$_'\n";
+					$fh->print($_);
+					print $_;
+					$nin = numCanRead($curFH);
+				}
+			}
+			if (selEOF($stdIn))
+			{
+				#print "alpha\n";
+				last;
+			}
+		}
+		if (selEOF($stdIn))
+		{
+			#print "beta\n";
+			last;
+		}
+	}
+}
+close(STDOUT);
+close(STDERR);
+
+sub initIOSelect($)
+{
+	!$SELECT_INFO{'initialized'} || die;
+	$SELECT_INFO{'initialized'} = 1;
+	
+	if ($^O ne 'MSWin32')
+	{
+		return;
+	}
+	$SELECT_INFO{'isWindows'} = 1;
+	
+	my $serverSocket = IO::Socket::INET->new(
+		LocalHost => '127.0.0.1',
+		LocalPort => '0',
+		Proto => 'tcp',
+		Listen => $_[0],
+		Reuse => 1
+	) or die "ERROR in ServerSocket Creation : $!\n";
+	my $canAccept = 1;
+	share($canAccept);
+	
+	my $listenPort = (sockaddr_in(getsockname($serverSocket)))[0];
+	
+	my %receivingSockets = ();
+	share(%receivingSockets);
+	$SELECT_INFO{'receivingSockets'} = \%receivingSockets;
+	
+	my %threadsForSocket = ();
+	$SELECT_INFO{'threadsForSocket'} = \%threadsForSocket;
+	
+	$SELECT_INFO{'serverHandle'} = sub
+	{
+		my $fh = $_[0];
+		my $signal = undef;
+		share($signal);
+		#print "ServerHandle\n";
+		lock($signal);
+		#print "ServerHandle got lock\n";
+		my $thr = threads->new(sub {
+			#print "Beginning tee\n";
+			my $socketOut = undef;
+			my $socketFileNo = undef;
+			{
+				lock(%receivingSockets);
+				#print "tee got lock\n";
+				eval{{
+					defined($fh) || die;
+					#print "'" . ref($fh) . "' $fh " . (eof($fh) ? 1 : 0) . "\n";
+					#print "before signal socket connection attempt\n";
+					cond_broadcast($signal);
+					#print "after signal socket connection attempt\n";
+					$socketOut = IO::Socket::INET->new(
+						PeerHost => '127.0.0.1',
+						PeerPort => $listenPort,
+						Proto => 'tcp',
+					) or die "ERROR in Socket Creation : $!\n";
+					$socketFileNo = fileno($socketOut);
+					#print "socketOut $socketFileNo created\n";
+					binmode($socketOut);
+					$receivingSockets{$socketFileNo} = 1;
+				}};
+				if ($@)
+				{
+					$canAccept = 0;
+					die $@;
+				}
+				cond_wait(%receivingSockets);
+			}
+			my $b;
+			eval{{
+				while (read($fh, $b, 1))
+				{
+					#print "sending: '$b'\n";
+					$socketOut->send($b);
+				}
+			}};
+			#print "Socket $socketFileNo src eof\n";
+			delete $receivingSockets{$socketFileNo};
+			die $@ if $@;
+			
+			$socketOut->flush;
+			read($socketOut, $b, 1);
+			#print "socketOut $socketFileNo dead\n";
+		}) || die;
+		#print "Waiting for writing thread to signal server handshake in progress\n";
+		cond_wait($signal);
+		$canAccept || die;
+		my $socketIn = $serverSocket->accept() || die;
+		#print "socketIn " . fileno($socketIn) . " created\n";
+		binmode($socketIn);
+		my $nonblocking = 1;
+		ioctl($socketIn, 0x8004667e, \$nonblocking); # make socket non blocking on windows... #TODO: will it block when attempting to write?
+		cond_broadcast(%receivingSockets);
+		$threadsForSocket{$socketIn} = $thr;
+		
+		#print "return ServerHandle\n";
+		
+		return $socketIn;
+	};
+}
+
+sub newSelIn($)
+{
+	state $isWindows = $SELECT_INFO{'isWindows'};
+	
+	if (!$isWindows)
+	{
+		return $_[0];
+	}
+	
+	state $handle = $SELECT_INFO{'serverHandle'};
+	
+	return $handle->(@_);
+}
+
+sub selEOF($)
+{
+	state $isWindows = $SELECT_INFO{'isWindows'};
+	
+	if (!$isWindows)
+	{
+		return;
+	}
+	
+	state $confirmedEOFs = {};
+	state $readSet = IO::Select->new();
+	state $threadsForSocket = $SELECT_INFO{'threadsForSocket'};
+	state $receivingSockets = $SELECT_INFO{'receivingSockets'};
+	
+	my $fh = $_[0];
+	my $rval = 0;
+	if ($confirmedEOFs->{$fh})
+	{
+		$rval = 1;
+	}
+	else
+	{
+		my $selNotReceiving = !($receivingSockets->{fileno($fh)});
+		my $canReadNothing = 0;
+		if ($selNotReceiving)
+		{
+			my @read = ();
+			$canReadNothing = (numCanRead($fh) == 0);
+			if ($canReadNothing)
+			{
+				$readSet->add($fh);
+				eval{{
+					(@read) = IO::Select->select($readSet, undef, undef, .2);
+					@read = @{$read[0]};
+					$canReadNothing = ($#read == -1);
+				}};
+				my $eCode = $@;
+				eval{{
+					$readSet->remove($fh);
+				}};
+				$eCode = $ecode || $@;
+				die $eCode if $eCode;
+			}
+		}
+		if ($selNotReceiving && $canReadNothing)
+		{
+			#print "Signaling socketIn thread death: " . fileno($fh) . "\n";
+			my $thr = $threadsForSocket->{$fh};
+			$fh->send('x');
+			$fh->close();
+			$thr->join();
+			$confirmedEOFs->{$fh} = 1; # this would leak if I cared
+			$rval = 1;
+		}
+	}
+	
+	return $rval;
+}
