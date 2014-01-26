@@ -10,17 +10,6 @@ use IO::Handle;
 
 STDOUT->autoflush(1);
 
-sub numCanRead($)
-{
-	state $FIONREAD = 0x4004667f;
-	our $numbytes = pack('L', 0);
-	
-	ioctl($_[0], $FIONREAD, unpack('I', pack('P', $numbytes)));
-	my $rval = unpack('I', $numbytes);
-	
-	return $rval;
-}
-
 
 my %SELECT_INFO = ();
 initIOSelect(2);
@@ -93,6 +82,20 @@ if (!selEOF($stdIn))
 }
 close(STDOUT);
 close(STDERR);
+# End of Script
+
+
+
+sub numCanRead($)
+{
+	state $FIONREAD = 0x4004667f;
+	our $numbytes = pack('L', 0);
+	
+	ioctl($_[0], $FIONREAD, unpack('I', pack('P', $numbytes)));
+	my $rval = unpack('I', $numbytes);
+	
+	return $rval;
+}
 
 sub initIOSelect($)
 {
