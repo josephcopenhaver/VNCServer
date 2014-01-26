@@ -61,15 +61,11 @@ $io->add($stdErr);
 my @canRead = ();
 my ($curFH, $nin, $nout);
 
-if (selEOF($stdIn))
-{
-	die "wtf?";
-}
-else
+if (!selEOF($stdIn))
 {
 	while (1)
 	{
-		while (@canRead = $io->can_read(1))
+		while (@canRead = $io->can_read(.2))
 		{
 			foreach (@canRead)
 			{
@@ -79,7 +75,6 @@ else
 				while ($nin > 0)
 				{
 					$nout = read($curFH, $_, $nin);
-					#print "Got '$_'\n";
 					$fh->print($_);
 					print $_;
 					$nin = numCanRead($curFH);
@@ -87,13 +82,11 @@ else
 			}
 			if (selEOF($stdIn))
 			{
-				#print "alpha\n";
 				last;
 			}
 		}
 		if (selEOF($stdIn))
 		{
-			#print "beta\n";
 			last;
 		}
 	}
@@ -136,29 +129,21 @@ sub initIOSelect($)
 		my $fh = $_[0];
 		my $signal = undef;
 		share($signal);
-		#print "ServerHandle\n";
 		lock($signal);
-		#print "ServerHandle got lock\n";
 		my $thr = threads->new(sub {
-			#print "Beginning tee\n";
 			my $socketOut = undef;
 			my $socketFileNo = undef;
 			{
 				lock(%receivingSockets);
-				#print "tee got lock\n";
 				eval{{
 					defined($fh) || die;
-					#print "'" . ref($fh) . "' $fh " . (eof($fh) ? 1 : 0) . "\n";
-					#print "before signal socket connection attempt\n";
 					cond_broadcast($signal);
-					#print "after signal socket connection attempt\n";
 					$socketOut = IO::Socket::INET->new(
 						PeerHost => '127.0.0.1',
 						PeerPort => $listenPort,
 						Proto => 'tcp',
 					) or die "ERROR in Socket Creation : $!\n";
 					$socketFileNo = fileno($socketOut);
-					#print "socketOut $socketFileNo created\n";
 					binmode($socketOut);
 					$receivingSockets{$socketFileNo} = 1;
 				}};
@@ -173,30 +158,22 @@ sub initIOSelect($)
 			eval{{
 				while (read($fh, $b, 1))
 				{
-					#print "sending: '$b'\n";
 					$socketOut->send($b);
 				}
 			}};
-			#print "Socket $socketFileNo src eof\n";
 			delete $receivingSockets{$socketFileNo};
 			die $@ if $@;
 			
 			$socketOut->flush;
 			read($socketOut, $b, 1);
-			#print "socketOut $socketFileNo dead\n";
 		}) || die;
-		#print "Waiting for writing thread to signal server handshake in progress\n";
 		cond_wait($signal);
 		$canAccept || die;
 		my $socketIn = $serverSocket->accept() || die;
-		#print "socketIn " . fileno($socketIn) . " created\n";
 		binmode($socketIn);
 		my $nonblocking = 1;
-		ioctl($socketIn, 0x8004667e, \$nonblocking); # make socket non blocking on windows... #TODO: will it block when attempting to write?
 		cond_broadcast(%receivingSockets);
 		$threadsForSocket{$socketIn} = $thr;
-		
-		#print "return ServerHandle\n";
 		
 		return $socketIn;
 	};
@@ -262,12 +239,11 @@ sub selEOF($)
 		}
 		if ($selNotReceiving && $canReadNothing)
 		{
-			#print "Signaling socketIn thread death: " . fileno($fh) . "\n";
 			my $thr = $threadsForSocket->{$fh};
 			$fh->send('x');
 			$fh->close();
 			$thr->join();
-			$confirmedEOFs->{$fh} = 1; # this would leak if I cared
+			$confirmedEOFs->{$fh} = 1; # this leaks... I do not care at this moment
 			$rval = 1;
 		}
 	}
