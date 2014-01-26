@@ -127,6 +127,9 @@ sub initIOSelect($)
 	my %threadsForSocket = ();
 	$SELECT_INFO{'threadsForSocket'} = \%threadsForSocket;
 	
+	my %notEOFs = ();
+	$SELECT_INFO{'notEOFs'} = \%notEOFs;
+	
 	$SELECT_INFO{'serverHandle'} = sub
 	{
 		my $fh = $_[0];
@@ -177,6 +180,7 @@ sub initIOSelect($)
 		my $nonblocking = 1;
 		cond_broadcast(%receivingSockets);
 		$threadsForSocket{$socketIn} = $thr;
+		$notEOFs{$socketIn} = 1;
 		
 		return $socketIn;
 	};
@@ -205,14 +209,14 @@ sub selEOF($)
 		return;
 	}
 	
-	state $confirmedEOFs = {};
+	state $notEOFs = $SELECT_INFO{'notEOFs'};
 	state $readSet = IO::Select->new();
 	state $threadsForSocket = $SELECT_INFO{'threadsForSocket'};
 	state $receivingSockets = $SELECT_INFO{'receivingSockets'};
 	
 	my $fh = $_[0];
 	my $rval = 0;
-	if ($confirmedEOFs->{$fh})
+	if (!$notEOFs->{$fh})
 	{
 		$rval = 1;
 	}
@@ -243,10 +247,11 @@ sub selEOF($)
 		if ($selNotReceiving && $canReadNothing)
 		{
 			my $thr = $threadsForSocket->{$fh};
+			delete $notEOFs->{$fh};
+			delete $threadsForSocket->{$fh};
 			$fh->send('x');
 			$fh->close();
 			$thr->join();
-			$confirmedEOFs->{$fh} = 1; # this leaks... I do not care at this moment
 			$rval = 1;
 		}
 	}
