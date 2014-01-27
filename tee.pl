@@ -7,6 +7,7 @@ use feature 'state';
 use threads;
 use threads::shared;
 use IO::Handle;
+use strict;
 
 STDOUT->autoflush(1);
 
@@ -16,16 +17,16 @@ initIOSelect(2);
 
 
 my %opts = ();
+my $lAppend = undef;
+GetOptions ('append!' => \$lAppend);
 getopts('a', \%opts);
 my $append = $opts{'a'};
-my $lAppend = undef;
 
 if (!defined($append))
 {
 	$append = 0;
 }
 
-GetOptions ('append!' => \$lAppend);
 if (defined($lAppend))
 {
 	$append = $lAppend;
@@ -42,8 +43,8 @@ my $file = $ARGV[0];
 
 my $fh = FileHandle->new($file, ($append ? '>>' : '>')) || die;
 binmode($fh);
-my $stdIn = newSelIn(STDIN) || die;
-my $stdErr = newSelIn(STDERR) || die;
+my $stdIn = newSelIn(\*STDIN) || die;
+my $stdErr = newSelIn(\*STDERR) || die;
 my $io = IO::Select->new();
 $io->add($stdIn);
 $io->add($stdErr);
@@ -233,14 +234,14 @@ sub selEOF($)
 				$readSet->add($fh);
 				eval{{
 					(@read) = IO::Select->select($readSet, undef, undef, .2);
-					@read = @{$read[0]};
+					@read = defined($read[0]) ? @{$read[0]} : ();
 					$canReadNothing = ($#read == -1);
 				}};
 				my $eCode = $@;
 				eval{{
 					$readSet->remove($fh);
 				}};
-				$eCode = $ecode || $@;
+				$eCode = $eCode || $@;
 				die $eCode if $eCode;
 			}
 		}
