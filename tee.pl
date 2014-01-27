@@ -25,7 +25,7 @@ if (!defined($append))
 	$append = 0;
 }
 
-GetOptions ('append!' => \$append);
+GetOptions ('append!' => \$lAppend);
 if (defined($lAppend))
 {
 	$append = $lAppend;
