@@ -207,7 +207,7 @@ sub selEOF($)
 	
 	if (!$isWindows)
 	{
-		return;
+		return eof($_[0]);
 	}
 	
 	state $notEOFs = $SELECT_INFO{'notEOFs'};
