@@ -61,13 +61,11 @@ if (!selEOF($stdIn))
 			{
 				$curFH = $_;
 				$_ = undef;
-				$nin = numCanRead($curFH);
-				while ($nin > 0)
+				while (($nin = numCanRead($curFH)) > 0)
 				{
 					$nout = read($curFH, $_, $nin);
 					$fh->print($_);
 					print $_;
-					$nin = numCanRead($curFH);
 				}
 			}
 			if (selEOF($stdIn))
