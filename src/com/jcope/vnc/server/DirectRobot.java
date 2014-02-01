@@ -45,7 +45,6 @@ public final class DirectRobot
     private WeakHashMap<int[],BufferedImage> nonAlphaCache = new WeakHashMap<int[],BufferedImage>();
     private WeakHashMap<int[],BufferedImage> alphaCache = new WeakHashMap<int[],BufferedImage>();
     private boolean isDirty = true, usedEfficientMethod;
-    private static int[] initialScale = new int[]{0,0};
     private int[] pixelCache;
     private int width, height, numPixels;
     
@@ -311,22 +310,16 @@ public final class DirectRobot
 		{
 		    // found an instance where garbage ridiculously large values were
 		    // returned when coming back from lock screen on windows7
-		    Rectangle bounds;
-		    int iW, iH;
-		    synchronized (initialScale)
-		    {
-		        bounds = _getScreenBounds(rval, initialScale);
-		        iW = initialScale[0];
-		        iH = initialScale[1];
-		    }
+		    int[] initialScale = new int[2];
+		    Rectangle bounds = _getScreenBounds(rval, initialScale);
 		    
 		    point.x -= bounds.x;
             point.y -= bounds.y;
             
-            if (iW != bounds.width || iH != bounds.height)
+            if (initialScale[0] != bounds.width || initialScale[1] != bounds.height)
             {
-                point.x = Math.round(((float)bounds.width)/((float)iW)*((float)point.x));
-                point.y = Math.round(((float)bounds.height)/((float)iH)*((float)point.y));
+                point.x = Math.round(((float)bounds.width)/((float)initialScale[0])*((float)point.x));
+                point.y = Math.round(((float)bounds.height)/((float)initialScale[1])*((float)point.y));
             }
             
             if (point.x < 0)
