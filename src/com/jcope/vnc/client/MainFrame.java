@@ -4,6 +4,7 @@ import static com.jcope.debug.Debug.DEBUG;
 import static com.jcope.debug.Debug.assert_;
 import static com.jcope.util.Scale.factorsThatShrinkToFitWithin;
 import static com.jcope.util.Scale.factorsThatStretchToFit;
+import static com.jcope.vnc.server.DirectRobot.getScreenBounds;
 import static java.awt.event.InputEvent.CTRL_DOWN_MASK;
 
 import java.awt.Dimension;
@@ -498,7 +499,7 @@ public class MainFrame extends JFrame
 	    {
 	        if (enabled)
 	        {
-	            Rectangle r = currentFullScreenDevice.getDefaultConfiguration().getBounds();
+	            Rectangle r = getScreenBounds(currentFullScreenDevice);
 	            setLocation(r.x, r.y);
 	            setSize(r.width, r.height);
 	        }

@@ -91,6 +91,21 @@ public class ImagePanel extends JPanel
         drawCursor(g2d);
     }
     
+    private void drawCursor(Graphics2D g2d)
+    {
+        if (cursorVisible)
+        {
+            final int startX = offX + pixelsUnderCursorRect.x + 1;
+            final int endX = offX + pixelsUnderCursorRect.width + pixelsUnderCursorRect.x - 1;
+            final int startY = offY + pixelsUnderCursorRect.y + 1;
+            final int endY = offY + pixelsUnderCursorRect.height + pixelsUnderCursorRect.y - 1;
+            
+            g2d.setColor(Color.BLACK);
+            g2d.drawLine(startX, startY, endX, endY);
+            g2d.drawLine(startX, endY, endX, startY);
+        }
+    }
+
     private void loadScreenPixels(int[] pixels)
     {
         int screenWidth = image.getWidth();
@@ -164,10 +179,72 @@ public class ImagePanel extends JPanel
         setSegment(segmentID, SEGMENT_ALGORITHM.SOLID_COLOR, solidPixelColor);
     }
     
+    private boolean _repaint()
+    {
+        return _repaint(false, null);
+    }
+    
+    private boolean _repaint(boolean forceRepaint, Long tm)
+    {
+        boolean didRepaint = forceRepaint;
+        
+        if (isScaling && (scaledImageCache == null || scaledImageCache.getWidth() != preferredSize.width || scaledImageCache.getHeight() != preferredSize.height))
+        {
+            // pull the entire image out and place into scaledImageCache
+            scaledImageCache = new BufferedImage(preferredSize.width, preferredSize.height, image.getType());
+            Graphics2D g2d = scaledImageCache.createGraphics();
+            setRenderingHints(g2d, Boolean.TRUE);
+            g2d.drawImage(image, 0, 0, scaledImageCache.getWidth(), scaledImageCache.getHeight(), 0, 0, image.getWidth(), image.getHeight(), null);
+            g2d.dispose();
+            didRepaint = true;
+        }
+        
+        if (didRepaint)
+        {
+            if (tm == null)
+            {
+                super.repaint();
+            }
+            else
+            {
+                super.repaint(tm);
+            }
+        }
+        
+        return didRepaint;
+    }
+    
+    @Override
+    public void repaint()
+    {
+        _repaint(true, null);
+    }
+    
     @Override
     public void repaint(Rectangle r)
     {
-        repaint(r.x, r.y, r.width, r.height);
+        if (!_repaint())
+        {
+            super.repaint(offX + r.x, offY + r.y, r.width, r.height);
+        }
+    }
+    
+    @Override
+    public void repaint(long tm)
+    {
+        if (!_repaint(false, tm))
+        {
+            super.repaint(tm);
+        }
+    }
+    
+    @Override
+    public void repaint(long tm, int x, int y, int w, int h)
+    {
+        if (!_repaint(false, tm))
+        {
+            super.repaint(tm, x, y, w, h);
+        }
     }
     
     @Override
@@ -175,17 +252,7 @@ public class ImagePanel extends JPanel
     {
         if (isScaling)
         {
-            if (scaledImageCache == null || scaledImageCache.getWidth() != preferredSize.width || scaledImageCache.getHeight() != preferredSize.height)
-            {
-                // pull the entire image out and place into scaledImageCache
-                scaledImageCache = new BufferedImage(preferredSize.width, preferredSize.height, image.getType());
-                Graphics2D g2d = scaledImageCache.createGraphics();
-                setRenderingHints(g2d, Boolean.TRUE);
-                g2d.drawImage(image, 0, 0, scaledImageCache.getWidth(), scaledImageCache.getHeight(), 0, 0, image.getWidth(), image.getHeight(), null);
-                g2d.dispose();
-                repaint();
-            }
-            else
+            if (!_repaint())
             {
                 final int x2src = x+w;
                 final int y2src = y+h;
@@ -248,21 +315,6 @@ public class ImagePanel extends JPanel
         }
     }
     
-    private void drawCursor(Graphics2D g2d)
-    {
-        if (cursorVisible)
-        {
-            final int startX = pixelsUnderCursorRect.x + 1;
-            final int endX = pixelsUnderCursorRect.width + pixelsUnderCursorRect.x - 1;
-            final int startY = pixelsUnderCursorRect.y + 1;
-            final int endY = pixelsUnderCursorRect.height + pixelsUnderCursorRect.y - 1;
-            
-            g2d.setColor(Color.BLACK);
-            g2d.drawLine(startX, startY, endX, endY);
-            g2d.drawLine(startX, endY, endX, startY);
-        }
-    }
-
     public void hideCursor()
     {
         if (cursorVisible)
@@ -273,21 +325,26 @@ public class ImagePanel extends JPanel
         }
     }
     
+    private void setCursorRect(int x, int y)
+    {
+        final int startX = Math.round(((float)(x-halfCursorSideLength)) * scaleFactors.width);
+        final int endX = Math.round(((float)(x+halfCursorSideLength)) * scaleFactors.width);
+        final int startY = Math.round(((float)(y-halfCursorSideLength)) * scaleFactors.height);
+        final int endY = Math.round(((float)(y+halfCursorSideLength)) * scaleFactors.height);
+        
+        pixelsUnderCursorRect.x = startX-1;
+        pixelsUnderCursorRect.y = startY-1;
+        pixelsUnderCursorRect.width = endX-startX+2;
+        pixelsUnderCursorRect.height = endY-startY+2;
+    }
+    
     private void showCursor(int x, int y)
     {
         if (!cursorVisible)
         {
             cursorVisible = true;
             
-            final int startX = Math.round(((float)(x-halfCursorSideLength)) * scaleFactors.width);
-            final int endX = Math.round(((float)(x+halfCursorSideLength)) * scaleFactors.width);
-            final int startY = Math.round(((float)(y-halfCursorSideLength)) * scaleFactors.height);
-            final int endY = Math.round(((float)(y+halfCursorSideLength)) * scaleFactors.height);
-            
-            pixelsUnderCursorRect.x = startX-1;
-            pixelsUnderCursorRect.y = startY-1;
-            pixelsUnderCursorRect.width = endX-startX+2;
-            pixelsUnderCursorRect.height = endY-startY+2;
+            setCursorRect(x, y);
             cursorPosition.x = x;
             cursorPosition.y = y;
             

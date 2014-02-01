@@ -1,9 +1,9 @@
 package com.jcope.vnc.server;
 
 import static com.jcope.debug.Debug.assert_;
+import static com.jcope.vnc.shared.ScreenSelector.getScreenDevices;
 
 import java.awt.GraphicsDevice;
-import java.awt.GraphicsEnvironment;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -290,7 +290,7 @@ public class SecurityPolicy
         ArrayList<GraphicsDevice> enabledDevices = new ArrayList<GraphicsDevice>();
         HashMap<ACCESS_MODE, String> availableModes;
         
-        for (GraphicsDevice device : GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices())
+        for (GraphicsDevice device : getScreenDevices())
         {
             if ((availableModes = selectableDevices.get(device.getIDstring())) != null &&
                     (opt_accessMode == null || availableModes.get(ACCESS_MODE.ALL) != null || availableModes.get(opt_accessMode) != null))

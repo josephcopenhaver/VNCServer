@@ -1,7 +1,8 @@
 package com.jcope.vnc.server;
 
+import static com.jcope.vnc.shared.ScreenSelector.getScreenDevicesOrdered;
+
 import java.awt.GraphicsDevice;
-import java.awt.GraphicsEnvironment;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -14,9 +15,9 @@ import javax.swing.SwingUtilities;
 
 import com.jcope.debug.LLog;
 import com.jcope.util.TaskDispatcher;
-import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
 import com.jcope.vnc.server.screen.Manager;
 import com.jcope.vnc.server.screen.ScreenListener;
+import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
 import com.jcope.vnc.shared.Msg;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
@@ -176,7 +177,7 @@ public class ClientHandler extends Thread
 	{
 	    boolean rval;
 	    
-	    GraphicsDevice[] devices = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices();
+	    GraphicsDevice[] devices = getScreenDevicesOrdered();
 	    GraphicsDevice graphicsDevice = devices[graphicsDeviceID];
         
 	    rval = Manager.getInstance().bind(this, graphicsDevice, accessMode, password);

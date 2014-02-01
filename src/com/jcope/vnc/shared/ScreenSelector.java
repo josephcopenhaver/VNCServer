@@ -1,5 +1,7 @@
 package com.jcope.vnc.shared;
 
+import static com.jcope.vnc.server.DirectRobot.getScreenBounds;
+
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -11,6 +13,8 @@ import java.awt.GridBagLayout;
 import java.awt.Rectangle;
 import java.awt.event.WindowEvent;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 
 import javax.swing.BorderFactory;
 import javax.swing.JDialog;
@@ -25,12 +29,71 @@ public class ScreenSelector
 {
     public static final Color transparent = new Color(0, true);
     
+    public static GraphicsDevice[] getScreenDevices()
+    {
+        GraphicsDevice[] rval = GraphicsEnvironment
+                .getLocalGraphicsEnvironment().getScreenDevices();
+        
+        return rval;
+    }
+    
+    public static GraphicsDevice[] getScreenDevicesOrdered()
+    {
+        GraphicsDevice[] rval = getScreenDevices();
+        
+        Arrays.sort(rval, new Comparator<GraphicsDevice>(){
+            
+            @Override
+            public int compare(GraphicsDevice ga, GraphicsDevice gb)
+            {
+                int rval = -1;
+                boolean swap = false;
+                Rectangle a, b;
+                
+                a = ga.getDefaultConfiguration().getBounds();
+                b = gb.getDefaultConfiguration().getBounds();
+                
+                do
+                {
+                    if (a.x < b.x)
+                    {
+                        break;
+                    }
+                    if (a.x > b.x)
+                    {
+                        swap = true;
+                        break;
+                    }
+                    if (a.y < b.y)
+                    {
+                        break;
+                    }
+                    if (a.y > b.y)
+                    {
+                        swap = true;
+                        break;
+                    }
+                    rval = ga.getIDstring().compareTo(gb.getIDstring());
+                } while (false);
+                
+                if (swap)
+                {
+                    rval = 1;
+                }
+                
+                return rval;
+            }
+            
+        });
+        
+        return rval;
+    }
+    
     public static GraphicsDevice selectScreen(JFrame parent, Integer defaultSelection)
     {
         GraphicsDevice rval = null;
         
-        GraphicsDevice[] devices = GraphicsEnvironment
-                .getLocalGraphicsEnvironment().getScreenDevices();
+        GraphicsDevice[] devices = getScreenDevicesOrdered();
         ArrayList<JDialog> enumFrames = new ArrayList<JDialog>(devices.length);
         
         if (devices.length == 1)
@@ -56,7 +119,7 @@ public class ScreenSelector
                 transparentPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
                 enumFrame.setContentPane(transparentPanel);
                 
-                Rectangle bounds = device.getDefaultConfiguration().getBounds();
+                Rectangle bounds = getScreenBounds(device);
                 final Dimension size = new Dimension(bounds.width, bounds.height);
                 
                 final String enumMsg = ((Integer) ( i )).toString();

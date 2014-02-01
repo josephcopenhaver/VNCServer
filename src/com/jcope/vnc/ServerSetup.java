@@ -1,9 +1,9 @@
 package com.jcope.vnc;
 
 import static com.jcope.debug.Debug.assert_;
+import static com.jcope.vnc.shared.ScreenSelector.getScreenDevices;
 
 import java.awt.GraphicsDevice;
-import java.awt.GraphicsEnvironment;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
@@ -57,8 +57,7 @@ public class ServerSetup
         }
         
         boolean changed = false;
-        GraphicsDevice[] devices = GraphicsEnvironment
-                .getLocalGraphicsEnvironment().getScreenDevices();
+        GraphicsDevice[] devices = getScreenDevices();
         HashMap<String, GraphicsDevice> deviceMap =
                 new HashMap<String, GraphicsDevice>(devices.length);
         

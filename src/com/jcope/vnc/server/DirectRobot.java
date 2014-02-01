@@ -2,8 +2,11 @@ package com.jcope.vnc.server;
 
 import static com.jcope.debug.Debug.DEBUG;
 import static com.jcope.debug.Debug.assert_;
+import static com.jcope.vnc.shared.ScreenSelector.getScreenDevices;
 
 import java.awt.AWTException;
+import java.awt.DisplayMode;
+import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.MouseInfo;
@@ -42,6 +45,7 @@ public final class DirectRobot
     private WeakHashMap<int[],BufferedImage> nonAlphaCache = new WeakHashMap<int[],BufferedImage>();
     private WeakHashMap<int[],BufferedImage> alphaCache = new WeakHashMap<int[],BufferedImage>();
     private boolean isDirty = true, usedEfficientMethod;
+    private static int[] initialScale = new int[]{0,0};
     private int[] pixelCache;
     private int width, height, numPixels;
     
@@ -107,7 +111,7 @@ public final class DirectRobot
 			{
 				method = peerClass.getDeclaredMethod("getScreenPixels", new Class<?>[] { Integer.TYPE, Rectangle.class, int[].class });
 				methodType = 2;
-				GraphicsDevice[] devices = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices();
+				GraphicsDevice[] devices = getScreenDevices(); 
 				int count = devices.length;
 				for (int i = 0; i != count; ++i)
 				{
@@ -298,7 +302,7 @@ public final class DirectRobot
 		else
 		{
 		    int device = mouseInfoPeer.fillPointWithCoords(point != null ? point : new Point());
-            GraphicsDevice[] devices = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices();
+            GraphicsDevice[] devices = getScreenDevices();
             
             rval = devices[device];
 		}
@@ -307,10 +311,23 @@ public final class DirectRobot
 		{
 		    // found an instance where garbage ridiculously large values were
 		    // returned when coming back from lock screen on windows7
-            Rectangle bounds = getDeviceBounds(rval);
-            
-            point.x -= bounds.x;
+		    Rectangle bounds;
+		    int iW, iH;
+		    synchronized (initialScale)
+		    {
+		        bounds = _getScreenBounds(rval, initialScale);
+		        iW = initialScale[0];
+		        iH = initialScale[1];
+		    }
+		    
+		    point.x -= bounds.x;
             point.y -= bounds.y;
+            
+            if (iW != bounds.width || iH != bounds.height)
+            {
+                point.x = Math.round(((float)bounds.width)/((float)iW)*((float)point.x));
+                point.y = Math.round(((float)bounds.height)/((float)iH)*((float)point.y));
+            }
             
             if (point.x < 0)
             {
@@ -351,20 +368,53 @@ public final class DirectRobot
 	
 	public Rectangle getScreenBounds()
 	{
-	    return getDeviceBounds(device);
+	    return getScreenBounds(device);
 	}
 	
-	private static Rectangle getDeviceBounds(GraphicsDevice device)
+	public static Rectangle getScreenBounds(GraphicsDevice device)
 	{
-	    Rectangle rval = device.getDefaultConfiguration().getBounds();
-	    
-	    // x and y describe relative origin
-        // width and height are true width and height of the graphics device
-	    
-	    return rval;
+	    return _getScreenBounds(device, null);
 	}
+	
+	private static Rectangle _getScreenBounds(GraphicsDevice device, int[] initialScale)
+    {
+	    GraphicsConfiguration defaultConf = device.getDefaultConfiguration();
+	    Rectangle rval = defaultConf.getBounds();
+	    DisplayMode dispMode = device.getDisplayMode();
+	    int dispModeW = dispMode.getWidth(), dispModeH = dispMode.getHeight();
+	    
+        // x and y describe relative origin
+        // width and height are true width and height of the graphics device
+        
+	    for (GraphicsConfiguration gc : device.getConfigurations())
+	    {
+	        if (gc.equals(defaultConf))
+	        {
+	            continue;
+	        }
+	        
+	        Rectangle.union(gc.getBounds(), rval, rval);
+	    }
+	    
+	    // workaround for bug where for some reason
+	    // the bounds do not match the displaymode bounds
+	    
+	    if (initialScale != null)
+	    {
+            initialScale[0] = rval.width;
+            initialScale[1] = rval.height;
+	    }
+        
+        assert_(dispModeW >= rval.width);
+        assert_(dispModeH >= rval.height);
+	    
+        rval.width = dispModeW;
+	    rval.height = dispModeH;
+        
+        return rval;
+    }
 
-	public void mouseMove(int x, int y)
+    public void mouseMove(int x, int y)
 	{
 		peer.mouseMove(x, y);
 	}

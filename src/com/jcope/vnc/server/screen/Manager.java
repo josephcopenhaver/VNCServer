@@ -2,10 +2,10 @@ package com.jcope.vnc.server.screen;
 
 import static com.jcope.debug.Debug.assert_;
 import static com.jcope.vnc.server.StateMachine.handleServerEvent;
+import static com.jcope.vnc.shared.ScreenSelector.getScreenDevices;
 
 import java.awt.AWTException;
 import java.awt.GraphicsDevice;
-import java.awt.GraphicsEnvironment;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map.Entry;
@@ -14,9 +14,9 @@ import java.util.concurrent.Semaphore;
 import com.jcope.debug.LLog;
 import com.jcope.vnc.server.ClientHandler;
 import com.jcope.vnc.server.DirectRobot;
+import com.jcope.vnc.server.VncServer;
 import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
 import com.jcope.vnc.shared.Msg;
-import com.jcope.vnc.server.VncServer;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
 /**
@@ -113,7 +113,7 @@ public class Manager extends Thread
 		    try
 		    {
     			setChanged = Boolean.FALSE;
-    			GraphicsDevice[] graphicsDeviceList = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices();
+    			GraphicsDevice[] graphicsDeviceList = getScreenDevices();
     			tmpGraphicsDeviceSet.putAll(graphicDevicesSet);
     			for (GraphicsDevice graphicsDevice : graphicsDeviceList)
     			{
