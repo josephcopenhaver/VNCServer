@@ -1,1 +1,1 @@
-perl tee.pl %*
+@perl tee.pl %*
