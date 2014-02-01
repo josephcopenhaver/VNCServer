@@ -104,7 +104,6 @@ public class ImagePanel extends JPanel
     {
         int solidPixelColor = 0;
         int[] pixels = null;
-        Object updateArg = null;
         
         assert_(args.length == 1);
         
@@ -136,11 +135,9 @@ public class ImagePanel extends JPanel
         switch (alg)
         {
             case PIXELS:
-                updateArg = pixels;
                 setRGB(image, startX, startY, pixels, 0, 0, tmp[0], tmp[1], tmp[0], tmp[1]);
                 break;
             case SOLID_COLOR:
-                updateArg = solidPixelColor;
                 int endX = startX + tmp[0];
                 int endY = startY + tmp[1];
                 
