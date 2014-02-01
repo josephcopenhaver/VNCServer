@@ -20,7 +20,7 @@ public class CursorMove extends Handle
         
         MainFrame frame = stateMachine.getFrame();
         ImagePanel imagePanel = frame.getImagePanel();
-        imagePanel.showCursor((Integer) args[0], (Integer) args[1]);
+        imagePanel.moveCursor((Integer) args[0], (Integer) args[1]);
     }
     
 }
