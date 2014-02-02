@@ -406,25 +406,46 @@ public final class DirectRobot
         
         return rval;
     }
-
-    public void mouseMove(int x, int y)
+	
+	public void mouseMove(int x, int y)
 	{
+	    mouseMove(x, y, 0, 0);
+	}
+
+    public void mouseMove(int x, int y, int ox, int oy)
+	{
+        // Appears that peer does not require inverse scaling
+        // when attempting to move the mouse
+        /*
+        int[] initialScale = new int[2];
+        Rectangle bounds = _getScreenBounds(device, initialScale);
+        
+        if (initialScale[0] != bounds.width || initialScale[1] != bounds.height)
+        {
+            x = Math.round(((float)initialScale[0])/((float)bounds.width)*((float)x));
+            y = Math.round(((float)initialScale[1])/((float)bounds.height)*((float)y));
+        }
+        */
+        
+        x += ox;
+        y += oy;
+        
 		peer.mouseMove(x, y);
 	}
 
-	public void mousePress(int buttons)
+	public void mousePress(int buttonID)
 	{
-		peer.mousePress(buttons);
+		peer.mousePress(buttonID);
 	}
 
-	public void mouseRelease(int buttons)
+	public void mouseRelease(int buttonID)
 	{
-		peer.mouseRelease(buttons);
+		peer.mouseRelease(buttonID);
 	}
 
-	public void mouseWheel(int wheelAmt)
+	public void mouseWheel(int wheelAmount)
 	{
-		peer.mouseWheel(wheelAmt);
+		peer.mouseWheel(wheelAmount);
 	}
 
 	public void keyPress(int keycode)

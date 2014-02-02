@@ -329,10 +329,7 @@ public class InputEvent implements Serializable
         x = event.x();
         y = event.y();
         
-        x += InputEventInfo.ORIGIN[0];
-        y += InputEventInfo.ORIGIN[1];
-        
-        dirbot.mouseMove(x, y);
+        dirbot.mouseMove(x, y, InputEventInfo.ORIGIN[0], InputEventInfo.ORIGIN[1]);
     }
     
     private static int pushMods(DirectRobot dirbot, int mod, int modex)
