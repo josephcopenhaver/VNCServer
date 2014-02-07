@@ -1,6 +1,6 @@
 package com.jcope.vnc.shared;
 
-import static com.jcope.vnc.server.DirectRobot.getScreenBounds;
+import static com.jcope.vnc.shared.ScreenInfo.getScreenBounds;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -50,8 +50,8 @@ public class ScreenSelector
                 boolean swap = false;
                 Rectangle a, b;
                 
-                a = ga.getDefaultConfiguration().getBounds();
-                b = gb.getDefaultConfiguration().getBounds();
+                a = getScreenBounds(ga);
+                b = getScreenBounds(gb);
                 
                 do
                 {

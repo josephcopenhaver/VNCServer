@@ -2,11 +2,10 @@ package com.jcope.vnc.server;
 
 import static com.jcope.debug.Debug.DEBUG;
 import static com.jcope.debug.Debug.assert_;
+import static com.jcope.vnc.shared.ScreenInfo.getScreenBoundsVerbose;
 import static com.jcope.vnc.shared.ScreenSelector.getScreenDevices;
 
 import java.awt.AWTException;
-import java.awt.DisplayMode;
-import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.MouseInfo;
@@ -30,6 +29,7 @@ import sun.awt.ComponentFactory;
 
 import com.jcope.debug.LLog;
 import com.jcope.ui.DirectBufferedImage;
+import com.jcope.vnc.shared.ScreenInfo;
 
 public final class DirectRobot
 {
@@ -311,7 +311,7 @@ public final class DirectRobot
 		    // found an instance where garbage ridiculously large values were
 		    // returned when coming back from lock screen on windows7
 		    int[] initialScale = new int[2];
-		    Rectangle bounds = _getScreenBounds(rval, initialScale);
+		    Rectangle bounds = getScreenBoundsVerbose(rval, initialScale);
 		    
 		    point.x -= bounds.x;
             point.y -= bounds.y;
@@ -361,51 +361,8 @@ public final class DirectRobot
 	
 	public Rectangle getScreenBounds()
 	{
-	    return getScreenBounds(device);
+	    return ScreenInfo.getScreenBounds(device);
 	}
-	
-	public static Rectangle getScreenBounds(GraphicsDevice device)
-	{
-	    return _getScreenBounds(device, null);
-	}
-	
-	private static Rectangle _getScreenBounds(GraphicsDevice device, int[] initialScale)
-    {
-	    GraphicsConfiguration defaultConf = device.getDefaultConfiguration();
-	    Rectangle rval = defaultConf.getBounds();
-	    DisplayMode dispMode = device.getDisplayMode();
-	    int dispModeW = dispMode.getWidth(), dispModeH = dispMode.getHeight();
-	    
-        // x and y describe relative origin
-        // width and height are true width and height of the graphics device
-        
-	    for (GraphicsConfiguration gc : device.getConfigurations())
-	    {
-	        if (gc.equals(defaultConf))
-	        {
-	            continue;
-	        }
-	        
-	        Rectangle.union(gc.getBounds(), rval, rval);
-	    }
-	    
-	    // workaround for bug where for some reason
-	    // the bounds do not match the displaymode bounds
-	    
-	    if (initialScale != null)
-	    {
-            initialScale[0] = rval.width;
-            initialScale[1] = rval.height;
-	    }
-        
-        assert_(dispModeW >= rval.width);
-        assert_(dispModeH >= rval.height);
-	    
-        rval.width = dispModeW;
-	    rval.height = dispModeH;
-        
-        return rval;
-    }
 	
 	public void mouseMove(int x, int y)
 	{

@@ -4,14 +4,16 @@ import static com.jcope.debug.Debug.DEBUG;
 import static com.jcope.debug.Debug.assert_;
 import static com.jcope.util.Scale.factorsThatShrinkToFitWithin;
 import static com.jcope.util.Scale.factorsThatStretchToFit;
-import static com.jcope.vnc.server.DirectRobot.getScreenBounds;
+import static com.jcope.vnc.shared.ScreenInfo.getVirtualScreenBounds;
 import static java.awt.event.InputEvent.CTRL_DOWN_MASK;
 
 import java.awt.Dimension;
-import java.awt.DisplayMode;
 import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
+import java.awt.Insets;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
@@ -23,7 +25,6 @@ import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
-import javax.swing.JRootPane;
 import javax.swing.JScrollPane;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
@@ -67,9 +68,9 @@ public class MainFrame extends JFrame
 	private Point locationBeforeFullScreen = new Point();
     private Dimension sizeBeforeFullScreen = new Dimension();
     private volatile boolean isChangingFullScreenStatus = false;
+    private volatile boolean usingSetFullScreenWindow = false;
 	private Semaphore isChangingFullScreenLock = new Semaphore(1, true);
 	private boolean isFullScreen = false;
-	private DisplayMode displayMode = null;
 	private GraphicsDevice currentFullScreenDevice = null;
 
 	public MainFrame(final StateMachine stateMachine)
@@ -237,6 +238,67 @@ public class MainFrame extends JFrame
 		final ActionListener defaultView;
 		ActionListener tmpActionListener = null;
 		
+		// preserve aspect ratio scaling
+        // Only guaranteed to fill one axis, but maybe not both
+        final Runnable setScreenFitStretchedRunnable = new Runnable() {
+
+            @Override
+            public void run()
+            {
+                if (imagePanel != null)
+                {
+                    stateMachine.handleUserAction(new Runnable()
+                    {
+    
+                        @Override
+                        public void run()
+                        {
+                            int lSpace,tSpace;
+                            
+                            imagePanel.getImageSize(imagePanelSize);
+                            factorsThatStretchToFit(imagePanelSize.width, imagePanelSize.height, contentPaneSize.width, contentPaneSize.height, scaleFactors);
+                            
+                            lSpace = (int) Math.floor((((float)contentPaneSize.width) - ((float)imagePanelSize.width)*scaleFactors.width)/2.0f);
+                            tSpace = (int) Math.floor((((float)contentPaneSize.height) - ((float)imagePanelSize.height)*scaleFactors.height)/2.0f);
+                            
+                            imagePanel.setScaleFactors(lSpace, tSpace, scaleFactors);
+                        }
+                        
+                    });
+                }
+            }
+		    
+		};
+		
+		// stretch image to fill width and height
+		final Runnable setScreenStretchedRunnable = new Runnable() {
+
+            @Override
+            public void run()
+            {
+                if (imagePanel != null)
+                {
+                    stateMachine.handleUserAction(new Runnable()
+                    {
+    
+                        @Override
+                        public void run()
+                        {
+                            imagePanel.getImageSize(imagePanelSize);
+                            scaleFactors.width = ((float)((float)contentPaneSize.width)/((float)imagePanelSize.width));
+                            scaleFactors.height = ((float)((float)contentPaneSize.height)/((float)imagePanelSize.height));
+                            imagePanel.setScaleFactors(0, 0, scaleFactors);
+                        }
+                        
+                    });
+                }
+            }
+		    
+		};
+		
+		//TODO: add a way to select between Fit-Stretch and Full-Stretch
+		final Runnable setScreenScallingFullRunnable = setScreenFitStretchedRunnable; //setScreenFitStretchedRunnable;
+		
 		
 		
 		// TODO: define accelerator
@@ -300,44 +362,7 @@ public class MainFrame extends JFrame
                 }
                 
                 setFullScreen(true);
-                if (imagePanel != null)
-                {
-                    SwingUtilities.invokeLater(new Runnable() {
-                        
-                        @Override
-                        public void run()
-                        {
-                            stateMachine.handleUserAction(new Runnable()
-                            {
-            
-                                @Override
-                                public void run()
-                                {
-                                    int lSpace,tSpace;
-                                    
-                                    scaleFactors.width = 1.0f;
-                                    scaleFactors.height = 1.0f;
-                                    
-                                    imagePanel.getImageSize(imagePanelSize);
-                                    
-                                    lSpace = (contentPaneSize.width - imagePanelSize.width)/2;
-                                    tSpace = (contentPaneSize.height - imagePanelSize.height)/2;
-                                    if (lSpace < 0)
-                                    {
-                                        lSpace = 0;
-                                    }
-                                    if (tSpace < 0)
-                                    {
-                                        tSpace = 0;
-                                    }
-                                    
-                                    imagePanel.setScaleFactors(lSpace, tSpace, scaleFactors);
-                                }
-                                
-                            });
-                        }
-                    });
-                }
+                setScreenScallingFullRunnable.run();
             }
         }));
 		viewModeActions.put(VIEW_MODE.FULL_SCREEN, tmpActionListener);
@@ -353,23 +378,7 @@ public class MainFrame extends JFrame
                     return;
                 }
                 
-                // stretch image to fill width and height
-                if (imagePanel != null)
-                {
-                    stateMachine.handleUserAction(new Runnable()
-                    {
-    
-                        @Override
-                        public void run()
-                        {
-                            imagePanel.getImageSize(imagePanelSize);
-                            scaleFactors.width = ((float)((float)contentPaneSize.width)/((float)imagePanelSize.width));
-                            scaleFactors.height = ((float)((float)contentPaneSize.height)/((float)imagePanelSize.height));
-                            imagePanel.setScaleFactors(0, 0, scaleFactors);
-                        }
-                        
-                    });
-                }
+                setScreenStretchedRunnable.run();
             }
         }));
         viewModeActions.put(VIEW_MODE.STRETCH, tmpActionListener);
@@ -385,29 +394,7 @@ public class MainFrame extends JFrame
                     return;
                 }
                 
-                // preserve aspect ratio scaling
-                // Only guaranteed to fill one axis, but maybe not both
-                if (imagePanel != null)
-                {
-                    stateMachine.handleUserAction(new Runnable()
-                    {
-    
-                        @Override
-                        public void run()
-                        {
-                            int lSpace,tSpace;
-                            
-                            imagePanel.getImageSize(imagePanelSize);
-                            factorsThatStretchToFit(imagePanelSize.width, imagePanelSize.height, contentPaneSize.width, contentPaneSize.height, scaleFactors);
-                            
-                            lSpace = (int) Math.floor((((float)contentPaneSize.width) - ((float)imagePanelSize.width)*scaleFactors.width)/2.0f);
-                            tSpace = (int) Math.floor((((float)contentPaneSize.height) - ((float)imagePanelSize.height)*scaleFactors.height)/2.0f);
-                            
-                            imagePanel.setScaleFactors(lSpace, tSpace, scaleFactors);
-                        }
-                        
-                    });
-                }
+                setScreenFitStretchedRunnable.run();
             }
         }));
         viewModeActions.put(VIEW_MODE.STRETCHED_FIT, tmpActionListener);
@@ -499,7 +486,7 @@ public class MainFrame extends JFrame
 	    {
 	        if (enabled)
 	        {
-	            Rectangle r = getScreenBounds(currentFullScreenDevice);
+	            Rectangle r = getVirtualScreenBounds(currentFullScreenDevice);
 	            setLocation(r.x, r.y);
 	            setSize(r.width, r.height);
 	        }
@@ -549,36 +536,34 @@ public class MainFrame extends JFrame
     	    
     	    if (device.isFullScreenSupported())
     	    {
-    	        handled = true;
-    	        
-    	        if (enabled)
+	            if (enabled)
     	        {
-    	            int width, height;
-    	            Rectangle bounds = device.getDefaultConfiguration().getBounds();
-    	            Dimension d = new Dimension();
-    	            
+    	            Rectangle bounds = getVirtualScreenBounds(device);
+    	            Insets insets= null;
+                    
     	            currentFullScreenDevice = device;
+    	            setSize(bounds.width, bounds.height);
     	            
-    	            imagePanel.getImageSize(d);
-    	            width = Math.min(d.width, bounds.width);
-    	            height = Math.min(d.height, bounds.height);
-    	            if (device.isDisplayChangeSupported())
+    	            if (device.equals(GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice()) && (insets = Toolkit.getDefaultToolkit().getScreenInsets(device.getDefaultConfiguration())) != null
+    	                    && (insets.left != 0 || insets.top != 0 || insets.right != 0 || insets.bottom != 0))
+                    {
+    	                handled = true;
+    	                usingSetFullScreenWindow = true;
+        	            
+        	            device.setFullScreenWindow(this);
+                    }
+    	            else
     	            {
-        	            displayMode = device.getDisplayMode();
-        	            DisplayMode newDisplayMode = new DisplayMode(width, height, 32, 60);
-        	            device.setDisplayMode(newDisplayMode);
+    	                usingSetFullScreenWindow = false;
     	            }
-    	            setSize(width, height);
-    	            device.setFullScreenWindow(this);
     	        }
     	        else
     	        {
-    	            if (displayMode != null)
+    	            handled = true;
+    	            if (usingSetFullScreenWindow)
     	            {
-    	                device.setDisplayMode(displayMode);
+    	                device.setFullScreenWindow(null);
     	            }
-    	            device.setFullScreenWindow(null);
-    	            displayMode = null;
     	        }
     	    }
     	    else
@@ -586,36 +571,32 @@ public class MainFrame extends JFrame
     	        currentFullScreenDevice = null;
     	    }
     	    
-    	    if (enabled)
-            {
-                setVisible(false);
-                super.dispose();
-                setUndecorated(true);
-                if (!handled)
-                {
-                    setExtendedState(getExtendedState() | JFrame.MAXIMIZED_BOTH);
-                }
-                setVisible(true);
-            }
-            else
-            {
-                setVisible(false);
-                super.dispose();
-                setUndecorated(false);
-                if (!handled)
-                {
-                    getRootPane().setWindowDecorationStyle(JRootPane.FRAME);
-                    setExtendedState(getExtendedState() ^ JFrame.MAXIMIZED_BOTH);
-                }
-                setVisible(true);
-            }
-    	    
-    	    if (!enabled)
+    	    setVisible(false);
+    	    try
     	    {
-    	        setLocation(locationBeforeFullScreen);
-    	        setSize(sizeBeforeFullScreen);
-    	        currentFullScreenDevice = null;
+    	        super.dispose();
+        	    if (enabled)
+                {
+                    setUndecorated(true);
+                    if (!handled)
+                    {
+                        setExtendedState(getExtendedState() | JFrame.MAXIMIZED_BOTH);
+                    }
+                }
+                else
+                {
+                    setUndecorated(false);
+                    setExtendedState(getExtendedState() ^ (JFrame.MAXIMIZED_BOTH | JFrame.MAXIMIZED_HORIZ | JFrame.MAXIMIZED_VERT));
+                    setLocation(locationBeforeFullScreen);
+                    setSize(sizeBeforeFullScreen);
+                    currentFullScreenDevice = null;
+                }
     	    }
+    	    finally {
+    	        setVisible(true);
+    	    }
+    	    
+    	    repaint();
 	    }
 	    finally {
 	        isChangingFullScreenStatus = false;
