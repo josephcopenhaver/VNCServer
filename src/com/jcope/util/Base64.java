@@ -12,6 +12,7 @@ public class Base64
 		private byte remainder = 0x00;
 		private byte state = 0;
 		private boolean isFinalized = Boolean.FALSE;
+		private String finVal = null;
 		
 		private static final byte[] offsets = new byte[] {
 			(byte)'A',
@@ -61,10 +62,8 @@ public class Base64
 			state %= 3;
 		}
 		
-		public String getFinalized()
+		private String _getFinalized()
 		{
-			String rval;
-			
 			if (!isFinalized)
 			{
 				isFinalized = Boolean.TRUE;
@@ -96,11 +95,29 @@ public class Base64
 						assert_(false);
 						break;
 				}
+				
+				finVal = sb.toString();
+				sb = null;
 			}
 			
-			rval = sb.toString();
+			return finVal;
+		}
+		
+		public String getFinalized(boolean popVal)
+		{
+			String rval = _getFinalized();
+			
+			if (popVal)
+			{
+				finVal = null;
+			}
 			
 			return rval;
+		}
+		
+		public String getFinalized()
+		{
+			return getFinalized(true);
 		}
 		
 		private static char get(byte b)
@@ -129,15 +146,38 @@ public class Base64
 	
 	private static final class Decoder
 	{
-		private ArrayList<Byte> bb;
+		private ArrayList<Byte> bList;
+		private int bArrayIdx = 0;
+		private byte[] bArray;
 		private byte remainder = 0x00;
 		private byte padCount = 0;
 		private byte state = 0;
 		private boolean isFinalized = Boolean.FALSE;
 		
-		public Decoder(int size)
+		public Decoder(int size, boolean exact)
 		{
-			bb = new ArrayList<Byte>(size);
+			if (exact)
+			{
+				bArray = new byte[size];
+				bList = null;
+			}
+			else
+			{
+				bArray = null;
+				bList = new ArrayList<Byte>(size);
+			}
+		}
+		
+		private void add(byte b)
+		{
+			if (bArray == null)
+			{
+				bList.add(b);
+			}
+			else
+			{
+				bArray[bArrayIdx++] = b;
+			}
 		}
 		
 		public void update(byte b)
@@ -179,17 +219,17 @@ public class Base64
 					break;
 				case 1:
 					// top 2, store bot 4
-					bb.add((byte) (remainder | ((b >> 4) & 0x03)));
+					add((byte) (remainder | ((b >> 4) & 0x03)));
 					remainder = (byte) ((b << 4) & 0xF0);
 					break;
 				case 2:
 					// top 4, store bot 2
-					bb.add((byte) (remainder | ((b >> 2) & 0x0F)));
+					add((byte) (remainder | ((b >> 2) & 0x0F)));
 					remainder = (byte) ((b << 6) & 0xC0);
 					break;
 				case 3:
 					// top 6, store nothing
-					bb.add((byte) (remainder | (b & 0x3F)));
+					add((byte) (remainder | (b & 0x3F)));
 					break;
 				default:
 					assert_(false);
@@ -199,11 +239,8 @@ public class Base64
 			state %= 4;
 		}
 		
-		public byte[] getFinalized()
+		private byte[] _getFinalized()
 		{
-			byte[] rval;
-			int idx;
-			
 			if (!isFinalized)
 			{
 				isFinalized = Boolean.TRUE;
@@ -232,18 +269,37 @@ public class Base64
 					default:
 						assert_(false);
 				}
+				if (bArray == null)
+				{
+					bArray = new byte[bList.size()];
+					
+					for (Byte b : bList)
+					{
+						bArray[bArrayIdx++] = b;
+					}
+					bList = null;
+				}
+				assert_(bArray.length == bArrayIdx);
 			}
 			
-			rval = new byte[bb.size()];
+			return bArray;
+		}
+		
+		public byte[] getFinalized(boolean popVal)
+		{
+			byte[] rval = _getFinalized();
 			
-			idx=0;
-			for (Byte b : bb)
+			if (popVal)
 			{
-				rval[idx] = b;
-				idx++;
+				bArray = null;
 			}
 			
 			return rval;
+		}
+		
+		public byte[] getFinalized()
+		{
+			return getFinalized(true);
 		}
 		
 		private static byte get(byte b)
@@ -311,7 +367,7 @@ public class Base64
 			size--;
 		}
 		
-		Decoder decoder = new Decoder(size);
+		Decoder decoder = new Decoder(size, true);
 		
 		for (byte x : b)
 		{
