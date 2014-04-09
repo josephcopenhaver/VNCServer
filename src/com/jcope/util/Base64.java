@@ -117,7 +117,7 @@ public class Base64
 		
 		public String getFinalized()
 		{
-			return getFinalized(true);
+			return getFinalized(Boolean.TRUE);
 		}
 		
 		private static char get(byte b)
@@ -301,7 +301,7 @@ public class Base64
 		
 		public byte[] getFinalized()
 		{
-			return getFinalized(true);
+			return getFinalized(Boolean.TRUE);
 		}
 		
 		private static byte get(byte b)
