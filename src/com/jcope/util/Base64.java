@@ -209,6 +209,8 @@ public class Base64
 					assert_(false);
 			}
 			
+			assert_(padCount == 0);
+			
 			b = get(b);
 			
 			switch (state)
