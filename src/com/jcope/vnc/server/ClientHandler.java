@@ -147,7 +147,7 @@ public class ClientHandler extends Thread
 			addOnDestroyAction(killIOAction);
 			addOnDestroyAction(getUnbindAliasAction(this));
 			
-			CompressedObjectReader reader = Msg.newCompressedObjectReader();
+			CompressedObjectReader reader = new CompressedObjectReader();
 			Object obj = null;
 			
 			while (!dying)

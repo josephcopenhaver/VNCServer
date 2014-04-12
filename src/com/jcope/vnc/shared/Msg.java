@@ -36,7 +36,7 @@ public class Msg implements Serializable
 		this.args = args;
 	}
 	
-	public static Object decompress(byte[] bArray, int length)
+	private static Object decompress(byte[] bArray, int length)
 	{
 	    Object rval = null;
 	    
@@ -216,75 +216,78 @@ public class Msg implements Serializable
 	    }
 	}
 	
-	public static abstract class CompressedObjectReader
+	public static class CompressedObjectReader
 	{
-	    public abstract Object readObject(BufferedInputStream in) throws IOException;
-	}
-	
-	public static CompressedObjectReader newCompressedObjectReader()
-	{
-	    final byte[][] bArrayRef = new byte[][]{null};
-	    final byte[] bArraySize = new byte[4];
-	    final int[] pos_dp_size = new int[3];
-	    
-	    return new CompressedObjectReader() {
-
-            @Override
-            public Object readObject(BufferedInputStream in) throws IOException
+	    protected byte[] buffer;
+	    protected byte[] sizeParts;
+	    protected int pos,
+            dp,
+            size;
+        
+        public CompressedObjectReader()
+        {
+            buffer = null;
+            sizeParts = new byte[4];
+        }
+        
+        public Object readObject(BufferedInputStream in) throws IOException
+        {
+            Object rval = null;
+            
+            do
             {
-                Object rval = null;
+                pos = 0;
                 
                 do
                 {
-                    pos_dp_size[0] = 0;
                     
-                    do
-                    {
-                        pos_dp_size[1] = in.read(bArraySize, pos_dp_size[0], bArraySize.length-pos_dp_size[0]);
-                        if (pos_dp_size[1] < 0)
-                        {
-                            break;
-                        }
-                        pos_dp_size[0] += pos_dp_size[1];
-                    } while (pos_dp_size[0] < bArraySize.length);
-                    
-                    if (pos_dp_size[1] < 1) // why would it ever be zero and allowed to continue?
+                    dp = in.read(sizeParts, pos, sizeParts.length-pos);
+                    if (dp < 0)
                     {
                         break;
                     }
+                    pos += dp;
                     
-                    pos_dp_size[0] = 0;
-                    pos_dp_size[2] = (0xff & bArraySize[0])
-                        | ((0xff & bArraySize[1]) << 8)
-                        | ((0xff & bArraySize[2]) << 16)
-                        | ((0xff & bArraySize[3]) << 24);
-                    
-                    if (bArrayRef[0] == null || bArrayRef[0].length < pos_dp_size[2])
-                    {
-                        bArrayRef[0] = new byte[pos_dp_size[2]];
-                    }
-                    
-                    do
-                    {
-                        pos_dp_size[1] = in.read(bArrayRef[0], pos_dp_size[0], pos_dp_size[2]-pos_dp_size[0]);
-                        if (pos_dp_size[1] < 0)
-                        {
-                            break;
-                        }
-                        pos_dp_size[0] += pos_dp_size[1];
-                    } while (pos_dp_size[0] < pos_dp_size[2]);
-                    
-                    if (pos_dp_size[1] < 1) // why would it ever be zero and allowed to continue?
-                    {
-                        break;
-                    }
-                    
-                    rval = decompress(bArrayRef[0], pos_dp_size[2]);
-                    
-                } while (Boolean.FALSE);
+                } while (pos < sizeParts.length);
                 
-                return rval;
-            }
-	    };
+                if (dp < 1) // why would it ever be zero and allowed to continue?
+                {
+                    break;
+                }
+                
+                pos = 0;
+                size = (0xff & sizeParts[0])
+                    | ((0xff & sizeParts[1]) << 8)
+                    | ((0xff & sizeParts[2]) << 16)
+                    | ((0xff & sizeParts[3]) << 24);
+                
+                if (buffer == null || buffer.length < size)
+                {
+                    buffer = new byte[size];
+                }
+                
+                do
+                {
+                    
+                    dp = in.read(buffer, pos, size-pos);
+                    if (dp < 0)
+                    {
+                        break;
+                    }
+                    pos += dp;
+                    
+                } while (pos < size);
+                
+                if (dp < 1) // why would it ever be zero and allowed to continue?
+                {
+                    break;
+                }
+                
+                rval = decompress(buffer, size);
+                
+            } while (Boolean.FALSE);
+            
+            return rval;
+        }
 	}
 }

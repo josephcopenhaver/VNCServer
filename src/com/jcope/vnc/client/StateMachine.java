@@ -223,7 +223,7 @@ public class StateMachine implements Runnable
 				    
 				});
 				
-				CompressedObjectReader reader = Msg.newCompressedObjectReader();
+				CompressedObjectReader reader = new CompressedObjectReader();
 				Object obj;
                 
 				while ((obj = reader.readObject(in)) != null)
