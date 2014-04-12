@@ -64,5 +64,11 @@
 	<!-- Create ${build} directory -->
 	<mkdir dir="${build}"/>
 	<touch file="${not_built_marker}"/>
+	
+	<!-- Delete files often created in normal run/log operations -->
+	<delete file="client.log" failonerror="false" />
+	<delete file="server.log" failonerror="false" />
+	<delete file="server.lock" failonerror="false" />
+	<delete file="server.pid" failonerror="false" />
   </target>
 </project>
