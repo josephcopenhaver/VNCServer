@@ -218,74 +218,83 @@ public class Msg implements Serializable
 	
 	public static class CompressedObjectReader
 	{
-	    protected byte[] buffer;
-	    protected byte[] sizeParts;
-	    protected int pos,
+	    private BufferedInputStream in;
+	    private byte[] buffer;
+	    private int pos,
             dp,
             size;
         
         public CompressedObjectReader()
         {
-            buffer = null;
-            sizeParts = new byte[4];
+            buffer = new byte[4];
+        }
+        
+        private void fillBuffer() throws IOException
+        {
+            do
+            {
+                
+                dp = in.read(buffer, pos, size-pos);
+                if (dp < 0)
+                {
+                    break;
+                }
+                pos += dp;
+                
+            } while (pos < size);
         }
         
         public Object readObject(BufferedInputStream in) throws IOException
         {
             Object rval = null;
             
-            do
+            this.in = in;
+            
+            try
             {
-                pos = 0;
                 
                 do
                 {
+                    pos = 0;
+                    size = 4;
                     
-                    dp = in.read(sizeParts, pos, sizeParts.length-pos);
-                    if (dp < 0)
+                    fillBuffer();
+                    
+                    if (dp < 1)
                     {
+                        // why would it ever be zero and allowed to continue?
                         break;
                     }
-                    pos += dp;
                     
-                } while (pos < sizeParts.length);
-                
-                if (dp < 1) // why would it ever be zero and allowed to continue?
-                {
-                    break;
-                }
-                
-                pos = 0;
-                size = (0xff & sizeParts[0])
-                    | ((0xff & sizeParts[1]) << 8)
-                    | ((0xff & sizeParts[2]) << 16)
-                    | ((0xff & sizeParts[3]) << 24);
-                
-                if (buffer == null || buffer.length < size)
-                {
-                    buffer = new byte[size];
-                }
-                
-                do
-                {
+                    pos = 0;
+                    size = (0xff & buffer[0])
+                        | ((0xff & buffer[1]) << 8)
+                        | ((0xff & buffer[2]) << 16)
+                        | ((0xff & buffer[3]) << 24);
                     
-                    dp = in.read(buffer, pos, size-pos);
-                    if (dp < 0)
+                    if (buffer.length < size)
                     {
+                        buffer = new byte[size];
+                    }
+                    
+                    fillBuffer();
+                    
+                    if (dp < 1)
+                    {
+                        // why would it ever be zero and allowed to continue?
                         break;
                     }
-                    pos += dp;
                     
-                } while (pos < size);
+                    rval = decompress(buffer, size);
+                    
+                } while (Boolean.FALSE);
                 
-                if (dp < 1) // why would it ever be zero and allowed to continue?
-                {
-                    break;
-                }
+            }
+            finally {
                 
-                rval = decompress(buffer, size);
+                this.in = null;
                 
-            } while (Boolean.FALSE);
+            }
             
             return rval;
         }
