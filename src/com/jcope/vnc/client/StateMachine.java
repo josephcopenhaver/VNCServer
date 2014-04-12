@@ -2,10 +2,10 @@ package com.jcope.vnc.client;
 
 import static com.jcope.vnc.shared.InputEventInfo.MAX_QUEUE_SIZE;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -19,9 +19,10 @@ import com.jcope.debug.LLog;
 import com.jcope.util.TaskDispatcher;
 import com.jcope.vnc.client.input.Handler;
 import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
+import com.jcope.vnc.shared.HashFactory;
 import com.jcope.vnc.shared.InputEvent;
 import com.jcope.vnc.shared.Msg;
-import com.jcope.vnc.shared.HashFactory;
+import com.jcope.vnc.shared.Msg.CompressedObjectReader;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
@@ -33,7 +34,7 @@ public class StateMachine implements Runnable
 	private Integer selectedScreenNum;
 	
 	private Socket socket;
-	private volatile ObjectOutputStream out;
+	private volatile BufferedOutputStream out;
 	private volatile Exception whyFailed = null;
 	
 	private Semaphore setWhyFailedLock = new Semaphore(1, true);
@@ -163,7 +164,7 @@ public class StateMachine implements Runnable
 			OutputStream os = null;
 			InputStream is = null;
 			out = null;
-			ObjectInputStream in = null;
+			BufferedInputStream in = null;
 			try
 			{
 			    ACCESS_MODE defaultAccessMode = ACCESS_MODE.VIEW_ONLY;
@@ -206,9 +207,9 @@ public class StateMachine implements Runnable
 				socket = new Socket(serverAddress, serverPort);
 				wasConnected = Boolean.TRUE;
 				os = socket.getOutputStream();
-				out = new ObjectOutputStream(os);
+				out = new BufferedOutputStream(os);
 				is = socket.getInputStream();
-				in = new ObjectInputStream(is);
+				in = new BufferedInputStream(is);
 				
 				this.accessMode = accessMode;
 				
@@ -222,24 +223,27 @@ public class StateMachine implements Runnable
 				    
 				});
 				
+				CompressedObjectReader reader = Msg.newCompressedObjectReader();
 				Object obj;
-				while ((obj = in.readObject()) != null)
+                
+				while ((obj = reader.readObject(in)) != null)
 				{
 				    try
-				    {
+			        {
 				        inputHandlingSema.acquire();
-				    }
-                    catch (InterruptedException e)
-                    {
-                        LLog.e(e);
-                    }
-				    try
-				    {
-				        handleServerEvent(obj);
-				    }
-				    finally {
-				        inputHandlingSema.release();
-				    }
+			        }
+			        catch (InterruptedException e)
+			        {
+			            LLog.e(e);
+			        }
+			        try
+			        {
+			            handleServerEvent(obj);
+			        }
+			        finally {
+			            obj = null;
+			            inputHandlingSema.release();
+			        }
 				}
 			}
 			catch (UnknownHostException e)
@@ -249,10 +253,6 @@ public class StateMachine implements Runnable
 			catch (IOException e)
 			{
 			    setWhyFailed(e);
-			}
-			catch (ClassNotFoundException e)
-			{
-				LLog.e(e);
 			}
 			finally {
 				if (out != null) {try{out.close();}catch(Exception e){}}
@@ -286,8 +286,7 @@ public class StateMachine implements Runnable
 	
 	private void handleServerEvent(Object obj)
 	{
-	    obj = Msg.decompress(obj);
-		if (obj instanceof SERVER_EVENT)
+	    if (obj instanceof SERVER_EVENT)
 		{
 			_handleServerEvent((SERVER_EVENT) obj, null);
 		}

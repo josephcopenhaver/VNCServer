@@ -1,11 +1,12 @@
 package com.jcope.vnc.shared;
 
-import static com.jcope.debug.Debug.assert_;
 import static com.jcope.vnc.shared.MsgCache.compressionCache;
 import static com.jcope.vnc.shared.MsgCache.compressionResultCache;
 import static com.jcope.vnc.shared.MsgCache.precompRBOS;
 import static com.jcope.vnc.shared.MsgCache.precompSema;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -35,13 +36,11 @@ public class Msg implements Serializable
 		this.args = args;
 	}
 	
-	public static Object decompress(Object obj)
+	public static Object decompress(byte[] bArray, int length)
 	{
 	    Object rval = null;
 	    
-	    assert_(obj instanceof byte[]);
-	    
-	    ByteArrayInputStream bis = new ByteArrayInputStream((byte[]) obj);
+	     ByteArrayInputStream bis = new ByteArrayInputStream(bArray, 0, length);
 	    try
         {
             GZIPInputStream gzip_in = new GZIPInputStream(bis);
@@ -91,7 +90,7 @@ public class Msg implements Serializable
 	    }
 	}
 	
-	private static Object compress(ObjectOutputStream out, Object obj)
+	private static byte[] compress(BufferedOutputStream out, Object obj)
 	{
 	    byte[] rval = null;
 	    ReusableByteArrayOutputStream rbos;
@@ -169,32 +168,123 @@ public class Msg implements Serializable
 	    return rval;
 	}
 	
-	public static void send(ObjectOutputStream out, byte[] preCompressed, SERVER_EVENT event, Object... args) throws IOException
+	public static void send(BufferedOutputStream out, byte[] preCompressed, SERVER_EVENT event, Object... args) throws IOException
 	{
 		_send(out, preCompressed, event, args);
 	}
 	
-	public static void send(ObjectOutputStream out, CLIENT_EVENT event, Object... args) throws IOException
+	public static void send(BufferedOutputStream out, CLIENT_EVENT event, Object... args) throws IOException
 	{
 		_send(out, null, event, args);
 	}
 	
-	private static void _send(ObjectOutputStream out, byte[] preCompressed, Object event, Object... args) throws IOException
+	private static void _send(BufferedOutputStream out, byte[] preCompressed, Object event, Object... args) throws IOException
 	{
-	    if (preCompressed != null)
+	    if (preCompressed == null)
 	    {
-	        out.writeObject(preCompressed);
+    	    if (args == null)
+    		{
+    	        preCompressed = compress(out, event);
+    		}
+    		else
+    		{
+    		    preCompressed = compress(out, new Msg(event, args));
+    		}
+    	}
+	    
+	    if (preCompressed.length > 0)
+	    {
+	        byte b = preCompressed[0];
+	        
+	        preCompressed[0] = (byte)(preCompressed.length & 0xff);
+    	    out.write(preCompressed, 0, 1);
+    	    
+    	    preCompressed[0] = (byte)((preCompressed.length >> 8) & 0xff);
+	        out.write(preCompressed, 0, 1);
+	        
+	        preCompressed[0] = (byte)((preCompressed.length >> 16) & 0xff);
+	        out.write(preCompressed, 0, 1);
+	        
+	        preCompressed[0] = (byte)((preCompressed.length >> 24) & 0xff);
+	        out.write(preCompressed, 0, 1);
+	        
+	        preCompressed[0] = b;
+    	    out.write(preCompressed);
+    	    
+    		out.flush();
+    		// TODO: periodically flush and reset rather than always flushing
 	    }
-	    else if (args == null)
-		{
-			out.writeObject(compress(out, event));
-		}
-		else
-		{
-			out.writeObject(compress(out, new Msg(event, args)));
-		}
-		out.flush();
-		out.reset();
-		// TODO: periodically flush and reset rather than always flushing
+	}
+	
+	public static abstract class CompressedObjectReader
+	{
+	    public abstract Object readObject(BufferedInputStream in) throws IOException;
+	}
+	
+	public static CompressedObjectReader newCompressedObjectReader()
+	{
+	    final byte[][] bArrayRef = new byte[][]{null};
+	    final byte[] bArraySize = new byte[4];
+	    final int[] pos_dp_size = new int[3];
+	    
+	    return new CompressedObjectReader() {
+
+            @Override
+            public Object readObject(BufferedInputStream in) throws IOException
+            {
+                Object rval = null;
+                
+                do
+                {
+                    pos_dp_size[0] = 0;
+                    
+                    do
+                    {
+                        pos_dp_size[1] = in.read(bArraySize, pos_dp_size[0], bArraySize.length-pos_dp_size[0]);
+                        if (pos_dp_size[1] < 0)
+                        {
+                            break;
+                        }
+                        pos_dp_size[0] += pos_dp_size[1];
+                    } while (pos_dp_size[0] < bArraySize.length);
+                    
+                    if (pos_dp_size[1] < 1) // why would it ever be zero and allowed to continue?
+                    {
+                        break;
+                    }
+                    
+                    pos_dp_size[0] = 0;
+                    pos_dp_size[2] = (0xff & bArraySize[0])
+                        | ((0xff & bArraySize[1]) << 8)
+                        | ((0xff & bArraySize[2]) << 16)
+                        | ((0xff & bArraySize[3]) << 24);
+                    
+                    if (bArrayRef[0] == null || bArrayRef[0].length < pos_dp_size[2])
+                    {
+                        bArrayRef[0] = new byte[pos_dp_size[2]];
+                    }
+                    
+                    do
+                    {
+                        pos_dp_size[1] = in.read(bArrayRef[0], pos_dp_size[0], pos_dp_size[2]-pos_dp_size[0]);
+                        if (pos_dp_size[1] < 0)
+                        {
+                            break;
+                        }
+                        pos_dp_size[0] += pos_dp_size[1];
+                    } while (pos_dp_size[0] < pos_dp_size[2]);
+                    
+                    if (pos_dp_size[1] < 1) // why would it ever be zero and allowed to continue?
+                    {
+                        break;
+                    }
+                    
+                    rval = decompress(bArrayRef[0], pos_dp_size[2]);
+                    
+                } while (Boolean.FALSE);
+                
+                return rval;
+            }
+	    };
 	}
 }

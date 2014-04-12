@@ -3,9 +3,9 @@ package com.jcope.vnc.server;
 import static com.jcope.vnc.shared.ScreenSelector.getScreenDevicesOrdered;
 
 import java.awt.GraphicsDevice;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -19,14 +19,15 @@ import com.jcope.vnc.server.screen.Manager;
 import com.jcope.vnc.server.screen.ScreenListener;
 import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
 import com.jcope.vnc.shared.Msg;
+import com.jcope.vnc.shared.Msg.CompressedObjectReader;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
 public class ClientHandler extends Thread
 {
 	
 	private Socket socket;
-	private ObjectInputStream in = null;
-	private ObjectOutputStream out = null;
+	private BufferedInputStream in = null;
+	private BufferedOutputStream out = null;
 	private ArrayList<Runnable> onDestroyActions = new ArrayList<Runnable>(1);
 	private volatile boolean dying = Boolean.FALSE;
 	private volatile boolean alive = Boolean.TRUE;
@@ -48,8 +49,8 @@ public class ClientHandler extends Thread
 	{
 	    super(toString(socket));
 	    this.socket = socket;
-		out = new ObjectOutputStream(socket.getOutputStream());
-		in = new ObjectInputStream(socket.getInputStream());
+		out = new BufferedOutputStream(socket.getOutputStream());
+		in = new BufferedInputStream(socket.getInputStream());
 		String strID = toString();
 		unserializedDispatcher = new TaskDispatcher<Integer>(String.format("Non-serial dispatcher: %s", strID));
         serializedDispatcher = new TaskDispatcher<Integer>(String.format("Serial dispatcher: %s", strID));
@@ -145,22 +146,22 @@ public class ClientHandler extends Thread
 		{
 			addOnDestroyAction(killIOAction);
 			addOnDestroyAction(getUnbindAliasAction(this));
+			
+			CompressedObjectReader reader = Msg.newCompressedObjectReader();
+			Object obj = null;
+			
 			while (!dying)
 			{
-				Object obj = null;
 				try
 				{
-					obj = in.readObject();
+					obj = reader.readObject(in);
 				}
 				catch (IOException e)
 				{
 					LLog.e(e);
 				}
-				catch (ClassNotFoundException e)
-				{
-					LLog.e(e);
-				}
-				handle(obj);
+				StateMachine.handleClientInput(this, obj);
+				obj = null;
 			}
 		}
 		catch (Exception e)
@@ -241,11 +242,6 @@ public class ClientHandler extends Thread
 	public boolean isDead()
 	{
 		return !alive;
-	}
-	
-	private void handle(Object obj)
-	{
-		StateMachine.handleClientInput(this, obj);
 	}
 	
 	public ClientState getClientState()
