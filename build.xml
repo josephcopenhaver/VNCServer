@@ -5,6 +5,7 @@
   <property name="src" location="src"/>
   <property name="build" location="bin"/>
   <property name="dist"  location="dist"/>
+  <property name="not_built_marker"  location="${build}/empty"/>
 
   <target name="initlog" >
     <mkdir dir="${logdir}"/>
@@ -22,6 +23,10 @@
   <target name="compile" depends="init"
         description="compile the source " >
   	<record name="${logdir}/compile.txt" action="start" append="false" />
+    
+	<!-- remove the not_built_marker marker -->
+	<delete file="${not_built_marker}" failonerror="false" />
+	
     <!-- Compile the java code from ${src} into ${build} -->
     <javac target="1.6" srcdir="${src}" destdir="${build}">
       <compilerarg value="-Xlint:unchecked"/>
@@ -32,7 +37,8 @@
   <target name="dist" depends="compile"
         description="generate the distribution" >
   	<record name="${logdir}/dist.txt" action="start" append="false" />
-    <!-- Create the distribution directory -->
+	
+	<!-- Create the distribution directory -->
     <mkdir dir="${dist}/lib"/>
 
     <!-- Put everything in ${build} into the MyProject-${DSTAMP}.jar file -->
@@ -47,5 +53,16 @@
     <delete dir="${build}"/>
     <delete dir="${dist}"/>
   	<record name="${logdir}/clean.txt" action="stop"/>
+  </target>
+  
+  <target name="cleangit"
+        description="clean up" depends="clean" >
+	
+  	<!-- Delete the ${logdir} directory trees -->
+    <delete dir="${logdir}"/>
+	
+	<!-- Create ${build} directory -->
+	<mkdir dir="${build}"/>
+	<touch file="${not_built_marker}"/>
   </target>
 </project>
