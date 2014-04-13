@@ -274,9 +274,9 @@ public class ClientHandler extends Thread
 		
 	}
 	
-	public void sendPreCompressed(SERVER_EVENT event, byte[] preCmpressed)
+	public void sendJitCompressed(SERVER_EVENT event, JitCompressedEvent jce)
     {
-        _sendEvent(event, preCmpressed, (Object[]) null);
+        _sendEvent(event, jce, (Object[]) null);
     }
 	
 	public void sendEvent(SERVER_EVENT event)
@@ -289,7 +289,7 @@ public class ClientHandler extends Thread
 	    _sendEvent(event, null, args);
 	}
 
-	public void _sendEvent(final SERVER_EVENT event, final byte[] preCompressed, final Object... args)
+	public void _sendEvent(final SERVER_EVENT event, final JitCompressedEvent jce, final Object... args)
 	{
 	    int tidTmp;
 	    TaskDispatcher<Integer> dispatcher;
@@ -364,7 +364,7 @@ public class ClientHandler extends Thread
 	                    }
 	                    try
 	                    {
-	                        Msg.send(out, preCompressed, event, args);
+	                        Msg.send(out, jce, event, args);
 	                        switch(event)
 	                        {
                                 case AUTHORIZATION_UPDATE:
@@ -420,7 +420,28 @@ public class ClientHandler extends Thread
 	                }
 	            }
 	        };
-	        dispatcher.dispatch(tidTmp, r);
+	        
+	        Runnable rOnDestroy;
+	        
+	        if (jce == null)
+	        {
+	            rOnDestroy = null;
+	        }
+	        else
+	        {
+	            jce.acquire();
+	            rOnDestroy = new Runnable() {
+
+	                @Override
+	                public void run()
+	                {
+	                    jce.release();
+	                }
+	                
+	            };
+	        } 
+	        
+	        dispatcher.dispatch(tidTmp, r, rOnDestroy);
 		}
 	}
 	

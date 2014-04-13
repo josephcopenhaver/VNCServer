@@ -12,6 +12,7 @@ public class TaskDispatcher<T> extends Thread
 		public Semaphore s;
 		public Node n;
 		public Runnable r;
+		public Runnable onDestroy;
 		
 		public void dispose()
 		{
@@ -20,6 +21,7 @@ public class TaskDispatcher<T> extends Thread
 			s = null;
 			n = null;
 			r = null;
+			onDestroy = null;
 		}
 	}
 	
@@ -527,9 +529,20 @@ public class TaskDispatcher<T> extends Thread
 						try
 						{
 							Runnable r = curTask.r;
+							Runnable d = curTask.onDestroy;
 							curTask.s = null;
 							curTask.r = null;
-							r.run();
+							curTask.onDestroy = null;
+							try
+							{
+							    r.run();
+							}
+							finally {
+							    if (d != null)
+							    {
+							        d.run();
+							    }
+							}
 						}
 						finally {
 							if (s != null)
@@ -556,25 +569,42 @@ public class TaskDispatcher<T> extends Thread
 		while(true);
 	}
 	
-	private void updateNode(Dispatchable d, Runnable r, Semaphore s)
+	private void updateNode(Dispatchable d, Runnable r, Runnable onDestroy, Semaphore s)
 	{
+		Runnable od = d.onDestroy;
 		Semaphore os = d.s;
 		d.s = s;
 		d.r = r;
+		d.onDestroy = onDestroy;
+		if (od != null)
+		{
+    		try
+    		{
+    		    od.run();
+    		}
+    		catch (Exception e)
+            {
+                e.printStackTrace();
+            }
+            catch (Throwable t)
+            {
+                t.printStackTrace();
+            }
+		}
 		if (os != null)
 		{
 			os.release();
 		}
 	}
 	
-	private void _dispatch(LinkedList q, HashMap<T,Dispatchable> m, T k, Runnable r, Semaphore s)
+	private void _dispatch(LinkedList q, HashMap<T,Dispatchable> m, T k, Runnable r, Runnable onDestroy, Semaphore s)
 	{
 		Dispatchable d = m.get(k);
 		if (d != null)
 		{
 			if (isMutable(k))
 			{
-				updateNode(d, r, s);
+				updateNode(d, r, onDestroy, s);
 			}
 			else
 			{
@@ -587,7 +617,7 @@ public class TaskDispatcher<T> extends Thread
 					dispose(e);
 					return;
 				}
-				updateNode(d, r, s);
+				updateNode(d, r, onDestroy, s);
 				try
 				{
 					d.n = q.add(d);
@@ -606,6 +636,7 @@ public class TaskDispatcher<T> extends Thread
 			d.k = k;
 			d.s = s;
 			d.r = r;
+			d.onDestroy = onDestroy;
 			try
 			{
 				d.n = isImmediate(k) ? q.addFirst(d) : q.add(d);
@@ -646,25 +677,25 @@ public class TaskDispatcher<T> extends Thread
 		}
 	}
 	
-	private void _dispatch(T k, Runnable r, Semaphore s)
+	private void _dispatch(T k, Runnable r, Runnable onDestroy, Semaphore s)
 	{
-		_dispatch(inQueue, inMapSet, k, r, s);
+		_dispatch(inQueue, inMapSet, k, r, onDestroy, s);
 	}
 	
 	private void _dispatch(Dispatchable d)
 	{
 		d.n = null;
-		_dispatch(queue, mapSet, d.k, d.r, d.s);
+		_dispatch(queue, mapSet, d.k, d.r, d.onDestroy, d.s);
 	}
 	
-	public void dispatch(T k, Runnable r)
+	public void dispatch(T k, Runnable r, Runnable onDestroy)
 	{
 		try
 		{
 			listLock.acquire();
 			try
 			{
-				_dispatch(k, r, null);
+				_dispatch(k, r, onDestroy, null);
 			}
 			finally {
 				listLock.release();
@@ -675,6 +706,11 @@ public class TaskDispatcher<T> extends Thread
 			e.printStackTrace();
 			System.exit(1);
 		}
+	}
+	
+	public void dispatch(T k, Runnable r)
+	{
+	    dispatch(k, r, null);
 	}
 	
 	private void dispose(Exception e)

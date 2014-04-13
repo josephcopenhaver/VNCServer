@@ -14,9 +14,9 @@ import java.util.concurrent.Semaphore;
 import com.jcope.debug.LLog;
 import com.jcope.vnc.server.ClientHandler;
 import com.jcope.vnc.server.DirectRobot;
+import com.jcope.vnc.server.JitCompressedEvent;
 import com.jcope.vnc.server.VncServer;
 import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
-import com.jcope.vnc.shared.Msg;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
 /**
@@ -317,19 +317,28 @@ public class Manager extends Thread
 				try
 				{
 				    SERVER_EVENT event = SERVER_EVENT.SCREEN_GONE;
-				    byte[] preCmpressed = (clientsToSignal.size() > 1) ? Msg.getCompressed(event, (Object[]) null) : null;
-				    for (ClientHandler client : clientsToSignal)
-					{
-					    if (preCmpressed != null)
-					    {
-					        client.sendPreCompressed(event, preCmpressed);
-					    }
-					    else
-					    {
-					        handleServerEvent(client, event);
-					    }
-						decreaseMonitorLock();
-					}
+				    JitCompressedEvent jce = (clientsToSignal.size() > 1) ? JitCompressedEvent.getInstance(event, (Object[]) null) : null;
+				    try
+				    {
+    				    for (ClientHandler client : clientsToSignal)
+    					{
+    					    if (jce != null)
+    					    {
+    					        client.sendJitCompressed(event, jce);
+    					    }
+    					    else
+    					    {
+    					        handleServerEvent(client, event);
+    					    }
+    						decreaseMonitorLock();
+    					}
+				    }
+				    finally {
+				        if (jce != null)
+				        {
+				            jce.release();
+				        }
+				    }
 				}
 				finally {
 					clientsToSignal.clear();
@@ -348,10 +357,16 @@ public class Manager extends Thread
 		{
 			SERVER_EVENT evt = (SERVER_EVENT) stagedArgs[0];
 			Object[] evtArgs = (Object[]) stagedArgs[1];
-			byte[] preCmpressed = Msg.getCompressed(evt, evtArgs); 
-			for (ArrayList<ClientHandler> clientList : clientsPerGraphicsDevice.values())
+			JitCompressedEvent jce = JitCompressedEvent.getInstance(evt, evtArgs);
+			try
 			{
-			    handleServerEvent(clientList, preCmpressed, evt);
+    			for (ArrayList<ClientHandler> clientList : clientsPerGraphicsDevice.values())
+    			{
+    			    handleServerEvent(clientList, jce, evt);
+    			}
+			}
+			finally {
+			    jce.release();
 			}
 		}
 		

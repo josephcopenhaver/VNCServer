@@ -39,11 +39,11 @@ public class StateMachine
 		Handler.getInstance().handle(client, event, args);
 	}
 	
-    public static void handleServerEvent(ArrayList<ClientHandler> clients, byte[] preCmpressed, SERVER_EVENT event)
+    public static void handleServerEvent(ArrayList<ClientHandler> clients, JitCompressedEvent jce, SERVER_EVENT event)
     {
         for (ClientHandler client : clients)
         {
-            client.sendPreCompressed(event, preCmpressed);
+            client.sendJitCompressed(event, jce);
         }
     }
     
@@ -66,13 +66,16 @@ public class StateMachine
     {
         if (clients.size() > 1)
         {
-            // TODO: compress only just before serialization and sending
-            // save off the compressed reference relative to this object
-            // let containers be garbage collected 
-            byte[] preCmpressed = Msg.getCompressed(event, args);
-            for (ClientHandler client : clients)
+            JitCompressedEvent jce = JitCompressedEvent.getInstance(event, args);
+            try
             {
-                client.sendPreCompressed(event, preCmpressed);
+                for (ClientHandler client : clients)
+                {
+                    client.sendJitCompressed(event, jce);
+                }
+            }
+            finally {
+                jce.release();
             }
         }
         else

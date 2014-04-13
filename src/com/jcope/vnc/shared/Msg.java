@@ -19,6 +19,7 @@ import java.util.zip.GZIPOutputStream;
 
 import com.jcope.debug.LLog;
 import com.jcope.util.ReusableByteArrayOutputStream;
+import com.jcope.vnc.server.JitCompressedEvent;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
@@ -168,9 +169,9 @@ public class Msg implements Serializable
 	    return rval;
 	}
 	
-	public static void send(BufferedOutputStream out, byte[] preCompressed, SERVER_EVENT event, Object... args) throws IOException
+	public static void send(BufferedOutputStream out, JitCompressedEvent jce, SERVER_EVENT event, Object... args) throws IOException
 	{
-		_send(out, preCompressed, event, args);
+		_send(out, jce, event, args);
 	}
 	
 	public static void send(BufferedOutputStream out, CLIENT_EVENT event, Object... args) throws IOException
@@ -178,38 +179,44 @@ public class Msg implements Serializable
 		_send(out, null, event, args);
 	}
 	
-	private static void _send(BufferedOutputStream out, byte[] preCompressed, Object event, Object... args) throws IOException
+	private static void _send(BufferedOutputStream out, JitCompressedEvent jce, Object event, Object... args) throws IOException
 	{
-	    if (preCompressed == null)
+	    byte[] outBuffer;
+	    
+	    if (jce == null)
 	    {
     	    if (args == null)
     		{
-    	        preCompressed = compress(out, event);
+    	        outBuffer = compress(out, event);
     		}
     		else
     		{
-    		    preCompressed = compress(out, new Msg(event, args));
+    		    outBuffer = compress(out, new Msg(event, args));
     		}
     	}
-	    
-	    if (preCompressed.length > 0)
+	    else
 	    {
-	        byte b = preCompressed[0];
+	        outBuffer = jce.getCompressed();
+	    }
+	    
+	    if (outBuffer.length > 0)
+	    {
+	        byte b = outBuffer[0];
 	        
-	        preCompressed[0] = (byte)(preCompressed.length & 0xff);
-    	    out.write(preCompressed, 0, 1);
+	        outBuffer[0] = (byte)(outBuffer.length & 0xff);
+    	    out.write(outBuffer, 0, 1);
     	    
-    	    preCompressed[0] = (byte)((preCompressed.length >> 8) & 0xff);
-	        out.write(preCompressed, 0, 1);
+    	    outBuffer[0] = (byte)((outBuffer.length >> 8) & 0xff);
+	        out.write(outBuffer, 0, 1);
 	        
-	        preCompressed[0] = (byte)((preCompressed.length >> 16) & 0xff);
-	        out.write(preCompressed, 0, 1);
+	        outBuffer[0] = (byte)((outBuffer.length >> 16) & 0xff);
+	        out.write(outBuffer, 0, 1);
 	        
-	        preCompressed[0] = (byte)((preCompressed.length >> 24) & 0xff);
-	        out.write(preCompressed, 0, 1);
+	        outBuffer[0] = (byte)((outBuffer.length >> 24) & 0xff);
+	        out.write(outBuffer, 0, 1);
 	        
-	        preCompressed[0] = b;
-    	    out.write(preCompressed);
+	        outBuffer[0] = b;
+    	    out.write(outBuffer);
     	    
     		out.flush();
     		// TODO: periodically flush and reset rather than always flushing
