@@ -688,6 +688,18 @@ public class TaskDispatcher<T> extends Thread
 		_dispatch(queue, mapSet, d.k, d.r, d.onDestroy, d.s);
 	}
 	
+	/**
+	 * Not very useful unless attempting to do something unique
+	 * in a dispatched task when the dispatcher could be about to go idle
+	 * (E.G. if each task is guaranteed to write to a socket and empty, then flush)
+	 * 
+	 * @return
+	 */
+	public boolean isEmpty()
+	{
+	    return (queue.size == 0 && inQueue.size == 0);
+	}
+	
 	public void dispatch(T k, Runnable r, Runnable onDestroy)
 	{
 		try

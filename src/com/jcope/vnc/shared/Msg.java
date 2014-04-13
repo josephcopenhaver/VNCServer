@@ -218,8 +218,11 @@ public class Msg implements Serializable
 	        outBuffer[0] = b;
     	    out.write(outBuffer);
     	    
-    		out.flush();
-    		// TODO: periodically flush and reset rather than always flushing
+    		// out.flush();
+    		// Flushing has moved into the higher layer (I/O dispatcher task generation)
+    	    // This layer has full knowledge of all the dispatchers writing to the I/O layers
+    	    // And so a flush can easily occur there when the task see's that
+    	    // the dispatchers have nothing new to write
 	    }
 	}
 	

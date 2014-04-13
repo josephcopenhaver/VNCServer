@@ -333,6 +333,10 @@ public class StateMachine implements Runnable
                     try
                     {
                         Msg.send(out, event, args);
+                        if (dispatcher.isEmpty())
+                        {
+                            out.flush();
+                        }
                         killConnection = false;
                     }
                     catch (IOException e)

@@ -323,6 +323,27 @@ public class ClientHandler extends Thread
         }
 		else
 		{
+		    // TODO: don't send non-serial updates of the same event type until
+		    // the client has confirmed that the last update (if exists) has
+		    // been received
+		    // (and maybe even processed?)
+		    // 
+		    // The idea here is not to have duplicate events (ones that would
+		    // replace the other) in the data link. This is WASTED transmission
+		    // time and TCP window space.
+		    // 
+		    // Events deferred in this manner should be placed back at the END
+		    // of the queue and should NOT affect the current total of tasks
+		    // being flushed. (Ensure flushes still occur when the queue is
+		    // empty of all tasks except those deferred in this iteration.
+		    // 
+		    // Note that once a task of a certain type has been deferred, any
+		    // new task of that type added to the dispatcher will also have to
+		    // be deferred to preserve comity and assurance of timely delivery
+		    // (flushing occurs a.s.a.p. when it is known the link layer has as
+		    // many "hot" events as it can)
+		    // 
+		    // 
 		    if (event == SERVER_EVENT.SCREEN_SEGMENT_CHANGED || event == SERVER_EVENT.SCREEN_SEGMENT_UPDATE)
 		    {
 		        tidTmp = ((Integer)args[0]) + 2;
@@ -352,6 +373,7 @@ public class ClientHandler extends Thread
 	            public void run()
 	            {
 	                boolean killSelf = true;
+	                boolean flushed = false;
 	                try
 	                {
 	                    try
@@ -365,9 +387,19 @@ public class ClientHandler extends Thread
 	                    try
 	                    {
 	                        Msg.send(out, jce, event, args);
+	                        if (serializedDispatcher.isEmpty() && unserializedDispatcher.isEmpty())
+	                        {
+	                            flushed = true;
+	                            out.flush();
+	                        }
 	                        switch(event)
 	                        {
                                 case AUTHORIZATION_UPDATE:
+                                    if (!flushed)
+                                    {
+                                        flushed = true;
+                                        out.flush();
+                                    }
                                     if (!((Boolean) args[0]))
                                     {
                                         SwingUtilities.invokeLater(new Runnable() {
