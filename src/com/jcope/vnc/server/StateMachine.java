@@ -43,7 +43,7 @@ public class StateMachine
     {
         for (ClientHandler client : clients)
         {
-            client.sendJitCompressed(event, jce);
+            client.sendEvent(jce);
         }
     }
     
@@ -71,7 +71,7 @@ public class StateMachine
             {
                 for (ClientHandler client : clients)
                 {
-                    client.sendJitCompressed(event, jce);
+                    client.sendEvent(jce);
                 }
             }
             finally {

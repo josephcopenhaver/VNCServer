@@ -274,9 +274,9 @@ public class ClientHandler extends Thread
 		
 	}
 	
-	public void sendJitCompressed(SERVER_EVENT event, JitCompressedEvent jce)
+	public void sendEvent(JitCompressedEvent jce)
     {
-        _sendEvent(event, jce, (Object[]) null);
+        _sendEvent(jce.getEvent(), jce, (Object[]) null);
     }
 	
 	public void sendEvent(SERVER_EVENT event)
@@ -430,15 +430,7 @@ public class ClientHandler extends Thread
 	        else
 	        {
 	            jce.acquire();
-	            rOnDestroy = new Runnable() {
-
-	                @Override
-	                public void run()
-	                {
-	                    jce.release();
-	                }
-	                
-	            };
+	            rOnDestroy = jce.getOnDestroy();
 	        } 
 	        
 	        dispatcher.dispatch(tidTmp, r, rOnDestroy);

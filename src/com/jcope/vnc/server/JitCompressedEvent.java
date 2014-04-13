@@ -21,11 +21,22 @@ public class JitCompressedEvent
     private volatile SERVER_EVENT event;
     private volatile Object[] args;
     
+    private final Runnable onDestroy;
+    
     private JitCompressedEvent()
     {
         readSyncLock = new Semaphore(1, true);
         releaseSyncLock = new Semaphore(1, true);
         reset();
+        onDestroy = new Runnable() {
+
+            @Override
+            public void run()
+            {
+                release();
+            }
+            
+        };
     }
     
     private void reset()
@@ -100,5 +111,15 @@ public class JitCompressedEvent
         }
         
         return bytes;
+    }
+    
+    public SERVER_EVENT getEvent()
+    {
+        return event;
+    }
+
+    public Runnable getOnDestroy()
+    {
+        return onDestroy;
     }
 }

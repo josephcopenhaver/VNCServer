@@ -324,7 +324,7 @@ public class Manager extends Thread
     					{
     					    if (jce != null)
     					    {
-    					        client.sendJitCompressed(event, jce);
+    					        client.sendEvent(jce);
     					    }
     					    else
     					    {
