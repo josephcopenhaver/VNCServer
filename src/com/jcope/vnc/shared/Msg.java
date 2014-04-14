@@ -4,6 +4,8 @@ import static com.jcope.vnc.shared.MsgCache.compressionCache;
 import static com.jcope.vnc.shared.MsgCache.compressionResultCache;
 import static com.jcope.vnc.shared.MsgCache.precompRBOS;
 import static com.jcope.vnc.shared.MsgCache.precompSema;
+import static com.jcope.vnc.shared.MsgCache.bufferPool;
+import static com.jcope.vnc.shared.MsgCache.bufferPoolLock;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -18,6 +20,7 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import com.jcope.debug.LLog;
+import com.jcope.util.ConcurrentByteArrayPool;
 import com.jcope.util.ReusableByteArrayOutputStream;
 import com.jcope.vnc.server.JitCompressedEvent;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
@@ -136,7 +139,29 @@ public class Msg implements Serializable
             resultSize = rbos.size();
             if (out == null)
             {
-                rval = rbos.toByteArray();
+                if (bufferPool == null)
+                {
+                    try
+                    {
+                        bufferPoolLock.acquire();
+                    }
+                    catch (InterruptedException e)
+                    {
+                        LLog.e(e);
+                    }
+                    try
+                    {
+                        if (bufferPool == null)
+                        {
+                            bufferPool = new ConcurrentByteArrayPool();
+                        }
+                    }
+                    finally {
+                        bufferPoolLock.release();
+                    }
+                }
+                rval = bufferPool.get(rbos.size());
+                rbos.toByteArray(rval);
             }
             else
             {

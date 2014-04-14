@@ -1,5 +1,7 @@
 package com.jcope.vnc.server;
 
+import static com.jcope.vnc.shared.MsgCache.bufferPool;
+
 import java.util.LinkedList;
 import java.util.concurrent.Semaphore;
 
@@ -76,8 +78,14 @@ public class JitCompressedEvent
         {
             if ((--refCount) <= 0)
             {
+                if (bytes != null)
+                {
+                    bufferPool.add(bytes);
+                }
                 reset();
-                objPool.add(this);
+                synchronized(objPool) {
+                    objPool.add(this);
+                }
             }
         }
         finally {
