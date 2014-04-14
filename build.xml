@@ -1,6 +1,19 @@
 <project name="JCope VNC Server" default="compile" basedir=".">
-    <description>JCope VNCServer build file</description>
+  <description>JCope VNCServer build file</description>
   <!-- set global properties for this build -->
+  <macrodef name="deleteifexists">
+    <attribute name="file" />
+    <sequential>
+      <delete file="@{file}" failonerror="false" />
+      <fail message="File exists: @{file}">
+        <condition>
+          <resourcecount count="1">
+            <fileset file="@{file}"/>
+          </resourcecount>
+        </condition>
+      </fail>
+    </sequential>
+  </macrodef>
   <property name="logdir" location="build.log"/>
   <property name="src" location="src"/>
   <property name="build" location="bin"/>
@@ -25,7 +38,7 @@
   	<record name="${logdir}/compile.txt" action="start" append="false" />
     
 	<!-- remove the not_built_marker marker -->
-	<delete file="${not_built_marker}" failonerror="false" />
+	<deleteifexists file="${not_built_marker}" />
 	
     <!-- Compile the java code from ${src} into ${build} -->
     <javac target="1.6" srcdir="${src}" destdir="${build}">
@@ -66,9 +79,9 @@
 	<touch file="${not_built_marker}"/>
 	
 	<!-- Delete files often created in normal run/log operations -->
-	<delete file="client.log" failonerror="false" />
-	<delete file="server.log" failonerror="false" />
-	<delete file="server.lock" failonerror="false" />
-	<delete file="server.pid" failonerror="false" />
+	<deleteifexists file="client.log" />
+	<deleteifexists file="server.log" />
+	<deleteifexists file="server.lock" />
+	<deleteifexists file="server.pid" />
   </target>
 </project>
