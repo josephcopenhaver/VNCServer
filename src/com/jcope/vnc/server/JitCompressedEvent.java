@@ -2,7 +2,7 @@ package com.jcope.vnc.server;
 
 import static com.jcope.vnc.shared.MsgCache.bufferPool;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.concurrent.Semaphore;
 
 import com.jcope.debug.LLog;
@@ -12,7 +12,8 @@ import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 public class JitCompressedEvent
 {
     
-    private static final LinkedList<JitCompressedEvent> objPool = new  LinkedList<JitCompressedEvent>();
+    private static final Semaphore poolSyncLock = new Semaphore(1, true);
+    private static final ArrayList<JitCompressedEvent> objPool = new  ArrayList<JitCompressedEvent>();
     
     private final Semaphore readSyncLock;
     private final Semaphore releaseSyncLock;
@@ -51,7 +52,34 @@ public class JitCompressedEvent
     
     public static JitCompressedEvent getInstance(SERVER_EVENT event, Object[] args)
     {
-        JitCompressedEvent rval = objPool.isEmpty() ? (new JitCompressedEvent()) : objPool.pop();
+        JitCompressedEvent rval = null;
+        try
+        {
+            poolSyncLock.acquire();
+        }
+        catch (InterruptedException e)
+        {
+            LLog.e(e);
+        }
+        
+        try
+        {
+            synchronized(objPool) {
+                if (!objPool.isEmpty())
+                {
+                    rval = objPool.remove(objPool.size()-1);
+                }
+            }
+        }
+        finally {
+            poolSyncLock.release();
+        }
+        
+        if (rval == null)
+        {
+            rval = new JitCompressedEvent();
+        }
+        
         rval.event = event;
         rval.args = args;
         
@@ -83,8 +111,22 @@ public class JitCompressedEvent
                     bufferPool.add(bytes);
                 }
                 reset();
-                synchronized(objPool) {
-                    objPool.add(this);
+                try
+                {
+                    poolSyncLock.acquire();
+                }
+                catch (InterruptedException e)
+                {
+                    LLog.e(e);
+                }
+                try
+                {
+                    synchronized(objPool) {
+                        objPool.add(this);
+                    }
+                }
+                finally {
+                    poolSyncLock.release();
                 }
             }
         }
