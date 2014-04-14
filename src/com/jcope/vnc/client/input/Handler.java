@@ -7,6 +7,7 @@ import java.util.concurrent.Semaphore;
 
 import com.jcope.debug.LLog;
 import com.jcope.vnc.client.StateMachine;
+import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 import com.jcope.vnc.shared.input.Handle;
 
@@ -103,6 +104,13 @@ public class Handler extends com.jcope.vnc.shared.input.Handler<StateMachine, SE
     public void handle(StateMachine stateMachine, SERVER_EVENT event, Object... args)
     {
         Handle<StateMachine> handle = eventHandles.get(event);
+        if (!event.isSerial()
+            && event != SERVER_EVENT.SCREEN_SEGMENT_UPDATE
+            && event != SERVER_EVENT.SCREEN_SEGMENT_CHANGED // handle for this event performs send of NS response
+            )
+        {
+            stateMachine.sendEvent(CLIENT_EVENT.ACKNOWLEDGE_NON_SERIAL_EVENT, event);
+        }
         handle.handle(stateMachine, args);
     }
 }
