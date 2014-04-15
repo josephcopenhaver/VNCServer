@@ -19,7 +19,7 @@ public class ConcurrentByteArrayPool
     
     public byte[] get(int size)
     {
-        byte[] rval;
+        byte[] rval = null;
         try
         {
             sema.acquire();
@@ -35,12 +35,12 @@ public class ConcurrentByteArrayPool
             {
                 if (pool == null)
                 {
-                    rval = new byte[size];
                     break;
                 }
+				int p;
                 synchronized(pool)
                 {
-                    int p = pool.size();
+                    p = pool.size();
                     rval = null;
                     while (p>0)
                     {
@@ -51,18 +51,19 @@ public class ConcurrentByteArrayPool
                             break;
                         }
                     }
-                    if (rval != null)
-                    {
-                        break;
-                    }
-                    rval = new byte[size];
                 }
             } while (false);
-            return rval;
         }
         finally {
             sema.release();
         }
+		
+		if (rval == null)
+		{
+			rval = new byte[size];
+		}
+		
+		return rval;
     }
     
     public void add(byte[] unused)
