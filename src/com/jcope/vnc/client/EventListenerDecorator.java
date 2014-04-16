@@ -27,6 +27,7 @@ public class EventListenerDecorator
     private static volatile JFrame currentParent = null;
     private static final Semaphore accessSema = new Semaphore(1, true);
     private static Point point = new Point();
+    private static boolean traversalKeysEnabled = true;
     
     public static void decorate(JFrame parent, ImagePanel panel)
     {
@@ -203,6 +204,9 @@ public class EventListenerDecorator
     
     private static void _decorate(JFrame parent, ImagePanel panel)
     {
+        traversalKeysEnabled = parent.getFocusTraversalKeysEnabled();
+        parent.setFocusTraversalKeysEnabled(false);
+        //
         parent.addKeyListener(keyListener);
         panel.addMouseMotionListener(mouseMotionListener);
         panel.addMouseListener(mouseListener);
@@ -215,5 +219,7 @@ public class EventListenerDecorator
         panel.removeMouseMotionListener(mouseMotionListener);
         panel.removeMouseListener(mouseListener);
         panel.removeMouseWheelListener(mouseWheelListener);
+        //
+        parent.setFocusTraversalKeysEnabled(traversalKeysEnabled);
     }
 }
