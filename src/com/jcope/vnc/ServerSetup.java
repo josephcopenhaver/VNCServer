@@ -15,6 +15,7 @@ import javax.xml.transform.TransformerException;
 
 import org.xml.sax.SAXException;
 
+import com.jcope.ui.PasswordInputDialog;
 import com.jcope.vnc.Server.SERVER_PROPERTIES;
 import com.jcope.vnc.server.SecurityPolicy;
 import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
@@ -237,7 +238,7 @@ public class ServerSetup
                 {
                     defaultPasswordHash = "";
                 }
-                String passwordHash = JOptionPane.showInputDialog(parent, String.format("Device: \"%s\"\nMode: \"%s\"\nConfigure password:", deviceID, accessMode.name()), defaultPasswordHash);
+                String passwordHash = PasswordInputDialog.show(parent, "Password", String.format("Device: \"%s\"\nMode: \"%s\"\nConfigure password:", deviceID, accessMode.name()), true, null);
                 
                 if (null == passwordHash || passwordHash.equals(""))
                 {

@@ -16,6 +16,7 @@ import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
 import com.jcope.debug.LLog;
+import com.jcope.ui.PasswordInputDialog;
 import com.jcope.util.TaskDispatcher;
 import com.jcope.vnc.client.input.Handler;
 import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
@@ -92,7 +93,7 @@ public class StateMachine implements Runnable
 	    
 	    if (rval == null)
 	    {
-	        rval = (String) JOptionPane.showInputDialog(frame, "Password?", "");
+	        rval = PasswordInputDialog.show(frame, "Password?", "Password:", false, null);
 	        if (rval != null)
 	        {
 	            if (rval.equals(""))

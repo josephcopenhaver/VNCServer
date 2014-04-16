@@ -95,10 +95,17 @@ public class Client
                 return;
             }
             Properties prop = new Properties();
-            prop.load(new FileInputStream(properyFile));
-            for (CLIENT_PROPERTIES iprop : CLIENT_PROPERTIES.values())
+            FileInputStream in = new FileInputStream(properyFile);
+            try
             {
-                iprop.load(prop);
+                prop.load(in);
+                for (CLIENT_PROPERTIES iprop : CLIENT_PROPERTIES.values())
+                {
+                    iprop.load(prop);
+                }
+            }
+            finally {
+                in.close();
             }
         }
     }
