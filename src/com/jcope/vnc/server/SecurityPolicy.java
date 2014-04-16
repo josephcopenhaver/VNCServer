@@ -148,8 +148,17 @@ public class SecurityPolicy
     public void whitelist(String deviceIDString, ACCESS_MODE accessMode,
             String passwordHash)
     {
-        if (ACCESS_MODE.ALL == accessMode)
+        boolean fullAccess = false;
+        if (deviceIDString.equals(ALL_TOKEN) && ACCESS_MODE.ALL == accessMode && passwordHash.equals(ALL_TOKEN))
         {
+            clear();
+            fullAccess = true;
+        }
+        else if (ACCESS_MODE.ALL == accessMode && passwordHash.equals(ALL_TOKEN))
+        {
+            // added massive security opening that negates all existing policies
+            // for this device
+            // this removes pointless layers of security
             blacklist(deviceIDString);
         }
         
@@ -168,9 +177,11 @@ public class SecurityPolicy
         
         availableModes.put(accessMode, passwordHash);
         
-        if (!deviceIDString.equals(ALL_TOKEN))
+        if (!fullAccess && !deviceIDString.equals(ALL_TOKEN))
         {
-            blacklist(ALL_TOKEN);
+            // added device targeted security
+            // need to make sure it cannot be trivially circumvented
+            _blacklist(ALL_TOKEN, ACCESS_MODE.ALL, ALL_TOKEN);
         }
     }
     
@@ -183,12 +194,14 @@ public class SecurityPolicy
     {
         if (accessMode != ACCESS_MODE.ALL)
         {
-            _blacklist(ALL_TOKEN);
-            if (deviceIDString.equals(ALL_TOKEN))
+            // for some set of devices (all or one)
+            // we want to remove a specific access point
+            // need to ensure it cannot be accessed any more
+            _blacklist(ALL_TOKEN, ACCESS_MODE.ALL, ALL_TOKEN);
+            if (!deviceIDString.equals(ALL_TOKEN))
             {
-                return;
+                _blacklist(deviceIDString, ACCESS_MODE.ALL, ALL_TOKEN);
             }
-            _blacklist(deviceIDString, ACCESS_MODE.ALL);
         }
         _blacklist(deviceIDString, accessMode);
     }
@@ -203,6 +216,25 @@ public class SecurityPolicy
         }
     }
     
+    private void _blacklist(String deviceIDString, ACCESS_MODE accessMode, String passwordHash)
+    {
+        HashMap<ACCESS_MODE, String> availableModes = selectableDevices.get(deviceIDString);
+        String currentPasswordHash;
+        if (availableModes != null
+                && (currentPasswordHash = availableModes.get(accessMode)) != null
+                && currentPasswordHash.equals(passwordHash))
+        {
+            if (availableModes.size() <= 1)
+            {
+                blacklist(deviceIDString);
+            }
+            else
+            {
+                availableModes.remove(accessMode);
+            }
+        }
+    }
+    
     public void blacklist(GraphicsDevice device)
     {
         blacklist(device.getIDstring());
@@ -212,7 +244,7 @@ public class SecurityPolicy
     {
         if (!deviceIDString.equals(ALL_TOKEN))
         {
-            _blacklist(ALL_TOKEN);
+            _blacklist(ALL_TOKEN, ACCESS_MODE.ALL, ALL_TOKEN);
         }
         _blacklist(deviceIDString);
     }
