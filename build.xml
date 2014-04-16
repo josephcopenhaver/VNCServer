@@ -79,6 +79,7 @@
 	<touch file="${not_built_marker}"/>
 	
 	<!-- Delete files often created in normal run/log operations -->
+	<deleteifexists file="setup.log" />
 	<deleteifexists file="client.log" />
 	<deleteifexists file="server.log" />
 	<deleteifexists file="server.lock" />

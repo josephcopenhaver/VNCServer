@@ -84,7 +84,7 @@ public class ServerSetup
             }
             else
             {
-                GraphicsDevice device = ScreenSelector.selectScreen(frame, -1);
+                GraphicsDevice device = ScreenSelector.selectScreen(frame, "Set a policy for the default device?", -1);
                 if (null == device)
                 {
                     break;

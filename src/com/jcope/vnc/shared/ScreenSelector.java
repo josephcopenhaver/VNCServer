@@ -89,16 +89,26 @@ public class ScreenSelector
         return rval;
     }
     
-    public static GraphicsDevice selectScreen(JFrame parent, Integer defaultSelection)
+    public static GraphicsDevice selectScreen(JFrame parent, String promptIfOnlyOneScreen, Integer defaultSelection)
     {
         GraphicsDevice rval = null;
         
         GraphicsDevice[] devices = getScreenDevicesOrdered();
+        
+        if (devices == null || devices.length < 1)
+        {
+            return null;
+        }
+        
         ArrayList<JDialog> enumFrames = new ArrayList<JDialog>(devices.length);
         
         if (devices.length == 1)
         {
-            return devices[0];
+            if (promptIfOnlyOneScreen == null || JOptionPane.OK_OPTION == JOptionPane.showConfirmDialog(parent, promptIfOnlyOneScreen))
+            {
+                return devices[0];
+            }
+            return null;
         }
         
         try

@@ -522,7 +522,7 @@ public class MainFrame extends JFrame
     	    {
     	        if (currentFullScreenDevice == null)
     	        {
-    	            device = ScreenSelector.selectScreen(this, 0);
+    	            device = ScreenSelector.selectScreen(this, null, 0);
     	        }
     	        else
     	        {
