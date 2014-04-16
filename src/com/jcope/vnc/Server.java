@@ -107,10 +107,17 @@ public class Server
                 return;
             }
             Properties prop = new Properties();
-            prop.load(new FileInputStream(properyFile));
-            for (SERVER_PROPERTIES iprop : SERVER_PROPERTIES.values())
+            FileInputStream in = new FileInputStream(properyFile);
+            try
             {
-                iprop.load(prop);
+                prop.load(in);
+                for (SERVER_PROPERTIES iprop : SERVER_PROPERTIES.values())
+                {
+                    iprop.load(prop);
+                }
+            }
+            finally {
+                in.close();
             }
         }
     }

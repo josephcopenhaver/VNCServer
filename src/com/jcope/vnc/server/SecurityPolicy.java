@@ -148,6 +148,11 @@ public class SecurityPolicy
     public void whitelist(String deviceIDString, ACCESS_MODE accessMode,
             String passwordHash)
     {
+        if (ACCESS_MODE.ALL == accessMode)
+        {
+            blacklist(deviceIDString);
+        }
+        
         HashMap<ACCESS_MODE, String> availableModes = selectableDevices.get(deviceIDString);
         
         if (availableModes == null)

@@ -73,10 +73,20 @@ public class ServerSetup
             securityPolicy.clear();
             changed = true;
         }
+        boolean firstRun = true;
         
         while (true)
         {
             String deviceID;
+            
+            if (firstRun)
+            {
+                firstRun = false;
+            }
+            else if (JOptionPane.OK_OPTION == JOptionPane.showConfirmDialog(frame, "Stop modifying policy settings?"))
+            {
+                break;
+            }
             
             if (JOptionPane.OK_OPTION == JOptionPane.showConfirmDialog(frame, "Set a policy for all devices?"))
             {
@@ -208,11 +218,11 @@ public class ServerSetup
                     break;
                 }
                 
-                int resultInt = JOptionPane.showConfirmDialog(parent, String.format("Device: \"%s\"\nAllow all types of connection attempts?", deviceID));
+                int resultInt = JOptionPane.showConfirmDialog(parent, String.format("Device: \"%s\"\nMode: \"%s\"\nSecure with a password?", deviceID, accessMode.name()));
                 
-                if (JOptionPane.OK_OPTION == resultInt)
+                if (JOptionPane.NO_OPTION == resultInt)
                 {
-                    securityPolicy.whitelist(deviceID, ACCESS_MODE.ALL);
+                    securityPolicy.whitelist(deviceID, accessMode);
                     rval = true;
                     break;
                 }
@@ -227,7 +237,7 @@ public class ServerSetup
                 {
                     defaultPasswordHash = "";
                 }
-                String passwordHash = JOptionPane.showInputDialog(parent, String.format("Device: \"%s\"\nMode: \"%s\"\nConfigure password", deviceID, accessMode.name()), defaultPasswordHash);
+                String passwordHash = JOptionPane.showInputDialog(parent, String.format("Device: \"%s\"\nMode: \"%s\"\nConfigure password:", deviceID, accessMode.name()), defaultPasswordHash);
                 
                 if (null == passwordHash || passwordHash.equals(""))
                 {
