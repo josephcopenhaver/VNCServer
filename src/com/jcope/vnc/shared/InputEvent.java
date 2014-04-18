@@ -430,7 +430,7 @@ public class InputEvent implements Serializable
                         case MOUSE_DOWN:
                         case MOUSE_UP:
                             // Hidden collapsing of nonsensical sequences
-                            rval = true;
+                            rval = (Arrays.equals(typeProps, next.typeProps));
                             break;
                         case MOUSE_MOVE:
                             System.arraycopy(next.typeProps, 0, typeProps, 0, typeProps.length);
