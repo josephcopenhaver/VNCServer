@@ -14,6 +14,23 @@
       </fail>
     </sequential>
   </macrodef>
+  <macrodef name="compilesrc">
+    <attribute name="name" />
+    <attribute name="excludes" default="" />
+    <attribute name="classpath" default="" />
+    <sequential>
+      <record name="${logdir}/@{name}.txt" action="start" append="false" />
+      
+	  <!-- remove the not_built_marker marker -->
+	  <deleteifexists file="${not_built_marker}" />
+	  
+      <!-- Compile the java code from ${src} into ${build} -->
+      <javac target="1.6" srcdir="${src}" destdir="${build}" excludes="@{excludes}" classpath="@{classpath}" >
+        <compilerarg value="-Xlint:unchecked"/>
+      </javac>
+  	  <record name="${logdir}/@{name}.txt" action="stop"/>
+    </sequential>
+  </macrodef>
   <property name="logdir" location="build.log"/>
   <property name="src" location="src"/>
   <property name="build" location="bin"/>
@@ -35,16 +52,21 @@
 
   <target name="compile" depends="init"
         description="compile the source " >
-  	<record name="${logdir}/compile.txt" action="start" append="false" />
+  	<compilesrc name="compile" excludes="com/jcope/vnc/client/NativeDecorator.java" />
+  </target>
+
+  <target name="ncompile" depends="init"
+        description="compile the source with native support " >
     
-	<!-- remove the not_built_marker marker -->
-	<deleteifexists file="${not_built_marker}" />
-	
-    <!-- Compile the java code from ${src} into ${build} -->
-    <javac target="1.6" srcdir="${src}" destdir="${build}">
-      <compilerarg value="-Xlint:unchecked"/>
-    </javac>
-  	<record name="${logdir}/compile.txt" action="stop"/>
+    <!-- Compile the software with
+         support for natively taking over
+         keystrokes/overriding global handles
+         using:
+         https://code.google.com/p/jnativehook/
+         Last known compatible version: 1.1.4
+         Drop JNativeHook.jar into "lib" dir -->
+    
+  	<compilesrc name="ncompile" classpath="lib/JNativeHook.jar" />
   </target>
 
   <target name="dist" depends="compile"

@@ -1,5 +1,6 @@
 package com.jcope.vnc.client;
 
+import static com.jcope.debug.Debug.DEBUG;
 import static com.jcope.debug.Debug.assert_;
 
 import java.awt.Point;
@@ -10,6 +11,8 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.Semaphore;
 
 import javax.swing.JFrame;
@@ -23,11 +26,51 @@ public class EventListenerDecorator
 {
     public static StateMachine stateMachine = null;
     
+    private static FrameDecorator nativeDecorator = null;
     private static volatile ImagePanel currentPanel = null;
     private static volatile JFrame currentParent = null;
     private static final Semaphore accessSema = new Semaphore(1, true);
     private static Point point = new Point();
     private static boolean traversalKeysEnabled = true;
+    
+    static
+    {
+        try
+        {
+            Class<?> cl = Class.forName("com.jcope.vnc.client.NativeDecorator");
+            Constructor<?> c = cl.getDeclaredConstructor((Class<?>[])null);
+            nativeDecorator = (FrameDecorator) c.newInstance();
+        }
+        catch (InstantiationException e)
+        {
+            LLog.e(e);
+        }
+        catch (IllegalAccessException e)
+        {
+            LLog.e(e);
+        }
+        catch (IllegalArgumentException e)
+        {
+            LLog.e(e);
+        }
+        catch (InvocationTargetException e)
+        {
+            LLog.e(e);
+        }
+        catch (NoSuchMethodException e)
+        {
+            LLog.e(e);
+        }
+        catch (SecurityException e)
+        {
+            LLog.e(e);
+        }
+        catch (ClassNotFoundException e)
+        {
+            // Do Nothing
+            if (DEBUG) {LLog.w(e);}
+        }
+    }
     
     public static void decorate(JFrame parent, ImagePanel panel)
     {
@@ -204,6 +247,8 @@ public class EventListenerDecorator
     
     private static void _decorate(JFrame parent, ImagePanel panel)
     {
+        if (nativeDecorator != null) {nativeDecorator.decorate(parent);}
+        //
         traversalKeysEnabled = parent.getFocusTraversalKeysEnabled();
         parent.setFocusTraversalKeysEnabled(false);
         //
@@ -215,6 +260,8 @@ public class EventListenerDecorator
     
     private static void undecorate(JFrame parent, ImagePanel panel)
     {
+        if (nativeDecorator != null) {nativeDecorator.undecorate(parent);}
+        //
         parent.removeKeyListener(keyListener);
         panel.removeMouseMotionListener(mouseMotionListener);
         panel.removeMouseListener(mouseListener);

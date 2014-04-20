@@ -59,6 +59,7 @@ OTHER ANT BUILD TARGETS:
 ===============================
 (See build.xml for more detail)
 -------------------------------
+ant ncompile
 ant clean
 ant cleangit
 

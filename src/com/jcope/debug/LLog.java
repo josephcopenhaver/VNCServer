@@ -20,6 +20,7 @@ public class LLog
 	public static void e(Throwable e, boolean rethrow, boolean hardStop)
 	{
 	    if (!DEBUG){if(!hardStop && !rethrow){return;}}
+	    (rethrow ? System.err : System.out).println(e.getMessage());
 		e.printStackTrace(rethrow ? System.err : System.out);
 		if (hardStop)
 		{
@@ -45,12 +46,19 @@ public class LLog
 	}
 	
 	public static void w(String warn_msg)
-	{
-	    if (!DEBUG){return;}
+    {
+        if (!DEBUG){return;}
         System.err.println(warn_msg);
-	}
-	
-	public static void logEvent(String source, SERVER_EVENT event, Object[] args)
+    }
+    
+	public static void w(Exception e)
+    {
+        if (!DEBUG){return;}
+        System.err.println(e.getMessage());
+        e.printStackTrace(System.err);
+    }
+    
+    public static void logEvent(String source, SERVER_EVENT event, Object[] args)
 	{
 	    if (!DEBUG){return;}
 	    if (event == SERVER_EVENT.SCREEN_SEGMENT_CHANGED
