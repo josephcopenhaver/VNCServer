@@ -15,7 +15,7 @@ public abstract class BufferPool<T> extends Thread
 {
     private final ArrayList<PoolRef> poolList;
     private volatile int size;
-    private final Semaphore sema;
+    private final Semaphore listSema;
     
     @SuppressWarnings("rawtypes")
     private final ReferenceQueue queue;
@@ -29,14 +29,14 @@ public abstract class BufferPool<T> extends Thread
         private final int order;
         
         @SuppressWarnings("unchecked")
-        private PoolRef(T thingToRef, final int order)
+        private PoolRef(T hardRef, final int order)
         {
-            super(thingToRef, queue);
+            super(hardRef, queue);
+            sema = new Semaphore(1, true);
             this.order = order;
-            hardRef = thingToRef;
+            this.hardRef = hardRef;
             idx = -1;
             refCount = 1;
-            sema = new Semaphore(1, true);
         }
         
         private void stageGet()
@@ -69,7 +69,7 @@ public abstract class BufferPool<T> extends Thread
             finally {
                 sema.release();
             }
-            if (newRefCount == 0)
+            if (newRefCount <= 0)
             {
                 BufferPool.this.release(this);
             }
@@ -102,7 +102,7 @@ public abstract class BufferPool<T> extends Thread
         size = 0;
         poolList = new ArrayList<PoolRef>();
         queue = new ReferenceQueue();
-        sema = new Semaphore(1, true);
+        listSema = new Semaphore(1, true);
         if (name != null)
         {
             setName(name);
@@ -122,7 +122,7 @@ public abstract class BufferPool<T> extends Thread
                 PoolRef ref = (PoolRef) queue.remove();
                 try
                 {
-                    sema.acquire();
+                    listSema.acquire();
                 }
                 catch (InterruptedException e)
                 {
@@ -144,7 +144,7 @@ public abstract class BufferPool<T> extends Thread
                     }
                 }
                 finally {
-                    sema.release();
+                    listSema.release();
                 }
             }
             catch (InterruptedException e)
@@ -188,47 +188,70 @@ public abstract class BufferPool<T> extends Thread
     
     private void remove(PoolRef ref)
     {
-        int idx, newSize, left, right, size;
+        int idx, newSize, left, right;
+        boolean uleft = Boolean.FALSE;
+        boolean uright = Boolean.FALSE;
         
-        size = this.size;
         idx = ref.idx;
         if (idx < 0)
         {
             return;
         }
+        
         newSize = size-1;
         assert_(newSize >= 0);
+        
         while (true)
         {
-            // TODO: something does not look right here
             right = (idx+1)<<1;
-            left = idx-1;
-            if (left >= size || right >= size)
+            left = right-1;
+            
+            if (left <= newSize)
             {
-                if (idx != newSize && newSize > 0)
+                if (right <= newSize)
                 {
-                    _set(idx, poolList.get(newSize));
-                    poolList.set(newSize, null);
-                    percolateUp(idx);
+                    if (poolList.get(left).order >= poolList.get(right).order)
+                    {
+                        uright = Boolean.TRUE;
+                    }
+                    else
+                    {
+                        uleft = Boolean.TRUE;
+                    }
                 }
                 else
                 {
-                    poolList.set(newSize, null);
+                    uleft = Boolean.TRUE;
                 }
-                break;
             }
-            if (poolList.get(left).order >= poolList.get(right).order)
+            else if (right <= newSize)
             {
+                uright = Boolean.TRUE;
+            }
+            
+            if (uleft)
+            {
+                uleft = Boolean.FALSE;
+                _set(idx, poolList.get(left));
+                idx = left;
+            }
+            else if (uright)
+            {
+                uright = Boolean.FALSE;
                 _set(idx, poolList.get(right));
                 idx = right;
             }
             else
             {
-                _set(idx, poolList.get(left));
-                idx = left;
+                if (idx != newSize)
+                {
+                    percolateUp(idx);
+                }
+                poolList.set(newSize, null);
+                break;
             }
         }
-        this.size = newSize;
+        size = newSize;
     }
     
     private PoolRef get(final int order, final int[] startRef)
@@ -313,7 +336,7 @@ public abstract class BufferPool<T> extends Thread
         {
             try
             {
-                sema.acquire();
+                listSema.acquire();
             }
             catch (InterruptedException e)
             {
@@ -333,13 +356,18 @@ public abstract class BufferPool<T> extends Thread
                 }
             }
             finally {
-                sema.release();
+                listSema.release();
             }
         }
         
         if (rval == null)
         {
-            rval = new PoolRef(getInstance(order), order);
+            T hardRef = getInstance(order);
+            rval = new PoolRef(hardRef, order);
+        }
+        else
+        {
+            rval.refCount = 1;
         }
         
         return rval;
@@ -350,7 +378,7 @@ public abstract class BufferPool<T> extends Thread
         int size;
         try
         {
-            sema.acquire();
+            listSema.acquire();
         }
         catch (InterruptedException e)
         {
@@ -368,7 +396,7 @@ public abstract class BufferPool<T> extends Thread
             this.size = size+1;
         }
         finally {
-            sema.release();
+            listSema.release();
         }
     }
     
