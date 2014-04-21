@@ -1,5 +1,8 @@
 package com.jcope.vnc.client;
 
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowFocusListener;
+import java.awt.event.WindowListener;
 import java.lang.reflect.Field;
 
 import javax.swing.JFrame;
@@ -19,6 +22,8 @@ public class NativeDecorator implements FrameDecorator
     
     private JFrame frame;
     private final static GlobalScreen globalScreen;
+    private volatile boolean windowActive = false;
+    private volatile boolean windowFocused = false;
     
     static
     {
@@ -43,7 +48,7 @@ public class NativeDecorator implements FrameDecorator
         boolean forwardKey = Boolean.FALSE;
         do
         {
-            if (!frame.isActive() || !frame.isFocused())
+            if (!windowActive || !windowFocused)
             {
                 // Only forwarding stuff when focused
                 break;
@@ -90,12 +95,12 @@ public class NativeDecorator implements FrameDecorator
         } while (Boolean.FALSE);
     }
     
-    private NativeKeyListener listener = new NativeKeyListener() {
+    private NativeKeyListener nKeyListener = new NativeKeyListener() {
         
         @Override
         public void nativeKeyTyped(NativeKeyEvent evt)
         {
-            handleNativeKey(evt, INPUT_TYPE.KEY_PRESSED);
+            // Do Nothing
         }
         
         @Override
@@ -111,11 +116,73 @@ public class NativeDecorator implements FrameDecorator
         }
     };
     
+    private WindowListener windowListener = new WindowListener() {
+        
+        @Override
+        public void windowOpened(WindowEvent e)
+        {
+            // Do Nothing
+        }
+        
+        @Override
+        public void windowIconified(WindowEvent e)
+        {
+            // Do Nothing
+        }
+        
+        @Override
+        public void windowDeiconified(WindowEvent e)
+        {
+            // Do Nothing
+        }
+        
+        @Override
+        public void windowDeactivated(WindowEvent e)
+        {
+            windowActive = Boolean.FALSE;
+        }
+        
+        @Override
+        public void windowClosing(WindowEvent e)
+        {
+            // Do Nothing
+        }
+        
+        @Override
+        public void windowClosed(WindowEvent e)
+        {
+            // Do Nothing
+        }
+        
+        @Override
+        public void windowActivated(WindowEvent e)
+        {
+            windowActive = Boolean.TRUE;
+        }
+    };
+    
+    private WindowFocusListener windowFocusListener = new WindowFocusListener() {
+        
+        @Override
+        public void windowLostFocus(WindowEvent e)
+        {
+            windowFocused = Boolean.FALSE;
+        }
+        
+        @Override
+        public void windowGainedFocus(WindowEvent e)
+        {
+            windowFocused = Boolean.TRUE;
+        }
+    };
+    
     public void undecorate()
     {
         try
         {
-            globalScreen.removeNativeKeyListener(listener);
+            frame.removeWindowListener(windowListener);
+            frame.removeWindowFocusListener(windowFocusListener);
+            globalScreen.removeNativeKeyListener(nKeyListener);
         }
         finally {
             frame = null;
@@ -125,6 +192,10 @@ public class NativeDecorator implements FrameDecorator
     public void decorate(JFrame parent)
     {
         frame = parent;
-        globalScreen.addNativeKeyListener(listener);
+        frame.addWindowListener(windowListener);
+        frame.addWindowFocusListener(windowFocusListener);
+        windowActive = frame.isActive();
+        windowFocused = frame.isFocused();
+        globalScreen.addNativeKeyListener(nKeyListener);
     }
 }
