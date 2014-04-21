@@ -111,7 +111,7 @@ public class NativeDecorator implements FrameDecorator
         }
     };
     
-    public void undecorate(JFrame parent)
+    public void undecorate()
     {
         try
         {

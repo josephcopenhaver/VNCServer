@@ -260,7 +260,7 @@ public class EventListenerDecorator
     
     private static void undecorate(JFrame parent, ImagePanel panel)
     {
-        if (nativeDecorator != null) {nativeDecorator.undecorate(parent);}
+        if (nativeDecorator != null) {nativeDecorator.undecorate();}
         //
         parent.removeKeyListener(keyListener);
         panel.removeMouseMotionListener(mouseMotionListener);
