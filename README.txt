@@ -5,7 +5,10 @@ VNCServer
 
 PREREQUISITS:
 ============
-apache ant already installed
+0. apache ant already installed
+1. If on windows then you need perl (for custom tee command)
+   or you should drop all references to the tee command in the
+   .bat scripts.
 
 
 
