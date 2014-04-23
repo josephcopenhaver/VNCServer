@@ -220,6 +220,28 @@ public class ClientHandler extends Thread
 			onDestroyActions = null;
 			serializedDispatcher.dispose();
 			unserializedDispatcher.dispose();
+			SwingUtilities.invokeLater(new Runnable() {
+				
+				@Override
+				public void run()
+				{
+					try
+					{
+						try
+						{
+							serializedDispatcher.join();
+						}
+						finally {
+							unserializedDispatcher.join();
+						}
+					}
+					catch (InterruptedException e)
+					{
+						LLog.e(e, Boolean.FALSE);
+					}
+				}
+				
+			});
 		}
 		
 		alive = false;
