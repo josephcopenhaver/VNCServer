@@ -7,59 +7,68 @@ import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
 public class LLog
 {
-	public static void e(Throwable e)
+	public static void e(final Throwable e)
 	{
-		e(e, true);
+		e(e, Boolean.TRUE);
 	}
 	
-	public static void e(Throwable e, boolean rethrow)
+	public static void e(final Throwable e, final boolean rethrow)
 	{
-		e(e, rethrow, false);
+		e(e, rethrow, Boolean.FALSE);
 	}
 	
-	public static void e(Throwable e, boolean rethrow, boolean hardStop)
+	public static void e(final Throwable e, final boolean rethrow, final boolean hardStop)
 	{
 	    if (!DEBUG){if(!hardStop && !rethrow){return;}}
-	    (rethrow ? System.err : System.out).println(e.getMessage());
-		e.printStackTrace(rethrow ? System.err : System.out);
-		if (hardStop)
-		{
-		    (rethrow ? System.err : System.out).flush();
-			System.exit(127);
-		}
-		else if (rethrow)
-		{
-			if (e instanceof RuntimeException)
-			{
-				throw ((RuntimeException)e);
-			}
-			else
-			{
-				throw new RuntimeException(e);
-			}
-		}
+	    try
+	    {
+    	    (rethrow ? System.err : System.out).println(e.getMessage());
+    		e.printStackTrace(rethrow ? System.err : System.out);
+    		if (hardStop)
+    		{
+    		    (rethrow ? System.err : System.out).flush();
+    			System.exit(127);
+    		}
+    		else if (rethrow)
+    		{
+    			if (e instanceof RuntimeException)
+    			{
+    				throw ((RuntimeException)e);
+    			}
+    			else
+    			{
+    				throw new RuntimeException(e);
+    			}
+    		}
+	    }
+	    finally {
+	        if (hardStop)
+            {
+                System.exit(127);
+            }
+	    }
 	}
 	
-	public static void i(String info_msg)
+	public static void i(final String info_msg)
 	{
 	    if (!DEBUG){return;}
 		System.out.println(info_msg);
 	}
 	
-	public static void w(String warn_msg)
+	public static void w(final String warn_msg)
     {
         if (!DEBUG){return;}
         System.err.println(warn_msg);
     }
     
-	public static void w(Exception e)
+	public static void w(final Exception e)
     {
         if (!DEBUG){return;}
         System.err.println(e.getMessage());
         e.printStackTrace(System.err);
     }
     
-    public static void logEvent(String source, SERVER_EVENT event, Object[] args)
+    public static void logEvent(final String source, final SERVER_EVENT event, final Object[] args)
 	{
 	    if (!DEBUG){return;}
 	    if (event == SERVER_EVENT.SCREEN_SEGMENT_CHANGED
@@ -73,7 +82,7 @@ public class LLog
 		_logEvent(source, event, args);
 	}
 
-	public static void logEvent(String source, CLIENT_EVENT event, Object[] args)
+	public static void logEvent(final String source, final CLIENT_EVENT event, final Object[] args)
 	{
 	    if (!DEBUG){return;}
 	    if ((event == CLIENT_EVENT.GET_SCREEN_SEGMENT && ((Integer)args[0]) != -1)
@@ -84,7 +93,7 @@ public class LLog
 		_logEvent(source, event, args);
 	}
 
-	private static void _logEvent(String source, Object event, Object[] args)
+	private static void _logEvent(final String source, final Object event, final Object[] args)
 	{
 		String eventName;
 		if (event instanceof SERVER_EVENT)

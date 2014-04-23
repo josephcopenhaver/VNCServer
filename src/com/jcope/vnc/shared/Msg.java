@@ -212,52 +212,56 @@ public class Msg implements Serializable
 	    BufferPool<byte[]>.PoolRef outBufferRef = null;
 	    byte[] outBuffer;
 	    
-	    if (jce == null)
+	    try
 	    {
-	        if (args == null)
-    		{
-    	        outBufferRef = compress(out, event);
-    		}
-    		else
-    		{
-    		    outBufferRef = compress(out, new Msg(event, args));
-    		}
-    	    outBuffer = outBufferRef.get();
-    	}
-	    else
-	    {
-	        outBuffer = jce.getCompressed();
-	    }
-	    
-	    if (outBuffer.length > 0)
-	    {
-	        byte b = outBuffer[0];
-	        
-	        outBuffer[0] = (byte)(outBuffer.length & 0xff);
-    	    out.write(outBuffer, 0, 1);
+    	    if (jce == null)
+    	    {
+    	        if (args == null)
+        		{
+        	        outBufferRef = compress(out, event);
+        		}
+        		else
+        		{
+        		    outBufferRef = compress(out, new Msg(event, args));
+        		}
+        	    outBuffer = outBufferRef.get();
+        	}
+    	    else
+    	    {
+    	        outBuffer = jce.getCompressed();
+    	    }
     	    
-    	    outBuffer[0] = (byte)((outBuffer.length >> 8) & 0xff);
-	        out.write(outBuffer, 0, 1);
-	        
-	        outBuffer[0] = (byte)((outBuffer.length >> 16) & 0xff);
-	        out.write(outBuffer, 0, 1);
-	        
-	        outBuffer[0] = (byte)((outBuffer.length >> 24) & 0xff);
-	        out.write(outBuffer, 0, 1);
-	        
-	        outBuffer[0] = b;
-    	    out.write(outBuffer);
-    	    
-    		// out.flush();
-    		// Flushing has moved into the higher layer (I/O dispatcher task generation)
-    	    // This layer has full knowledge of all the dispatchers writing to the I/O layers
-    	    // And so a flush can easily occur there when the task see's that
-    	    // the dispatchers have nothing new to write
+    	    if (outBuffer.length > 0)
+    	    {
+    	        byte b = outBuffer[0];
+    	        
+    	        outBuffer[0] = (byte)(outBuffer.length & 0xff);
+        	    out.write(outBuffer, 0, 1);
+        	    
+        	    outBuffer[0] = (byte)((outBuffer.length >> 8) & 0xff);
+    	        out.write(outBuffer, 0, 1);
+    	        
+    	        outBuffer[0] = (byte)((outBuffer.length >> 16) & 0xff);
+    	        out.write(outBuffer, 0, 1);
+    	        
+    	        outBuffer[0] = (byte)((outBuffer.length >> 24) & 0xff);
+    	        out.write(outBuffer, 0, 1);
+    	        
+    	        outBuffer[0] = b;
+        	    out.write(outBuffer);
+        	    
+        		// out.flush();
+        		// Flushing has moved into the higher layer (I/O dispatcher task generation)
+        	    // This layer has full knowledge of all the dispatchers writing to the I/O layers
+        	    // And so a flush can easily occur there when the task see's that
+        	    // the dispatchers have nothing new to write
+    	    }
 	    }
-	    
-	    if (outBufferRef != null)
-	    {
-	        outBufferRef.release();
+	    finally {
+    	    if (outBufferRef != null)
+    	    {
+    	        outBufferRef.release();
+    	    }
 	    }
 	}
 	
