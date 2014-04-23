@@ -24,6 +24,7 @@ public class LLog
 		e.printStackTrace(rethrow ? System.err : System.out);
 		if (hardStop)
 		{
+		    (rethrow ? System.err : System.out).flush();
 			System.exit(127);
 		}
 		else if (rethrow)

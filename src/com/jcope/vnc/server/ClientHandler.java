@@ -218,17 +218,8 @@ public class ClientHandler extends Thread
 		finally {
 			onDestroyActions.clear();
 			onDestroyActions = null;
-			try
-			{
-			    serializedDispatcher.dispose();
-			    unserializedDispatcher.dispose();
-			    serializedDispatcher.join();
-			    unserializedDispatcher.join();
-			}
-            catch (InterruptedException e)
-            {
-                LLog.e(e);
-            }
+			serializedDispatcher.dispose();
+			unserializedDispatcher.dispose();
 		}
 		
 		alive = false;

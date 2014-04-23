@@ -1,11 +1,11 @@
 package com.jcope.vnc.shared;
 
+import static com.jcope.vnc.shared.MsgCache.bufferPool;
+import static com.jcope.vnc.shared.MsgCache.bufferPoolLock;
 import static com.jcope.vnc.shared.MsgCache.compressionCache;
 import static com.jcope.vnc.shared.MsgCache.compressionResultCache;
 import static com.jcope.vnc.shared.MsgCache.precompRBOS;
 import static com.jcope.vnc.shared.MsgCache.precompSema;
-import static com.jcope.vnc.shared.MsgCache.bufferPool;
-import static com.jcope.vnc.shared.MsgCache.bufferPoolLock;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -14,13 +14,11 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.lang.ref.WeakReference;
-import java.util.HashMap;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import com.jcope.debug.LLog;
-import com.jcope.util.ConcurrentByteArrayPool;
+import com.jcope.util.BufferPool;
 import com.jcope.util.ReusableByteArrayOutputStream;
 import com.jcope.vnc.server.JitCompressedEvent;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
@@ -75,7 +73,7 @@ public class Msg implements Serializable
 	    return rval;
 	}
 	
-	public static byte[] getCompressed(SERVER_EVENT event, Object... args)
+	public static BufferPool<byte[]>.PoolRef getCompressed(SERVER_EVENT event, Object... args)
 	{
 	    try
 	    {
@@ -87,16 +85,16 @@ public class Msg implements Serializable
 	    }
 	    try
 	    {
-	        return (byte[]) compress(null, (args == null) ? event : new Msg(event, args));
+	        return compress(null, (args == null) ? event : new Msg(event, args));
 	    }
 	    finally {
 	        precompSema.release();
 	    }
 	}
 	
-	private static byte[] compress(BufferedOutputStream out, Object obj)
+	private static BufferPool<byte[]>.PoolRef compress(BufferedOutputStream out, Object obj)
 	{
-	    byte[] rval = null;
+	    BufferPool<byte[]>.PoolRef rval = null;
 	    ReusableByteArrayOutputStream rbos;
 	    int resultSize;
 	    
@@ -153,37 +151,42 @@ public class Msg implements Serializable
                     {
                         if (bufferPool == null)
                         {
-                            bufferPool = new ConcurrentByteArrayPool();
+                            bufferPool = new BufferPool<byte[]>() {
+
+                                @Override
+                                protected byte[] getInstance(int order)
+                                {
+                                    return new byte[order];
+                                }
+                                
+                            };
                         }
                     }
                     finally {
                         bufferPoolLock.release();
                     }
                 }
-                rval = bufferPool.get(rbos.size());
-                rbos.toByteArray(rval);
+                rval = bufferPool.acquire(rbos.size());
+                rbos.toByteArray(rval.get());
             }
             else
             {
-                HashMap<Integer,WeakReference<byte[]>> resultCache = compressionResultCache.get(out);
+                BufferPool<byte[]> resultCache = compressionResultCache.get(out);
                 if (resultCache == null)
                 {
-                    resultCache = new HashMap<Integer,WeakReference<byte[]>>(1);
+                    resultCache = new BufferPool<byte[]>() {
+
+                        @Override
+                        protected byte[] getInstance(int order)
+                        {
+                            return new byte[order];
+                        }
+                        
+                    };
                     compressionResultCache.put(out, resultCache);
-                    rval = new byte[resultSize];
-                    resultCache.put(resultSize, new WeakReference<byte[]>(rval));
                 }
-                else
-                {
-                    WeakReference<byte[]> ref = resultCache.get(resultSize);
-                    rval = (ref == null) ? null : ref.get();
-                    if (rval == null)
-                    {
-                        rval = new byte[resultSize];
-                        resultCache.put(resultSize, new WeakReference<byte[]>(rval));
-                    }
-                }
-                rbos.toByteArray(rval);
+                rval = resultCache.acquire(resultSize);
+                rbos.toByteArray(rval.get());
             }
         }
         catch (IOException e)
@@ -206,18 +209,20 @@ public class Msg implements Serializable
 	
 	private static void _send(BufferedOutputStream out, JitCompressedEvent jce, Object event, Object... args) throws IOException
 	{
+	    BufferPool<byte[]>.PoolRef outBufferRef = null;
 	    byte[] outBuffer;
 	    
 	    if (jce == null)
 	    {
-    	    if (args == null)
+	        if (args == null)
     		{
-    	        outBuffer = compress(out, event);
+    	        outBufferRef = compress(out, event);
     		}
     		else
     		{
-    		    outBuffer = compress(out, new Msg(event, args));
+    		    outBufferRef = compress(out, new Msg(event, args));
     		}
+    	    outBuffer = outBufferRef.get();
     	}
 	    else
 	    {
@@ -248,6 +253,11 @@ public class Msg implements Serializable
     	    // This layer has full knowledge of all the dispatchers writing to the I/O layers
     	    // And so a flush can easily occur there when the task see's that
     	    // the dispatchers have nothing new to write
+	    }
+	    
+	    if (outBufferRef != null)
+	    {
+	        outBufferRef.release();
 	    }
 	}
 	

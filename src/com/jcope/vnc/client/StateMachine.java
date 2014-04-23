@@ -246,16 +246,17 @@ public class StateMachine implements Runnable
 			            inputHandlingSema.release();
 			        }
 				}
+				throw new IOException("Connection reset by peer");
 			}
 			catch (UnknownHostException e)
 			{
 			    setWhyFailed(e);
 			}
 			catch (IOException e)
-			{
-			    setWhyFailed(e);
-			}
-			finally {
+            {
+                setWhyFailed(e);
+            }
+            finally {
 				if (out != null) {try{out.close();}catch(Exception e){}}
 				if (os  != null) {try{ os.close();}catch(Exception e){}}
 				if (in  != null) {try{ in.close();}catch(Exception e){}}

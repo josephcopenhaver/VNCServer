@@ -1,11 +1,10 @@
 package com.jcope.vnc.server;
 
-import static com.jcope.vnc.shared.MsgCache.bufferPool;
-
 import java.util.ArrayList;
 import java.util.concurrent.Semaphore;
 
 import com.jcope.debug.LLog;
+import com.jcope.util.BufferPool;
 import com.jcope.vnc.shared.Msg;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
@@ -18,9 +17,10 @@ public class JitCompressedEvent
     private final Semaphore readSyncLock;
     private final Semaphore releaseSyncLock;
     
+    // TODO: don't duplicate the BufferPool ref's refCount
     private volatile int refCount;
     
-    private volatile byte[] bytes;
+    private volatile BufferPool<byte[]>.PoolRef ref;
     private volatile SERVER_EVENT event;
     private volatile Object[] args;
     
@@ -45,7 +45,7 @@ public class JitCompressedEvent
     private void reset()
     {
         refCount = 1;
-        bytes = null;
+        ref = null;
         event = null;
         args = null;
     }
@@ -106,9 +106,9 @@ public class JitCompressedEvent
         {
             if ((--refCount) <= 0)
             {
-                if (bytes != null)
+                if (ref != null)
                 {
-                    bufferPool.add(bytes);
+                    ref.release();
                 }
                 reset();
                 try
@@ -137,7 +137,7 @@ public class JitCompressedEvent
 
     public byte[] getCompressed()
     {
-        if (bytes == null)
+        if (ref == null)
         {
             try
             {
@@ -150,9 +150,9 @@ public class JitCompressedEvent
             
             try
             {
-                if (bytes == null)
+                if (ref == null)
                 {
-                    bytes = Msg.getCompressed(event, args);
+                    ref = Msg.getCompressed(event, args);
                 }
             }
             finally {
@@ -160,7 +160,7 @@ public class JitCompressedEvent
             }
         }
         
-        return bytes;
+        return ref.get();
     }
     
     public SERVER_EVENT getEvent()
