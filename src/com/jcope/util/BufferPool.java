@@ -309,24 +309,19 @@ public abstract class BufferPool<T>
     
     private PoolRef get(final int order, final int[] startRef)
     {
-        PoolRef rval = null;
-        PoolRef left = null;
-        PoolRef right = null;
-        int idx = startRef[0];
-        int leftIdx, rightIdx;
-        Integer useParent = null;
-        
         final int size = startRef[1];
+        int idx = startRef[0];
         
-        if (size == 0 || size <= idx)
+        if (size <= idx)
         {
             return null;
         }
         
-        if (idx < 0)
-        {
-            idx = 0;
-        }
+        PoolRef rval = null;
+        PoolRef left = null;
+        PoolRef right = null;
+        int leftIdx, rightIdx;
+        Integer useParent = null;
         
         while ((rval = poolList.get(idx)).order != order)
         {
@@ -392,7 +387,7 @@ public abstract class BufferPool<T>
     public PoolRef acquire(final int order)
     {
         PoolRef rval = null;
-        int[] startRef = new int[]{-1, 0};
+        int[] startRef = new int[]{0, 0};
         
         if (size > 0)
         {
