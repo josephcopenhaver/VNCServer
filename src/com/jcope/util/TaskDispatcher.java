@@ -243,14 +243,25 @@ public class TaskDispatcher<T> extends Thread
 			{
 				Dispatchable d;
 				Semaphore ns;
+				Runnable onDestroy;
 				
 				while ((d = _remove()) != null)
 				{
 					ns = d.s;
+					onDestroy = d.onDestroy;
 					d.dispose();
-					if (releaseLocks && ns != null)
+					try
 					{
-						ns.release();
+					    if (onDestroy != null)
+					    {
+					        onDestroy.run();
+					    }
+					}
+					finally {
+    					if (releaseLocks && ns != null)
+    					{
+    						ns.release();
+    					}
 					}
 				}
 			}
@@ -707,7 +718,17 @@ public class TaskDispatcher<T> extends Thread
 			listLock.acquire();
 			try
 			{
-				_dispatch(k, r, onDestroy, null);
+			    if (disposed)
+			    {
+			        if (onDestroy != null)
+			        {
+			            onDestroy.run();
+			        }
+			    }
+			    else
+			    {
+			        _dispatch(k, r, onDestroy, null);
+			    }
 			}
 			finally {
 				listLock.release();
@@ -727,72 +748,119 @@ public class TaskDispatcher<T> extends Thread
 	
 	private void dispose(Exception e)
 	{
+	    dispose(null, e);
+	}
+	
+	private void dispose(Boolean releaseLocks, Exception e)
+	{
 		if (e != null)
 		{
 			e.printStackTrace();
 		}
 		disposed = true;
-		if (paused)
+		try
 		{
-			unpause();
+		    if (releaseLocks == null)
+		    {
+		        clear();
+		    }
+		    else
+		    {
+		        clear(releaseLocks);
+		    }
 		}
-		sleepLock.release();
+		finally {
+    		if (paused)
+    		{
+    			unpause();
+    		}
+    		sleepLock.release();
+		}
+	}
+	
+	public void dispose(Boolean releaseLocks)
+	{
+	    dispose(releaseLocks, null);
 	}
 	
 	public void dispose()
 	{
-		dispose(null);
+		dispose(null, null);
 	}
 	
 	public void clear()
+	{
+	    clear(null);
+	}
+	
+	public void clear(Boolean releaseLocks)
 	{
 		boolean doUnpause = !paused;
 		pause();
 		try
 		{
-			listLock.acquire();
+    		try
+    		{
+    			listLock.acquire();
+    		}
+    		catch (InterruptedException e)
+    		{
+    			dispose(e);
+    			return;
+    		}
+    		try
+    		{
+    		    inMapSet.clear();
+    		    if (releaseLocks == null)
+    		    {
+        			inQueue.clear();
+    		    }
+    		    else
+    		    {
+    		        inQueue.clear(releaseLocks);
+    		    }
+    		}
+    		catch (InterruptedException e)
+    		{
+    			dispose(e);
+    			return;
+    		}
+    		finally
+    		{
+    			listLock.release();
+    		}
 		}
-		catch (InterruptedException e)
-		{
-			dispose(e);
-			return;
-		}
-		try
-		{
-			inMapSet.clear();
-			inQueue.clear();
-		}
-		catch (InterruptedException e)
-		{
-			dispose(e);
-			return;
-		}
-		finally
-		{
-			listLock.release();
-		}
-		try
-		{
-			curTaskLock.acquire();
-		}
-		catch (InterruptedException e)
-		{
-			dispose(e);
-			return;
-		}
-		try
-		{
-			mapSet.clear();
-			queue.clear();
-		}
-		catch (InterruptedException e)
-		{
-			dispose(e);
-			return;
-		}
-		finally
-		{
-			curTaskLock.release();
+		finally {
+    		try
+    		{
+    			curTaskLock.acquire();
+    		}
+    		catch (InterruptedException e)
+    		{
+    			dispose(e);
+    			return;
+    		}
+    		try
+    		{
+    			mapSet.clear();
+    			if (releaseLocks == null)
+    			{
+    			    queue.clear();
+    			}
+    			else
+    			{
+    			    queue.clear(releaseLocks);
+    			}
+    		}
+    		catch (InterruptedException e)
+    		{
+    			dispose(e);
+    			return;
+    		}
+    		finally
+    		{
+    			curTaskLock.release();
+    		}
 		}
 		
 		if (doUnpause)
