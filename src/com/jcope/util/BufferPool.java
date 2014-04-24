@@ -1,5 +1,3 @@
-//EXPERIMENTAL; NOT_TESTED; NOT_USED
-
 package com.jcope.util;
 
 import static com.jcope.debug.Debug.assert_;
@@ -190,10 +188,7 @@ public abstract class BufferPool<T>
     
     private void percolateUp(int idx)
     {
-        final PoolRef nRef = poolList.get(idx);
-        final int order = nRef.order;
-        PoolRef ref;
-        int nextIdx;
+        /*
         boolean somethingMoved = Boolean.FALSE;
         
         while (idx > 0)
@@ -212,6 +207,40 @@ public abstract class BufferPool<T>
         {
             set(idx, nRef);
         }
+        */
+        // EQUIVALENT: 
+        
+        if (idx <= 0)
+        {
+            return;
+        }
+        
+        final PoolRef nRef = poolList.get(idx);
+        final int order = nRef.order;
+        PoolRef ref;
+        int nextIdx;
+        
+        do
+        {
+            nextIdx = (idx-1)/2;
+            if ((ref = poolList.get(nextIdx)).order <= order)
+            {
+                break;
+            }
+            set(idx, ref);
+            idx = nextIdx;
+            while (idx > 0)
+            {
+                nextIdx = (idx-1)/2;
+                if ((ref = poolList.get(nextIdx)).order <= order)
+                {
+                    break;
+                }
+                set(idx, ref);
+                idx = nextIdx;
+            }
+            set(idx, nRef);
+        } while (Boolean.FALSE);
     }
     
     private void remove(PoolRef ref)
@@ -225,52 +254,43 @@ public abstract class BufferPool<T>
         
         //assert_(!ref.isOwned);
         
-        int left, right;
-        boolean uleft = Boolean.FALSE;
-        boolean uright = Boolean.FALSE;
+        int leftIdx, rightIdx;
+        PoolRef left;
         
         final int newSize = size-1;
         assert_(newSize >= 0);
         
         while (true)
         {
-            right = (idx+1)<<1;
-            left = right-1;
+            rightIdx = (idx+1)<<1;
+            leftIdx = rightIdx-1;
             
-            if (left <= newSize)
+            if (leftIdx <= newSize)
             {
-                if (right <= newSize)
+                left = poolList.get(leftIdx);
+                if (rightIdx <= newSize)
                 {
-                    if (poolList.get(left).order >= poolList.get(right).order)
+                    if (left.order >= (ref = poolList.get(rightIdx)).order)
                     {
-                        uright = Boolean.TRUE;
+                        set(idx, ref);
+                        idx = rightIdx;
                     }
                     else
                     {
-                        uleft = Boolean.TRUE;
+                        set(idx, left);
+                        idx = leftIdx;
                     }
                 }
                 else
                 {
-                    uleft = Boolean.TRUE;
+                    set(idx, left);
+                    idx = leftIdx;
                 }
             }
-            else if (right <= newSize)
+            else if (rightIdx <= newSize)
             {
-                uright = Boolean.TRUE;
-            }
-            
-            if (uleft)
-            {
-                uleft = Boolean.FALSE;
-                set(idx, poolList.get(left));
-                idx = left;
-            }
-            else if (uright)
-            {
-                uright = Boolean.FALSE;
-                set(idx, poolList.get(right));
-                idx = right;
+                set(idx, poolList.get(rightIdx));
+                idx = rightIdx;
             }
             else
             {
@@ -290,8 +310,8 @@ public abstract class BufferPool<T>
     private PoolRef get(final int order, final int[] startRef)
     {
         PoolRef rval = null;
-        PoolRef left;
-        PoolRef right;
+        PoolRef left = null;
+        PoolRef right = null;
         int idx = startRef[0];
         int leftIdx, rightIdx;
         Integer useParent = null;
@@ -312,25 +332,20 @@ public abstract class BufferPool<T>
         {
             rightIdx = (idx + 1)<<1;
             leftIdx = rightIdx - 1;
-            left = leftIdx < size ? poolList.get(leftIdx) : null;
-            right = rightIdx < size ? poolList.get(rightIdx) : null;
-            /*
-            if (left != null)
+            
+            if (leftIdx < size)
             {
-                assert_(left.idx == leftIdx);
+                if ((left = poolList.get(leftIdx)).order > order)
+                {
+                    left = null;
+                }
             }
-            if (right != null)
+            if (rightIdx < size)
             {
-                assert_(right.idx == rightIdx);
-            }
-            */
-            if (left != null && left.order > order)
-            {
-                left = null;
-            }
-            if (right != null && right.order > order)
-            {
-                right = null;
+                if ((right = poolList.get(rightIdx)).order > order)
+                {
+                    right = null;
+                }
             }
             if (left == null && right == null)
             {
@@ -343,17 +358,20 @@ public abstract class BufferPool<T>
                 {
                     rval = (left.order < right.order) ? right : left;
                     useParent = (left.order == right.order) ? idx : null;
+                    right = null;
                 }
                 else
                 {
                     rval = left;
                     useParent = null;
                 }
+                left = null;
             }
             else
             {
                 rval = right;
                 useParent = null;
+                right = null;
             }
             idx = rval.idx;
         }
