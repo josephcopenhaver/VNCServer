@@ -18,7 +18,6 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import com.jcope.debug.LLog;
-import com.jcope.util.BufferPool;
 import com.jcope.util.ReusableByteArrayOutputStream;
 import com.jcope.vnc.server.JitCompressedEvent;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
@@ -73,7 +72,7 @@ public class Msg implements Serializable
 	    return rval;
 	}
 	
-	public static BufferPool<byte[]>.PoolRef getCompressed(SERVER_EVENT event, Object... args)
+	public static ByteBufferPool.PoolRef getCompressed(SERVER_EVENT event, Object... args)
 	{
 	    try
 	    {
@@ -92,9 +91,9 @@ public class Msg implements Serializable
 	    }
 	}
 	
-	private static BufferPool<byte[]>.PoolRef compress(BufferedOutputStream out, Object obj)
+	private static ByteBufferPool.PoolRef compress(BufferedOutputStream out, Object obj)
 	{
-	    BufferPool<byte[]>.PoolRef rval = null;
+	    ByteBufferPool.PoolRef rval = null;
 	    ReusableByteArrayOutputStream rbos;
 	    int resultSize;
 	    
@@ -151,15 +150,7 @@ public class Msg implements Serializable
                     {
                         if (bufferPool == null)
                         {
-                            bufferPool = new BufferPool<byte[]>() {
-
-                                @Override
-                                protected byte[] getInstance(int order)
-                                {
-                                    return new byte[order];
-                                }
-                                
-                            };
+                            bufferPool = new ByteBufferPool();
                         }
                     }
                     finally {
@@ -171,18 +162,10 @@ public class Msg implements Serializable
             }
             else
             {
-                BufferPool<byte[]> resultCache = compressionResultCache.get(out);
+                ByteBufferPool resultCache = compressionResultCache.get(out);
                 if (resultCache == null)
                 {
-                    resultCache = new BufferPool<byte[]>() {
-
-                        @Override
-                        protected byte[] getInstance(int order)
-                        {
-                            return new byte[order];
-                        }
-                        
-                    };
+                    resultCache = new ByteBufferPool();
                     compressionResultCache.put(out, resultCache);
                 }
                 rval = resultCache.acquire(resultSize);
@@ -209,7 +192,7 @@ public class Msg implements Serializable
 	
 	private static void _send(BufferedOutputStream out, JitCompressedEvent jce, Object event, Object... args) throws IOException
 	{
-	    BufferPool<byte[]>.PoolRef outBufferRef = null;
+	    ByteBufferPool.PoolRef outBufferRef = null;
 	    byte[] outBuffer;
 	    
 	    try

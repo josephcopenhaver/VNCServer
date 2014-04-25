@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.concurrent.Semaphore;
 
 import com.jcope.debug.LLog;
-import com.jcope.util.BufferPool;
+import com.jcope.vnc.shared.ByteBufferPool;
 import com.jcope.vnc.shared.Msg;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
@@ -20,7 +20,7 @@ public class JitCompressedEvent
     // TODO: don't duplicate the BufferPool ref's refCount
     private volatile int refCount;
     
-    private volatile BufferPool<byte[]>.PoolRef ref;
+    private volatile ByteBufferPool.PoolRef ref;
     private volatile SERVER_EVENT event;
     private volatile Object[] args;
     
