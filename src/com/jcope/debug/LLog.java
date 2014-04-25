@@ -86,7 +86,8 @@ public class LLog
 	{
 	    if (!DEBUG){return;}
 	    if ((event == CLIENT_EVENT.GET_SCREEN_SEGMENT && ((Integer)args[0]) != -1)
-	            || event == CLIENT_EVENT.OFFER_INPUT)
+	            || event == CLIENT_EVENT.OFFER_INPUT
+	            || event == CLIENT_EVENT.ACKNOWLEDGE_NON_SERIAL_EVENT)
 	    {
 	        return;
 	    }

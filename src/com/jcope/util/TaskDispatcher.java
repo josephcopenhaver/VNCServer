@@ -233,11 +233,15 @@ public class TaskDispatcher<T> extends Thread
 		 */
 		public void clear() throws InterruptedException
 		{
-			clear(true);
+			clear(null);
 		}
 		
-		public void clear(boolean releaseLocks) throws InterruptedException
+		public void clear(Boolean releaseLocks) throws InterruptedException
 		{
+		    if (releaseLocks == null)
+		    {
+		        releaseLocks = Boolean.TRUE;
+		    }
 			s.acquire();
 			try
 			{
@@ -619,26 +623,35 @@ public class TaskDispatcher<T> extends Thread
 			}
 			else
 			{
-				try
-				{
-					q.remove(d.n);
-				}
-				catch (InterruptedException e)
-				{
-					dispose(e);
-					return;
-				}
-				updateNode(d, r, onDestroy, s);
-				try
-				{
-					d.n = q.add(d);
-				}
-				catch (InterruptedException e)
-				{
-					dispose(e);
-					d.n = null;
-					return;
-				}
+			    try
+			    {
+    			    if (d.onDestroy != null)
+    			    {
+    			        d.onDestroy.run();
+    			    }
+			    }
+			    finally {
+    				try
+    				{
+    					q.remove(d.n);
+    				}
+    				catch (InterruptedException e)
+    				{
+    					dispose(e);
+    					return;
+    				}
+    				updateNode(d, r, onDestroy, s);
+    				try
+    				{
+    					d.n = q.add(d);
+    				}
+    				catch (InterruptedException e)
+    				{
+    					dispose(e);
+    					d.n = null;
+    					return;
+    				}
+			    }
 			}
 		}
 		else
@@ -760,14 +773,7 @@ public class TaskDispatcher<T> extends Thread
 		disposed = true;
 		try
 		{
-		    if (releaseLocks == null)
-		    {
-		        clear();
-		    }
-		    else
-		    {
-		        clear(releaseLocks);
-		    }
+		    clear(releaseLocks);
 		}
 		finally {
     		if (paused)
@@ -811,14 +817,7 @@ public class TaskDispatcher<T> extends Thread
     		try
     		{
     		    inMapSet.clear();
-    		    if (releaseLocks == null)
-    		    {
-        			inQueue.clear();
-    		    }
-    		    else
-    		    {
-    		        inQueue.clear(releaseLocks);
-    		    }
+    		    inQueue.clear(releaseLocks);
     		}
     		catch (InterruptedException e)
     		{
@@ -843,14 +842,7 @@ public class TaskDispatcher<T> extends Thread
     		try
     		{
     			mapSet.clear();
-    			if (releaseLocks == null)
-    			{
-    			    queue.clear();
-    			}
-    			else
-    			{
-    			    queue.clear(releaseLocks);
-    			}
+    			queue.clear(releaseLocks);
     		}
     		catch (InterruptedException e)
     		{
