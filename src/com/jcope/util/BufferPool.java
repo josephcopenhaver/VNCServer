@@ -188,9 +188,23 @@ public abstract class BufferPool<T>
     
     private void percolateUp(int idx)
     {
-        /*
-        boolean somethingMoved = Boolean.FALSE;
+        if (idx <= 0)
+        {
+            // prevent null de-ref errors
+            // and reading pointless data
+            return;
+        }
         
+        boolean somethingMoved = Boolean.FALSE;
+        final PoolRef nRef = poolList.get(idx);
+        final int order = nRef.order;
+        PoolRef ref;
+        int nextIdx;
+        
+        // Do not worry about optimizing setter functions to run only once
+        // the Java compiler ends up being efficient here when using
+        // static rvals in the setter, especially when the LHS is used
+        // in FLOW control logic
         while (idx > 0)
         {
             nextIdx = (idx-1)/2;
@@ -207,40 +221,6 @@ public abstract class BufferPool<T>
         {
             set(idx, nRef);
         }
-        */
-        // EQUIVALENT: 
-        
-        if (idx <= 0)
-        {
-            return;
-        }
-        
-        final PoolRef nRef = poolList.get(idx);
-        final int order = nRef.order;
-        PoolRef ref;
-        int nextIdx;
-        
-        do
-        {
-            nextIdx = (idx-1)/2;
-            if ((ref = poolList.get(nextIdx)).order <= order)
-            {
-                break;
-            }
-            set(idx, ref);
-            idx = nextIdx;
-            while (idx > 0)
-            {
-                nextIdx = (idx-1)/2;
-                if ((ref = poolList.get(nextIdx)).order <= order)
-                {
-                    break;
-                }
-                set(idx, ref);
-                idx = nextIdx;
-            }
-            set(idx, nRef);
-        } while (Boolean.FALSE);
     }
     
     private void remove(PoolRef ref)
