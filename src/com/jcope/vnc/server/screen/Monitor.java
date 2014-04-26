@@ -232,8 +232,9 @@ public class Monitor extends Thread
 	private boolean copyIntArray(int[] dst, int[] src, int length, Integer[] solidColorOut)
 	{
 		boolean rval = Boolean.FALSE;
-		int solidColor, srcPixel;
-		
+		int solidColor, srcPixel, i;
+		i=0;
+        
 		if (solidColorOut != null && solidColorOut.length > 0 && length > 0)
 		{
 		    solidColor = src[0];
@@ -248,20 +249,113 @@ public class Monitor extends Thread
 		    solidColorOut = null;
 		}
 		
+		/*
+		//
+		// BEGIN BASIS BLOCK:
+		//
+		
 		for (int i=0; i<length; i++)
+        {
+            srcPixel = src[i];
+            if (dst[i] != srcPixel)
+            {
+                dst[i] = srcPixel;
+                rval = Boolean.TRUE;
+            }
+            if (solidColorOut != null && srcPixel != solidColor)
+            {
+                solidColorOut[0] = null;
+                solidColorOut = null;
+            }
+        }
+        
+        //
+        // END BASIS BLOCK
+        //
+        
+        //
+        // REASON TO OPTIMIZE:
+        //   Reduce multilayer conditional segments in loop structures
+        //
+        
+        */
+		
+		//
+		// BEGIN EQUIVALENT OPTIMIZED BLOCK
+		//
+		
+		if (solidColorOut != null)
 		{
-		    srcPixel = src[i];
-			if (dst[i] != srcPixel)
-			{
-				dst[i] = srcPixel;
-				rval = Boolean.TRUE;
-			}
-			if (solidColorOut != null && srcPixel != solidColor)
-			{
-			    solidColorOut[0] = null;
-			    solidColorOut = null;
-			}
+    		for (; i<length; i++)
+    		{
+    		    srcPixel = src[i];
+    		    try
+    		    {
+        			if (dst[i] != srcPixel)
+        			{
+        				dst[i] = srcPixel;
+        				rval = Boolean.TRUE;
+        				break;
+        			}
+    		    }
+    		    finally {
+        			if (srcPixel != solidColor)
+        			{
+        			    solidColorOut[0] = null;
+        			    solidColorOut = null;
+        			    break;
+        			}
+    		    }
+    		}
 		}
+		
+		
+		if (i<length)
+		{
+		    // now either loading diff pixels or doing solid color analysis
+		    if (!rval)
+		    {
+		        // not doing solid color analysis
+		        // doing diff check
+		        srcPixel = src[i];
+		        for (; i<length; i++)
+		        {
+		            if (dst[i] != srcPixel)
+                    {
+                        dst[i] = srcPixel;
+                        rval = Boolean.TRUE;
+                        break;
+                    }
+		        }
+		    }
+		    else if (solidColorOut != null)
+		    {
+		        // not doing diff check (it is known to be different)
+		        // doing solid color analysis still though
+		        for (; i<length; i++)
+	            {
+	                srcPixel = src[i];
+	                dst[i] = srcPixel;
+	                if (srcPixel != solidColor)
+                    {
+                        solidColorOut[0] = null;
+                        solidColorOut = null;
+                        break;
+                    }
+	            }
+		    }
+		    
+		    // definitely only loading different pixels now
+		    // if there are still more to load...
+		    for (; i<length; i++)
+            {
+                dst[i] = src[i];
+            }
+		}
+		
+		//
+		// END EQUIVALENT OPTIMIZED BLOCK
+		//
 		
 		if (solidColorOut != null)
 		{
