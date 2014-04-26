@@ -265,6 +265,11 @@ public class Monitor extends Thread
                 solidColorOut[0] = null;
                 solidColorOut = null;
             }
+            if (solidColorOut == null && rval && i<length-1)
+            {
+                i++;
+                System.arraycopy(src, i, dst, i, length-i);
+            }
         }
 		
 		if (solidColorOut != null)
