@@ -52,16 +52,6 @@ public class StateMachine
         handleServerEvent(clients, event, (Object[]) null);
     }
     
-    /*
-    public static class JitCompressedEvent
-    {
-        public JitCompressedEvent()
-        {
-            
-        }
-    }
-    */
-    
     public static void handleServerEvent(ArrayList<ClientHandler> clients, SERVER_EVENT event, Object... args)
     {
         if (clients.size() > 1)

@@ -143,6 +143,10 @@ public class VncServer implements Runnable
 		{
 			ClientHandler client = (ClientHandler) stagedArgs[0];
 			clientList.remove(client);
+			if (clientList.size() == 0)
+			{
+			    GarbageUtil.cleanAllAsynchronously(stageLock, clientList);
+			}
 		}
 		
 	};
