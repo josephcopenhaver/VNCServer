@@ -5,6 +5,7 @@ import static com.jcope.debug.Debug.assert_;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import com.jcope.debug.LLog;
 import com.jcope.util.SegmentationInfo;
@@ -229,11 +230,25 @@ public class Monitor extends Thread
 	    }
 	}
 	
+	/**
+	 * Eratta: src array content MAY CHANGE as a result of this function!
+	 * It is faster to fill a buffer with a SOLID color and compare arrays
+	 * using a syscall than it is to iterate over the array and compare
+	 * individual elements with a sample color.
+	 * 
+	 * Note that this can only occur when the src and dst buffers are length
+	 * aligned and the length parameter is aligned with them as well.
+	 * 
+	 * @param dst
+	 * @param src
+	 * @param length
+	 * @param solidColorOut
+	 * @return
+	 */
 	private boolean copyIntArray(int[] dst, int[] src, int length, Integer[] solidColorOut)
 	{
 		boolean rval = Boolean.FALSE;
-		int solidColor, srcPixel, i;
-		i=0;
+		int solidColor, srcPixel;
         
 		if (solidColorOut != null && solidColorOut.length > 0 && length > 0)
 		{
@@ -249,28 +264,45 @@ public class Monitor extends Thread
 		    solidColorOut = null;
 		}
 		
-		// this appears to be faster than doing multiple loops
-		// or even separate continual loops
-		// java seems to compile this into efficient piecewise code...
-		for (;i<length; i++)
-        {
-            srcPixel = src[i];
-            if (dst[i] != srcPixel)
+		if (src.length == length && dst.length == length)
+		{
+		    rval = !Arrays.equals(src, dst);
+		    System.arraycopy(src, 0, dst, 0, length);
+		    if (solidColorOut != null)
+		    {
+		        Arrays.fill(src, solidColor);
+		        if (!Arrays.equals(src, dst))
+		        {
+		            solidColorOut[0] = null;
+                    solidColorOut = null;
+		        }
+		    }
+		}
+		else
+		{
+    		// this appears to be faster than doing multiple loops
+    		// or even separate continual loops
+    		// java seems to compile this into efficient piecewise code...
+    		for (int i=0;i<length; i++)
             {
-                dst[i] = srcPixel;
-                rval = Boolean.TRUE;
+                srcPixel = src[i];
+                if (dst[i] != srcPixel)
+                {
+                    dst[i] = srcPixel;
+                    rval = Boolean.TRUE;
+                }
+                if (solidColorOut != null && srcPixel != solidColor)
+                {
+                    solidColorOut[0] = null;
+                    solidColorOut = null;
+                }
+                if (solidColorOut == null && rval && i<length-1)
+                {
+                    i++;
+                    System.arraycopy(src, i, dst, i, length-i);
+                }
             }
-            if (solidColorOut != null && srcPixel != solidColor)
-            {
-                solidColorOut[0] = null;
-                solidColorOut = null;
-            }
-            if (solidColorOut == null && rval && i<length-1)
-            {
-                i++;
-                System.arraycopy(src, i, dst, i, length-i);
-            }
-        }
+		}
 		
 		if (solidColorOut != null)
 		{
