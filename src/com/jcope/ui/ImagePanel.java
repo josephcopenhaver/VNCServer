@@ -296,18 +296,10 @@ public class ImagePanel extends JPanel
         int dstBlock = dst;
         int src = srcy * srcScanWidth + srcx;
         int srcBlock = src;
-        int yub = dsty+srch;
-        int xub = dstx+srcw;
-        int x,y;
         
-        for (y=dsty; y<yub; y++)
+        for (int y=0; y<srch; y++)
         {
-            for (x=dstx; x<xub; x++)
-            {
-                dstPixels[dst] = srcPixels[src];
-                dst++;
-                src++;
-            }
+            System.arraycopy(srcPixels, src, dstPixels, dst, srcw);
             dstBlock += dstw;
             dst = dstBlock;
             srcBlock += srcScanWidth;

@@ -112,7 +112,7 @@ public final class DirectRobot
 				methodType = 2;
 				GraphicsDevice[] devices = getScreenDevices(); 
 				int count = devices.length;
-				for (int i = 0; i != count; ++i)
+				for (int i = 0; i < count; i++)
 				{
 					if (device.equals(devices[i]))
 					{

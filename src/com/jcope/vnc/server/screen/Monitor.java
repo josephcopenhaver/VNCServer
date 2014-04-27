@@ -83,9 +83,11 @@ public class Monitor extends Thread
 			for (int i=0; i<segInfo.numSegments; i++)
 			{
 				segments[i] = new int[getSegmentPixelCount(i)];
-				solidSegments[i] = null;
-				changedSegments[i] = Boolean.FALSE;
+				solidSegments[i] = null;// TODO: see if this can safely be replaced with Arrays.fill()
+				//changedSegments[i] = Boolean.FALSE;
 			}
+			//Arrays.fill(solidSegments, null);
+			Arrays.fill(changedSegments, Boolean.FALSE);
 			if (lastWidth != null)
 			{
 				// TODO: provide ability to lock a set of clients
@@ -178,10 +180,7 @@ public class Monitor extends Thread
 							}
 						}
 					}
-					for (int i=0; i<changedSegments.length; i++)
-					{
-						changedSegments[i] = Boolean.FALSE;
-					}
+					Arrays.fill(changedSegments, Boolean.FALSE);
 				}
 				
 				if (newClients.size() > 0)
