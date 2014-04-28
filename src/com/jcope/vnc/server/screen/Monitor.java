@@ -83,10 +83,8 @@ public class Monitor extends Thread
 			for (int i=0; i<segInfo.numSegments; i++)
 			{
 				segments[i] = new int[getSegmentPixelCount(i)];
-				solidSegments[i] = null;// TODO: see if this can safely be replaced with Arrays.fill()
-				//changedSegments[i] = Boolean.FALSE;
 			}
-			//Arrays.fill(solidSegments, null);
+			Arrays.fill(solidSegments, null);
 			Arrays.fill(changedSegments, Boolean.FALSE);
 			if (lastWidth != null)
 			{

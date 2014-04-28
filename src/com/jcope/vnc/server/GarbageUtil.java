@@ -18,6 +18,8 @@ public class GarbageUtil
     {
 		private Semaphore stageLock;
 		private ArrayList<ClientHandler> clientList;
+		private long garbageSize, garbageSizePre;
+		private Runtime runtime;
         private boolean rval;
         
         private boolean isDone()
@@ -62,13 +64,13 @@ public class GarbageUtil
         public void run()
         {
 			running = Boolean.TRUE;
-			this.stageLock = GarbageUtil.stageLock;
-			this.clientList = GarbageUtil.clientList;
-            try
+			try
             {
-                Runtime runtime = Runtime.getRuntime();
-                long garbageSize = runtime.totalMemory() - runtime.freeMemory();
-                long garbageSizePre = garbageSize;
+			    this.stageLock = GarbageUtil.stageLock;
+	            this.clientList = GarbageUtil.clientList;
+                runtime = Runtime.getRuntime();
+                garbageSize = runtime.totalMemory() - runtime.freeMemory();
+                garbageSizePre = garbageSize;
                 while (!isDone())
                 {
                     System.gc();
@@ -82,6 +84,7 @@ public class GarbageUtil
             }
             finally {
                 running = Boolean.FALSE;
+                runtime = null;
 				GarbageUtil.stageLock = null;
 				GarbageUtil.clientList = null;
             }
