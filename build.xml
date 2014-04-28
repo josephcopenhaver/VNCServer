@@ -25,7 +25,8 @@
 	  <deleteifexists file="${not_built_marker}" />
 	  
       <!-- Compile the java code from ${src} into ${build} -->
-      <javac target="1.6" srcdir="${src}" destdir="${build}" excludes="@{excludes}" classpath="@{classpath}" >
+	  <!-- TODO: move com/jcope/util/Hashify.java to another git repository/library -->
+      <javac target="1.6" srcdir="${src}" destdir="${build}" excludes="com/jcope/util/Hashify.java,@{excludes}" classpath="@{classpath}" >
         <compilerarg value="-Xlint:unchecked"/>
       </javac>
   	  <record name="${logdir}/@{name}.txt" action="stop"/>
