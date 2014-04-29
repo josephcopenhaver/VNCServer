@@ -15,7 +15,7 @@ public class AccessModes
     public static enum ACCESS_MODE
     {
         VIEW_ONLY,
-        VIEW_AND_CHAT,
+        CHAT_AND_VIEW,
         FULL_CONTROL,
         ALL
         

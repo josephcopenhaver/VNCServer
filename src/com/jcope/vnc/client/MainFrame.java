@@ -671,7 +671,7 @@ public class MainFrame extends JFrame
                 case FULL_CONTROL:
                     panelToDecorate = imagePanel;
                     break;
-                case VIEW_AND_CHAT:
+                case CHAT_AND_VIEW:
                 case VIEW_ONLY:
                     break;
                 case ALL:
