@@ -44,6 +44,9 @@ public class ClientHandler extends Thread
     private Semaphore sendSema = new Semaphore(1, true);
     private Semaphore serialSema = new Semaphore(1, true);
     volatile int tid = -1;
+    
+    private Semaphore handleIOSema = new Semaphore(1, true);
+    // TODO: add I/O delayed event resource pools
 	
 	public ClientHandler(Socket socket) throws IOException
 	{
@@ -107,6 +110,7 @@ public class ClientHandler extends Thread
 	
 	private Runnable killIOAction = new Runnable()
 	{
+	    @Override
 		public void run()
 		{
 			try
@@ -140,11 +144,45 @@ public class ClientHandler extends Thread
 		}
 	};
 	
+	private Runnable releaseIOResources = new Runnable()
+	{
+        @Override
+        public void run()
+        {
+            /*JitCompressedEvent jce;
+            try
+            {
+                queueSema.acquire();
+            }
+            catch (InterruptedException e)
+            {
+                LLog.e(e);
+            }
+            try
+            {
+                synchronized(nonSerialEventQueue) {
+                    for (Object[] sargs : nonSerialEventQueue.values())
+                    {
+                        jce = (JitCompressedEvent)sargs[0];
+                        if (jce != null)
+                        {
+                            jce.release();
+                        }
+                    }
+                }
+            }
+            finally {
+                queueSema.release();
+            }*/
+        }
+	};
+	
 	public void run()
 	{
 		try
 		{
 			addOnDestroyAction(killIOAction);
+			addOnDestroyAction(releaseIOResources);
 			addOnDestroyAction(getUnbindAliasAction(this));
 			
 			CompressedObjectReader reader = new CompressedObjectReader();
@@ -155,6 +193,10 @@ public class ClientHandler extends Thread
 				try
 				{
 					obj = reader.readObject(in);
+					if (obj == null)
+	                {
+	                    throw new IOException("Connection reset by peer");
+	                }
 				}
 				catch (IOException e)
 				{
@@ -193,13 +235,18 @@ public class ClientHandler extends Thread
 	
 	public void kill()
 	{
-		if (dying)
-		{
-			return;
-		}
-		dying = true;
+	    synchronized(this)
+	    {
+    		if (dying)
+    		{
+    			return;
+    		}
+    		dying = true;
+	    }
 		
-		try
+	    Exception topE = null;
+        
+        try
 		{
 		    Manager.getInstance().unbind(this);
 		}
@@ -212,8 +259,27 @@ public class ClientHandler extends Thread
 		{
 			for (Runnable r : onDestroyActions)
 			{
-				r.run();
+				try
+				{
+				    r.run();
+				}
+				catch(Exception e)
+				{
+				    if (topE == null)
+				    {
+				        topE = e;
+				    }
+				    else
+				    {
+				        System.err.println(e.getMessage());
+				        e.printStackTrace(System.err);
+				    }
+				}
 			}
+			if (topE != null)
+            {
+                throw new RuntimeException(topE);
+            }
 		}
 		finally {
 			onDestroyActions.clear();
@@ -314,6 +380,25 @@ public class ClientHandler extends Thread
 
 	public void _sendEvent(final SERVER_EVENT event, final JitCompressedEvent jce, final Object... args)
 	{
+	    try
+        {
+            handleIOSema.acquire();
+        }
+        catch (InterruptedException e)
+        {
+            LLog.e(e);
+        }
+	    try
+        {
+	        nts_sendEvent(event, jce, args);
+        }
+        finally {
+            handleIOSema.release();
+        }
+	}
+	
+	private void nts_sendEvent(final SERVER_EVENT event, final JitCompressedEvent jce, final Object... args)
+	{
 	    int tidTmp;
 	    TaskDispatcher<Integer> dispatcher;
 	    boolean dispatch;
@@ -342,7 +427,7 @@ public class ClientHandler extends Thread
     		    serialSema.release();
     		}
             dispatcher = serializedDispatcher;
-            dispatch = true;
+            dispatch = Boolean.TRUE;
         }
 		else
 		{
@@ -367,22 +452,7 @@ public class ClientHandler extends Thread
 		    // many "hot" events as it can)
 		    // 
 		    // 
-		    if (event == SERVER_EVENT.SCREEN_SEGMENT_CHANGED || event == SERVER_EVENT.SCREEN_SEGMENT_UPDATE)
-		    {
-		        tidTmp = ((Integer)args[0]) + 2;
-		        if (event == SERVER_EVENT.SCREEN_SEGMENT_UPDATE)
-		        {
-		            tidTmp += SERVER_EVENT.getMaxOrdinal();
-		        }
-		        else
-		        {
-		            tidTmp = -tidTmp;
-		        }
-		    }
-		    else
-		    {
-		        tidTmp = event.ordinal();
-		    }
+		    tidTmp = getNonSerialTID(event, args, 0);
 		    dispatcher = unserializedDispatcher;
 		    // TODO: only dispatch if we know for sure that the arguments have changed
 		    dispatch = (event.hasMutableArgs() || !unserializedDispatcher.queueContains(tidTmp));
@@ -492,7 +562,30 @@ public class ClientHandler extends Thread
 		}
 	}
 	
-	public Object getSegmentOptimized(int segmentID)
+	private int getNonSerialTID(SERVER_EVENT event, Object[] refStack, int idxSegmentID)
+    {
+	    int rval;
+	    if (event == SERVER_EVENT.SCREEN_SEGMENT_CHANGED || event == SERVER_EVENT.SCREEN_SEGMENT_UPDATE)
+        {
+	        rval = ((Integer)refStack[idxSegmentID]) + 2;
+            if (event == SERVER_EVENT.SCREEN_SEGMENT_UPDATE)
+            {
+                rval += SERVER_EVENT.getMaxOrdinal();
+            }
+            else
+            {
+                rval = -rval;
+            }
+        }
+        else
+        {
+            rval = event.ordinal();
+        }
+	    
+	    return rval;
+    }
+
+    public Object getSegmentOptimized(int segmentID)
 	{
 	    Object rval = Manager.getInstance().getSegmentOptimized(dirbot, segmentID);
 	    
