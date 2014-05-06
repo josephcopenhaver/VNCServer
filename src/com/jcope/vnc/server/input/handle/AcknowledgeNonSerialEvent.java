@@ -56,13 +56,6 @@ public class AcknowledgeNonSerialEvent extends Handle
                 break;
         }
         
-        if (segmentID == null)
-        {
-            // TODO: Release generic event lock
-        }
-        else
-        {
-            // TODO: Release segment event lock
-        }
+        client.handleEventAck(evt, segmentID == null ? null : args, 1);
     }
 }

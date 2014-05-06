@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.concurrent.Semaphore;
 
 import javax.swing.SwingUtilities;
@@ -46,7 +47,9 @@ public class ClientHandler extends Thread
     volatile int tid = -1;
     
     private Semaphore handleIOSema = new Semaphore(1, true);
-    // TODO: add I/O delayed event resource pools
+    private Semaphore queueSema = new Semaphore(1, true);
+    private HashMap<Integer, Boolean> nonSerialEventOutboundQueue = new HashMap<Integer, Boolean>();
+    private HashMap<Integer, Object[]> nonSerialEventQueue = new HashMap<Integer, Object[]>();
 	
 	public ClientHandler(Socket socket) throws IOException
 	{
@@ -149,7 +152,7 @@ public class ClientHandler extends Thread
         @Override
         public void run()
         {
-            /*JitCompressedEvent jce;
+            JitCompressedEvent jce;
             try
             {
                 queueSema.acquire();
@@ -163,6 +166,10 @@ public class ClientHandler extends Thread
                 synchronized(nonSerialEventQueue) {
                     for (Object[] sargs : nonSerialEventQueue.values())
                     {
+                        if (sargs == null)
+                        {
+                            continue;
+                        }
                         jce = (JitCompressedEvent)sargs[0];
                         if (jce != null)
                         {
@@ -173,7 +180,7 @@ public class ClientHandler extends Thread
             }
             finally {
                 queueSema.release();
-            }*/
+            }
         }
 	};
 	
@@ -402,6 +409,7 @@ public class ClientHandler extends Thread
 	    int tidTmp;
 	    TaskDispatcher<Integer> dispatcher;
 	    boolean dispatch;
+	    boolean isMutable;
 	    
 		if (event.isSerial())
         {
@@ -431,31 +439,75 @@ public class ClientHandler extends Thread
         }
 		else
 		{
-		    // TODO: don't send non-serial updates of the same event type until
-		    // the client has confirmed that the last update (if exists) has
-		    // been received
-		    // (and maybe even processed?)
-		    // 
-		    // The idea here is not to have duplicate events (ones that would
-		    // replace the other) in the data link. This is WASTED transmission
-		    // time and TCP window space.
-		    // 
-		    // Events deferred in this manner should be placed back at the END
-		    // of the queue and should NOT affect the current total of tasks
-		    // being flushed. (Ensure flushes still occur when the queue is
-		    // empty of all tasks except those deferred in this iteration.
-		    // 
-		    // Note that once a task of a certain type has been deferred, any
-		    // new task of that type added to the dispatcher will also have to
-		    // be deferred to preserve comity and assurance of timely delivery
-		    // (flushing occurs a.s.a.p. when it is known the link layer has as
-		    // many "hot" events as it can)
-		    // 
-		    // 
 		    tidTmp = getNonSerialTID(event, args, 0);
 		    dispatcher = unserializedDispatcher;
 		    // TODO: only dispatch if we know for sure that the arguments have changed
-		    dispatch = (event.hasMutableArgs() || !unserializedDispatcher.queueContains(tidTmp));
+		    if ((isMutable = event.hasMutableArgs()) || !unserializedDispatcher.queueContains(tidTmp))
+		    {
+		        if (event == SERVER_EVENT.SCREEN_SEGMENT_UPDATE)
+                {
+                    dispatch = Boolean.TRUE;
+                }
+		        else
+		        {
+    		        try
+    	            {
+    	                queueSema.acquire();
+    	            }
+    	            catch (InterruptedException e)
+    	            {
+    	                LLog.e(e);
+    	            }
+    	            try
+    	            {
+    	                synchronized(nonSerialEventQueue) {synchronized(nonSerialEventOutboundQueue) {
+    	                    if (nonSerialEventOutboundQueue.get(tidTmp) == null)
+                            {
+                                dispatch = Boolean.TRUE;
+                                nonSerialEventOutboundQueue.put(tidTmp, Boolean.TRUE);
+                            }
+                            else
+                            {
+                                Object[] sargs = null;
+                                dispatch = Boolean.FALSE;
+                                if (isMutable || (sargs = nonSerialEventQueue.get(tidTmp)) == null)
+                                {
+                                    JitCompressedEvent jce2;
+                                    if (isMutable)
+                                    {
+                                        sargs = nonSerialEventQueue.get(tidTmp);
+                                    }
+                                    if (sargs == null)
+                                    {
+                                        sargs = new Object[]{ jce, args };
+                                    }
+                                    else
+                                    {
+                                        jce2 = (JitCompressedEvent) sargs[0];
+                                        if (jce2 != null)
+                                        {
+                                            jce2.release();
+                                        }
+                                        sargs[0] = jce;
+                                        sargs[1] = args;
+                                    }
+                                    if (jce != null)
+                                    {
+                                        jce.acquire();
+                                    }
+                                }
+                            }
+                        }}
+    	            }
+    	            finally {
+    	                queueSema.release();
+    	            }
+		        }
+		    }
+		    else
+		    {
+		        dispatch = Boolean.FALSE;
+		    }
 		        
 		}
 		if (dispatch)
@@ -595,5 +647,60 @@ public class ClientHandler extends Thread
 	public DirectRobot getDirbot()
 	{
 	    return dirbot;
+	}
+	
+	public void handleEventAck(SERVER_EVENT event, Object[] refStack, int idxSegmentID)
+	{
+	    int tid = getNonSerialTID(event, refStack, idxSegmentID);
+	    Object[] sargs;
+	    JitCompressedEvent jce;
+	    
+	    try
+        {
+            handleIOSema.acquire();
+        }
+        catch (InterruptedException e)
+        {
+            LLog.e(e);
+        }
+	    try
+	    {
+    	    try
+            {
+                queueSema.acquire();
+            }
+            catch (InterruptedException e)
+            {
+                LLog.e(e);
+            }
+            try
+            {
+                synchronized(nonSerialEventQueue) {synchronized(nonSerialEventOutboundQueue) {
+                    nonSerialEventOutboundQueue.remove(tid);
+                    sargs = nonSerialEventQueue.remove(tid);
+                }}
+            }
+            finally {
+                queueSema.release();
+            }
+            if (sargs == null)
+            {
+                return;
+            }
+            jce = (JitCompressedEvent) sargs[0];
+            try
+            {
+                nts_sendEvent(event, jce, (Object[]) sargs[1]);
+            }
+            finally {
+                if (jce != null)
+                {
+                    jce.release();
+                }
+            }
+	    }
+	    finally {
+	        handleIOSema.release();
+	    }
 	}
 }
