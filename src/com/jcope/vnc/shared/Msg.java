@@ -217,21 +217,10 @@ public class Msg implements Serializable
     	    
     	    if (outBuffer.length > 0)
     	    {
-    	        byte b = outBuffer[0];
-    	        
-    	        outBuffer[0] = (byte)(outBuffer.length & 0xff);
-        	    out.write(outBuffer, 0, 1);
-        	    
-        	    outBuffer[0] = (byte)((outBuffer.length >> 8) & 0xff);
-    	        out.write(outBuffer, 0, 1);
-    	        
-    	        outBuffer[0] = (byte)((outBuffer.length >> 16) & 0xff);
-    	        out.write(outBuffer, 0, 1);
-    	        
-    	        outBuffer[0] = (byte)((outBuffer.length >> 24) & 0xff);
-    	        out.write(outBuffer, 0, 1);
-    	        
-    	        outBuffer[0] = b;
+    	        out.write(outBuffer.length & 0xff);
+    	        out.write((outBuffer.length >> 8) & 0xff);
+    	        out.write((outBuffer.length >> 16) & 0xff);
+    	        out.write((outBuffer.length >> 24) & 0xff);
         	    out.write(outBuffer);
         	    
         		// out.flush();
