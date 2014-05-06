@@ -41,7 +41,8 @@ public class Msg implements Serializable
 	{
 	    Object rval = null;
 	    
-	     ByteArrayInputStream bis = new ByteArrayInputStream(bArray, 0, length);
+	    ByteArrayInputStream bis = new ByteArrayInputStream(bArray, 0, length);
+	    
 	    try
         {
             GZIPInputStream gzip_in = new GZIPInputStream(bis);
