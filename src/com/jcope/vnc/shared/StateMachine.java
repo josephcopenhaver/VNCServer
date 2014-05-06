@@ -26,6 +26,31 @@ public class StateMachine
 		ENABLE_ALIAS_MONITOR,
 		ENABLE_CONNECTION_MONITOR,
 		ACKNOWLEDGE_NON_SERIAL_EVENT
+		
+		;
+		
+		public boolean isSerial()
+        {
+            Boolean rval = null;
+            
+            switch (this)
+            {
+                case ACKNOWLEDGE_NON_SERIAL_EVENT:
+                    rval = Boolean.TRUE;
+                    break;
+                case ENABLE_ALIAS_MONITOR:
+                case ENABLE_CONNECTION_MONITOR:
+                case GET_SCREEN_SEGMENT:
+                case OFFER_INPUT:
+                case REQUEST_ALIAS:
+                case SELECT_SCREEN:
+                case SEND_CHAT_MSG:
+                    rval = Boolean.FALSE;
+                    break;
+            }
+            
+            return rval;
+        }
 	};
 	
 	public static enum SERVER_EVENT
@@ -84,7 +109,7 @@ public class StateMachine
                 case SCREEN_SEGMENT_SIZE_UPDATE:
                 case CLIENT_ALIAS_UPDATE:
                 case READ_INPUT_EVENTS:
-                    rval = false;
+                    rval = Boolean.FALSE;
                     break;
                 
                 // clients need to get each of these events in turn
@@ -98,7 +123,7 @@ public class StateMachine
                 case CONNECTION_ESTABLISHED:
                 case FAILED_AUTHORIZATION:
                 case ALIAS_CHANGED:
-                    rval = true;
+                    rval = Boolean.TRUE;
                     break;
             }
             
@@ -131,7 +156,7 @@ public class StateMachine
                 case SCREEN_SEGMENT_SIZE_UPDATE:
                 case CLIENT_ALIAS_UPDATE:
                 case READ_INPUT_EVENTS:
-                    rval = true;
+                    rval = Boolean.TRUE;
                     break;
                 
                 // events that either have no parameterized
@@ -140,7 +165,7 @@ public class StateMachine
                 case CURSOR_GONE:
                 case SCREEN_GONE:
                 case SCREEN_SEGMENT_CHANGED:
-                    rval = false;
+                    rval = Boolean.FALSE;
                     break;
             }
             
