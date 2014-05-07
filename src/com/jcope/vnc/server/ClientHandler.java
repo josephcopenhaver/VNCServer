@@ -10,6 +10,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.concurrent.Semaphore;
 
 import javax.swing.SwingUtilities;
@@ -50,6 +51,7 @@ public class ClientHandler extends Thread
     private Semaphore queueSema = new Semaphore(1, true);
     private HashMap<Integer, Boolean> nonSerialEventOutboundQueue = new HashMap<Integer, Boolean>();
     private HashMap<Integer, Object[]> nonSerialEventQueue = new HashMap<Integer, Object[]>();
+    private LinkedList<Integer> nonSerialOrderedEventQueue = new LinkedList<Integer>();
 	
 	public ClientHandler(Socket socket) throws IOException
 	{
@@ -460,11 +462,12 @@ public class ClientHandler extends Thread
     	            }
     	            try
     	            {
-    	                synchronized(nonSerialEventQueue) {synchronized(nonSerialEventOutboundQueue) {
+    	                synchronized(nonSerialEventQueue) {synchronized(nonSerialEventOutboundQueue) {synchronized(nonSerialOrderedEventQueue) {
     	                    if (nonSerialEventOutboundQueue.get(tidTmp) == null)
                             {
                                 dispatch = Boolean.TRUE;
                                 nonSerialEventOutboundQueue.put(tidTmp, Boolean.TRUE);
+                                nonSerialOrderedEventQueue.addLast(tidTmp);
                             }
                             else
                             {
@@ -497,7 +500,7 @@ public class ClientHandler extends Thread
                                     }
                                 }
                             }
-                        }}
+                        }}}
     	            }
     	            finally {
     	                queueSema.release();
@@ -651,7 +654,9 @@ public class ClientHandler extends Thread
 	
 	public void handleEventAck(SERVER_EVENT event, Object[] refStack, int idxSegmentID)
 	{
-	    int tid = getNonSerialTID(event, refStack, idxSegmentID);
+	    ArrayList<Object[]> plist = new ArrayList<Object[]>();
+	    int tTid = getNonSerialTID(event, refStack, idxSegmentID);
+	    int tid;
 	    Object[] sargs;
 	    JitCompressedEvent jce;
 	    
@@ -675,28 +680,55 @@ public class ClientHandler extends Thread
             }
             try
             {
-                synchronized(nonSerialEventQueue) {synchronized(nonSerialEventOutboundQueue) {
-                    nonSerialEventOutboundQueue.remove(tid);
-                    sargs = nonSerialEventQueue.remove(tid);
-                }}
+                synchronized(nonSerialEventQueue) {synchronized(nonSerialEventOutboundQueue) {synchronized(nonSerialOrderedEventQueue) {
+                    do
+                    {
+                        tid = nonSerialOrderedEventQueue.removeFirst();
+                        nonSerialEventOutboundQueue.remove(tid);
+                        sargs = nonSerialEventQueue.remove(tid);
+                        if (sargs != null)
+                        {
+                            plist.add(sargs);
+                        }
+                    } while (tid != tTid);
+                }}}
             }
             finally {
                 queueSema.release();
             }
-            if (sargs == null)
+            
+            Exception firstE = null;
+            for (Object[] targs : plist)
             {
-                return;
-            }
-            jce = (JitCompressedEvent) sargs[0];
-            try
-            {
-                nts_sendEvent(event, jce, (Object[]) sargs[1]);
-            }
-            finally {
-                if (jce != null)
+                jce = (JitCompressedEvent) targs[0];
+                try
                 {
-                    jce.release();
+                    if (firstE == null)
+                    {
+                        nts_sendEvent(event, jce, (Object[]) targs[1]);
+                    }
                 }
+                catch (Exception e)
+                {
+                    if (firstE == null)
+                    {
+                        firstE = e;
+                    }
+                    else
+                    {
+                        throw new RuntimeException(e);
+                    }
+                }
+                finally {
+                    if (jce != null)
+                    {
+                        jce.release();
+                    }
+                }
+            }
+            if (firstE != null)
+            {
+                throw new RuntimeException(firstE);
             }
 	    }
 	    finally {

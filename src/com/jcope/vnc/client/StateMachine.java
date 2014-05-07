@@ -43,15 +43,11 @@ public class StateMachine implements Runnable
 	private Semaphore inputHandlingSema = new Semaphore(1, true);
 	
 	private Semaphore sendSema = new Semaphore(1, true);
-	private TaskDispatcher<Integer> unserializedDispatcher = new TaskDispatcher<Integer>("Non-serial client output dispatcher");
+	private TaskDispatcher<Integer> dispatcher = new TaskDispatcher<Integer>("Non-serial client output dispatcher");
     
     private Semaphore queueAccessSema = new Semaphore(1, true);
     private volatile ArrayList<InputEvent> outQueue = null;
     private ACCESS_MODE accessMode = null;
-	
-    private volatile int tid = -1;
-    private Semaphore serialSema = new Semaphore(1, true);
-    private TaskDispatcher<Integer> serializedDispatcher = new TaskDispatcher<Integer>("Serial client output dispatcher");
     
     public StateMachine(String serverAddress, int serverPort, Integer selectedScreenNum, String password) throws UnknownHostException, IOException
 	{
@@ -316,38 +312,7 @@ public class StateMachine implements Runnable
 	
 	public void sendEvent(final CLIENT_EVENT event, final Object... args)
 	{
-	    TaskDispatcher<Integer> dispatcher;
-	    Runnable r;
-	    int tidTmp;
-	    
-	    if (event.isSerial())
-	    {
-	        dispatcher = serializedDispatcher;
-	        try
-            {
-                serialSema.acquire();
-            }
-            catch (InterruptedException e)
-            {
-                LLog.e(e);
-            }
-	        try
-	        {
-	            tidTmp = tid;
-	            tidTmp++;
-	            tid = tidTmp;
-	        }
-	        finally {
-	            serialSema.release();
-	        }
-	    }
-	    else
-	    {
-	        dispatcher = unserializedDispatcher;
-    	    tidTmp = event == CLIENT_EVENT.GET_SCREEN_SEGMENT ? -(((Integer)args[0]) + 2) : event.ordinal();
-	    }
-	    
-	    r = new Runnable() {
+	    Runnable r = new Runnable() {
             
             @Override
             public void run()
@@ -370,7 +335,7 @@ public class StateMachine implements Runnable
                     try
                     {
                         Msg.send(out, event, args);
-                        if (serializedDispatcher.isEmpty() && unserializedDispatcher.isEmpty())
+                        if (dispatcher.isEmpty())
                         {
                             out.flush();
                         }
@@ -391,7 +356,7 @@ public class StateMachine implements Runnable
             }
         };
 	    
-        dispatcher.dispatch(tidTmp, r);
+        dispatcher.dispatch(event == CLIENT_EVENT.GET_SCREEN_SEGMENT ? -(((Integer)args[0]) + 2) : event.ordinal(), r);
 	}
 	
 	public void disconnect()
@@ -414,13 +379,7 @@ public class StateMachine implements Runnable
     		}
 	    }
 	    finally {
-	        try
-	        {
-	            unserializedDispatcher.clear();
-	        }
-	        finally {
-	            serializedDispatcher.clear();
-	        }
+	        dispatcher.clear();
 	    }
 	}
 	
