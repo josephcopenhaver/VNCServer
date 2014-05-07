@@ -43,7 +43,7 @@ public class StateMachine implements Runnable
 	private Semaphore inputHandlingSema = new Semaphore(1, true);
 	
 	private Semaphore sendSema = new Semaphore(1, true);
-	private TaskDispatcher<Integer> dispatcher = new TaskDispatcher<Integer>("Non-serial client output dispatcher");
+	private TaskDispatcher<Integer> dispatcher = new TaskDispatcher<Integer>("Client output dispatcher");
     
     private Semaphore queueAccessSema = new Semaphore(1, true);
     private volatile ArrayList<InputEvent> outQueue = null;
