@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 import com.jcope.debug.LLog;
-import com.jcope.util.BitGrid;
+import com.jcope.util.FixedLengthBitSet;
 import com.jcope.util.SegmentationInfo;
 import com.jcope.vnc.server.ClientHandler;
 import com.jcope.vnc.server.DirectRobot;
@@ -50,7 +50,7 @@ public class Monitor extends Thread
 	private DirectRobot dirbot;
 	private int[][] segments;
 	private Integer[] solidSegments;
-	private BitGrid changedSegments;
+	private FixedLengthBitSet changedSegments;
 	private volatile boolean stopped = Boolean.FALSE;
 	private volatile boolean joined = Boolean.FALSE;
 	private Boolean mouseOnMyScreen = null;
@@ -80,7 +80,7 @@ public class Monitor extends Thread
 		    segInfo.loadConfig(screenWidth, screenHeight, segInfo.segmentWidth, segInfo.segmentHeight);
 		    segments = new int[segInfo.numSegments][];
 		    solidSegments = new Integer[segInfo.numSegments];
-			changedSegments = new BitGrid(segInfo.numSegments);
+			changedSegments = new FixedLengthBitSet(segInfo.numSegments);
 		    for (int i=0; i<segInfo.numSegments; i++)
 			{
 				segments[i] = new int[getSegmentPixelCount(i)];
@@ -169,13 +169,10 @@ public class Monitor extends Thread
 					        continue;
 					    }
 						ScreenListener l = client.getScreenListener(dirbot);
-						for (int i=0; i<changedSegments.length; i++)
-						{
-							if (changedSegments.get(i))
-						    {
-								l.onScreenChange(i);
-							}
-						}
+                        for (int i = changedSegments.nextSetBit(0); i >= 0; i = changedSegments.nextSetBit(i + 1))
+                        {
+                            l.onScreenChange(i);
+                        }
 					}
 					changedSegments.fill(Boolean.FALSE);
 				}
