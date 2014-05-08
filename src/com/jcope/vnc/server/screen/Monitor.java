@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 import com.jcope.debug.LLog;
+import com.jcope.util.BitGrid;
 import com.jcope.util.SegmentationInfo;
 import com.jcope.vnc.server.ClientHandler;
 import com.jcope.vnc.server.DirectRobot;
@@ -49,7 +50,7 @@ public class Monitor extends Thread
 	private DirectRobot dirbot;
 	private int[][] segments;
 	private Integer[] solidSegments;
-	private boolean[] changedSegments;
+	private BitGrid changedSegments;
 	private volatile boolean stopped = Boolean.FALSE;
 	private volatile boolean joined = Boolean.FALSE;
 	private Boolean mouseOnMyScreen = null;
@@ -79,13 +80,11 @@ public class Monitor extends Thread
 		    segInfo.loadConfig(screenWidth, screenHeight, segInfo.segmentWidth, segInfo.segmentHeight);
 		    segments = new int[segInfo.numSegments][];
 		    solidSegments = new Integer[segInfo.numSegments];
-			changedSegments = new boolean[segInfo.numSegments];
-			for (int i=0; i<segInfo.numSegments; i++)
+			changedSegments = new BitGrid(segInfo.numSegments);
+		    for (int i=0; i<segInfo.numSegments; i++)
 			{
 				segments[i] = new int[getSegmentPixelCount(i)];
 			}
-			Arrays.fill(solidSegments, null);
-			Arrays.fill(changedSegments, Boolean.FALSE);
 			if (lastWidth != null)
 			{
 				// TODO: provide ability to lock a set of clients
@@ -148,7 +147,7 @@ public class Monitor extends Thread
 					if (copyIntArray(segments[i], buffer, segments[i].length, solidSegmentRef))
 					{
 						changed = Boolean.TRUE;
-						changedSegments[i] = Boolean.TRUE;
+						changedSegments.set(i, Boolean.TRUE);
 					}
 					solidSegments[i] = solidSegmentRef[0];
 				}
@@ -172,13 +171,13 @@ public class Monitor extends Thread
 						ScreenListener l = client.getScreenListener(dirbot);
 						for (int i=0; i<changedSegments.length; i++)
 						{
-							if (changedSegments[i])
-							{
+							if (changedSegments.get(i))
+						    {
 								l.onScreenChange(i);
 							}
 						}
 					}
-					Arrays.fill(changedSegments, Boolean.FALSE);
+					changedSegments.fill(Boolean.FALSE);
 				}
 				
 				if (newClients.size() > 0)

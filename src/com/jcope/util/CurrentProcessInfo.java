@@ -1,7 +1,5 @@
 package com.jcope.util;
 
-import static com.jcope.debug.Debug.assert_;
-
 import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory; // Hack for windows
