@@ -94,16 +94,9 @@ public class StateMachine implements Runnable
 	    if (rval == null)
 	    {
 	        rval = PasswordInputDialog.show(frame, "Password?", "Password:", false, null);
-	        if (rval != null)
+	        if (rval != null && !rval.equals(""))
 	        {
-	            if (rval.equals(""))
-	            {
-	                rval = null;
-	            }
-	            else
-	            {
-	                rval = HashFactory.hash(rval);
-	            }
+	            rval = HashFactory.hash(rval);
 	        }
 	    }
 	    
@@ -157,6 +150,7 @@ public class StateMachine implements Runnable
     public void run()
 	{
 		boolean tryConnect, wasConnected;
+		IOException usrCancel = new IOException("User cancelled connection attempt");
 		do
 		{
 		    tryConnect = Boolean.FALSE;
@@ -166,103 +160,130 @@ public class StateMachine implements Runnable
 			InputStream is = null;
 			out = null;
 			BufferedInputStream in = null;
-			try
+			do
 			{
-			    ACCESS_MODE defaultAccessMode = ACCESS_MODE.VIEW_ONLY;
-			    ACCESS_MODE tmpAccessMode;
-			    Integer tmpSelectedScreen;
-			    String tmp;
-			    
-			    tmp = (String) JOptionPane.showInputDialog(frame, "Enter server address", "Server Address", JOptionPane.QUESTION_MESSAGE, null, null, serverAddress);
-			    if (tmp != null && !tmp.equals(""))
-			    {
-			        serverAddress = tmp;
-			    }
-			    tmp = (String) JOptionPane.showInputDialog(frame, "Enter server port", "Server Port", JOptionPane.QUESTION_MESSAGE, null, null, (new Integer(serverPort)).toString());
-			    if (tmp != null && !tmp.equals(""))
-                {
-			        try
-			        {
-			            serverPort = Integer.parseInt(tmp);
-			        }
-			        catch (NumberFormatException e)
-			        {
-			            // Do Nothing
-			        }
-                }
-                tmpAccessMode = (ACCESS_MODE) JOptionPane.showInputDialog(frame, "Select access mode", "Select Access Mode", JOptionPane.QUESTION_MESSAGE, null, ACCESS_MODE.selectable(), defaultAccessMode);
-			    if (tmpAccessMode == null)
-			    {
-			        tmpAccessMode = defaultAccessMode;
-			    }
-			    tmpSelectedScreen = getSelectedScreen();
-			    if (tmpSelectedScreen == null)
-			    {
-			        tmpSelectedScreen = 0;
-			    }
-			    
-			    final int selectedScreen = tmpSelectedScreen;
-			    final String password = getPasswordHash();
-			    final ACCESS_MODE accessMode = tmpAccessMode;
-			    
-				socket = new Socket(serverAddress, serverPort);
-				wasConnected = Boolean.TRUE;
-				os = socket.getOutputStream();
-				out = new BufferedOutputStream(os);
-				is = socket.getInputStream();
-				in = new BufferedInputStream(is);
-				
-				this.accessMode = accessMode;
-				
-				SwingUtilities.invokeLater(new Runnable() {
-
-                    @Override
-                    public void run()
+    			try
+    			{
+    			    ACCESS_MODE defaultAccessMode = ACCESS_MODE.VIEW_ONLY;
+    			    ACCESS_MODE tmpAccessMode;
+    			    Integer tmpSelectedScreen;
+    			    String tmp;
+    			    
+    			    tmp = (String) JOptionPane.showInputDialog(frame, "Enter server address", "Server Address", JOptionPane.QUESTION_MESSAGE, null, null, serverAddress);
+    			    if (tmp == null)
+    			    {
+    			        whyFailed = usrCancel;
+                        break;
+    			    }
+    			    if (!tmp.equals(""))
+    			    {
+    			        serverAddress = tmp;
+    			    }
+    			    tmp = (String) JOptionPane.showInputDialog(frame, "Enter server port", "Server Port", JOptionPane.QUESTION_MESSAGE, null, null, (new Integer(serverPort)).toString());
+    			    if (tmp == null)
+    			    {
+    			        whyFailed = usrCancel;
+    			        break;
+    			    }
+    			    if (!tmp.equals(""))
                     {
-                        sendEvent(CLIENT_EVENT.SELECT_SCREEN, selectedScreen, accessMode, password);
+    			        try
+    			        {
+    			            serverPort = Integer.parseInt(tmp);
+    			        }
+    			        catch (NumberFormatException e)
+    			        {
+    			            // Do Nothing
+    			        }
                     }
-				    
-				});
-				
-				CompressedObjectReader reader = new CompressedObjectReader();
-				Object obj;
-                
-				while ((obj = reader.readObject(in)) != null)
-				{
-				    try
-			        {
-				        inputHandlingSema.acquire();
-			        }
-			        catch (InterruptedException e)
-			        {
-			            LLog.e(e);
-			        }
-			        try
-			        {
-			            handleServerEvent(obj);
-			        }
-			        finally {
-			            obj = null;
-			            inputHandlingSema.release();
-			        }
-				}
-				throw new IOException("Connection reset by peer");
-			}
-			catch (UnknownHostException e)
-			{
-			    setWhyFailed(e);
-			}
-			catch (IOException e)
-            {
-                setWhyFailed(e);
-            }
-            finally {
-				if (out != null) {try{out.close();}catch(Exception e){}}
-				if (os  != null) {try{ os.close();}catch(Exception e){}}
-				if (in  != null) {try{ in.close();}catch(Exception e){}}
-				if (is  != null) {try{ is.close();}catch(Exception e){}}
-				disconnect();
-			}
+                    tmpAccessMode = (ACCESS_MODE) JOptionPane.showInputDialog(frame, "Select access mode", "Select Access Mode", JOptionPane.QUESTION_MESSAGE, null, ACCESS_MODE.selectable(), defaultAccessMode);
+    			    if (tmpAccessMode == null)
+    			    {
+    			        whyFailed = usrCancel;
+                        break;
+    			    }
+    			    tmpSelectedScreen = getSelectedScreen();
+    			    if (tmpSelectedScreen == null)
+    			    {
+    			        whyFailed = usrCancel;
+                        break;
+    			    }
+    			    
+    			    String tmpPassword = getPasswordHash();
+    			    if (tmpPassword == null)
+    			    {
+    			        whyFailed = usrCancel;
+                        break;
+    			    }
+    			    if (tmpPassword.equals(""))
+    			    {
+    			        tmpPassword = null;
+    			    }
+    			    
+    			    final int selectedScreen = tmpSelectedScreen;
+    			    final String password = tmpPassword;
+    			    final ACCESS_MODE accessMode = tmpAccessMode;
+    			    tmpPassword = null;
+    			    
+    				socket = new Socket(serverAddress, serverPort);
+    				wasConnected = Boolean.TRUE;
+    				os = socket.getOutputStream();
+    				out = new BufferedOutputStream(os);
+    				is = socket.getInputStream();
+    				in = new BufferedInputStream(is);
+    				
+    				this.accessMode = accessMode;
+    				
+    				SwingUtilities.invokeLater(new Runnable() {
+    
+                        @Override
+                        public void run()
+                        {
+                            sendEvent(CLIENT_EVENT.SELECT_SCREEN, selectedScreen, accessMode, password);
+                        }
+    				    
+    				});
+    				
+    				CompressedObjectReader reader = new CompressedObjectReader();
+    				Object obj;
+                    
+    				while ((obj = reader.readObject(in)) != null)
+    				{
+    				    try
+    			        {
+    				        inputHandlingSema.acquire();
+    			        }
+    			        catch (InterruptedException e)
+    			        {
+    			            LLog.e(e);
+    			        }
+    			        try
+    			        {
+    			            handleServerEvent(obj);
+    			        }
+    			        finally {
+    			            obj = null;
+    			            inputHandlingSema.release();
+    			        }
+    				}
+    				throw new IOException("Connection reset by peer");
+    			}
+    			catch (UnknownHostException e)
+    			{
+    			    setWhyFailed(e);
+    			}
+    			catch (IOException e)
+                {
+                    setWhyFailed(e);
+                }
+                finally {
+    				if (out != null) {try{out.close();}catch(Exception e){}}
+    				if (os  != null) {try{ os.close();}catch(Exception e){}}
+    				if (in  != null) {try{ in.close();}catch(Exception e){}}
+    				if (is  != null) {try{ is.close();}catch(Exception e){}}
+    				disconnect();
+    			}
+			} while (Boolean.FALSE);
 			if (whyFailed != null)
 			{
 				try
