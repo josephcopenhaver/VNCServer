@@ -92,6 +92,10 @@ public class PasswordInputDialog
                             continue;
                         }
                     }
+                    else
+                    {
+                        return "";
+                    }
                 }
                 done = true;
             } while (!done);
