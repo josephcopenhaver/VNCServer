@@ -80,7 +80,8 @@ public class PasswordInputDialog
                     options[0]);
                 if (JCOptionPane.OK_OPTION == resultOption)
                 {
-                    if ((tmp = pass.getPassword()).length > 0 && (!confirm || ((confirmTmp = confirmPass.getPassword()).length > 0 && tmp.length == confirmTmp.length && Arrays.equals(tmp, confirmTmp))))
+                    tmp = pass.getPassword();
+                    if (!confirm || ((confirmTmp = confirmPass.getPassword()).length > 0 && tmp.length == confirmTmp.length && Arrays.equals(tmp, confirmTmp)))
                     {
                         return new String(tmp);
                     }
@@ -91,10 +92,6 @@ public class PasswordInputDialog
                         {
                             continue;
                         }
-                    }
-                    else
-                    {
-                        return "";
                     }
                 }
                 done = true;
