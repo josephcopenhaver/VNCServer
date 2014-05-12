@@ -9,12 +9,12 @@ import java.io.IOException;
 import java.util.HashMap;
 
 import javax.swing.JFrame;
-import javax.swing.JOptionPane;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
 
 import org.xml.sax.SAXException;
 
+import com.jcope.ui.JCOptionPane;
 import com.jcope.ui.PasswordInputDialog;
 import com.jcope.vnc.Server.SERVER_PROPERTIES;
 import com.jcope.vnc.server.SecurityPolicy;
@@ -67,9 +67,9 @@ public class ServerSetup
             deviceMap.put(device.getIDstring(), device);
         }
         
-        int resultInt = JOptionPane.showConfirmDialog(frame, "Reset the entire policy to default \"fully locked\" mode?");
+        int resultInt = JCOptionPane.showConfirmDialog(frame, "Reset the entire policy to default \"fully locked\" mode?");
         
-        if (JOptionPane.OK_OPTION == resultInt)
+        if (JCOptionPane.OK_OPTION == resultInt)
         {
             securityPolicy.clear();
             changed = true;
@@ -84,12 +84,12 @@ public class ServerSetup
             {
                 firstRun = false;
             }
-            else if (JOptionPane.OK_OPTION == JOptionPane.showConfirmDialog(frame, "Stop modifying policy settings?"))
+            else if (JCOptionPane.OK_OPTION == JCOptionPane.showConfirmDialog(frame, "Stop modifying policy settings?"))
             {
                 break;
             }
             
-            if (JOptionPane.OK_OPTION == JOptionPane.showConfirmDialog(frame, "Set a policy for all devices?"))
+            if (JCOptionPane.OK_OPTION == JCOptionPane.showConfirmDialog(frame, "Set a policy for all devices?"))
             {
                 deviceID = SecurityPolicy.ALL_TOKEN;
             }
@@ -124,7 +124,7 @@ public class ServerSetup
             }
             else
             {
-                action = (String) JOptionPane.showInputDialog(frame, String.format("Device: %s\nSelect action", deviceID), "Perform Action", JOptionPane.PLAIN_MESSAGE, null, availableActions, null);
+                action = (String) JCOptionPane.showInputDialog(frame, String.format("Device: %s\nSelect action", deviceID), "Perform Action", JCOptionPane.PLAIN_MESSAGE, null, availableActions, null);
             }
             
             if (null != action)
@@ -159,14 +159,14 @@ public class ServerSetup
         
         if (changed)
         {
-            if (JOptionPane.OK_OPTION == JOptionPane.showConfirmDialog(frame, String.format("%s\nSave changes?", filePath)))
+            if (JCOptionPane.OK_OPTION == JCOptionPane.showConfirmDialog(frame, String.format("%s\nSave changes?", filePath)))
             {
                 securityPolicy.writePolicy(file);
             }
         }
         else
         {
-            JOptionPane.showMessageDialog(frame, String.format("%s\nNothing saved, no changes have been made.", filePath), "Warning", JOptionPane.WARNING_MESSAGE);
+            JCOptionPane.showMessageDialog(frame, String.format("%s\nNothing saved, no changes have been made.", filePath), "Warning", JCOptionPane.WARNING_MESSAGE);
         }
         
         System.exit(0);
@@ -184,7 +184,7 @@ public class ServerSetup
             {
                 ACCESS_MODE[] enabledModes = securityPolicy.getModes(deviceID);
                 numModes = enabledModes.length;
-                ACCESS_MODE accessMode = (ACCESS_MODE) JOptionPane.showInputDialog(parent, String.format("Device: \"%s\"\nSelect an access openning to remove", deviceID), "Remove Access Openning", JOptionPane.PLAIN_MESSAGE, null, enabledModes, null);
+                ACCESS_MODE accessMode = (ACCESS_MODE) JCOptionPane.showInputDialog(parent, String.format("Device: \"%s\"\nSelect an access openning to remove", deviceID), "Remove Access Openning", JCOptionPane.PLAIN_MESSAGE, null, enabledModes, null);
                 
                 if (null == accessMode)
                 {
@@ -196,7 +196,7 @@ public class ServerSetup
                 rval = true;
                 
             } while (false);
-        } while (numModes > 0 && JOptionPane.OK_OPTION == JOptionPane.showConfirmDialog(parent, String.format("Device: \"%s\"\nRemove another access openning?", deviceID)));
+        } while (numModes > 0 && JCOptionPane.OK_OPTION == JCOptionPane.showConfirmDialog(parent, String.format("Device: \"%s\"\nRemove another access openning?", deviceID)));
         
         return rval;
     }
@@ -212,22 +212,22 @@ public class ServerSetup
         {
             do
             {
-                ACCESS_MODE accessMode = (ACCESS_MODE) JOptionPane.showInputDialog(parent, String.format("Device: \"%s\"\nSelect an access openning to add/edit", deviceID), "Add/Edit Access Point", JOptionPane.PLAIN_MESSAGE, null, availableModes, null);
+                ACCESS_MODE accessMode = (ACCESS_MODE) JCOptionPane.showInputDialog(parent, String.format("Device: \"%s\"\nSelect an access openning to add/edit", deviceID), "Add/Edit Access Point", JCOptionPane.PLAIN_MESSAGE, null, availableModes, null);
                 
                 if (null == accessMode)
                 {
                     break;
                 }
                 
-                int resultInt = JOptionPane.showConfirmDialog(parent, String.format("Device: \"%s\"\nMode: \"%s\"\nSecure with a password?", deviceID, accessMode.name()));
+                int resultInt = JCOptionPane.showConfirmDialog(parent, String.format("Device: \"%s\"\nMode: \"%s\"\nSecure with a password?", deviceID, accessMode.name()));
                 
-                if (JOptionPane.NO_OPTION == resultInt)
+                if (JCOptionPane.NO_OPTION == resultInt)
                 {
                     securityPolicy.whitelist(deviceID, accessMode);
                     rval = true;
                     break;
                 }
-                else if (JOptionPane.CANCEL_OPTION == resultInt)
+                else if (JCOptionPane.CANCEL_OPTION == resultInt)
                 {
                     break;
                 }
@@ -254,7 +254,7 @@ public class ServerSetup
                 rval = true;
                 
             } while (false);
-        } while (JOptionPane.OK_OPTION == JOptionPane.showConfirmDialog(parent, String.format("Device: \"%s\"\nAdd/edit another access openning?", deviceID)));
+        } while (JCOptionPane.OK_OPTION == JCOptionPane.showConfirmDialog(parent, String.format("Device: \"%s\"\nAdd/edit another access openning?", deviceID)));
         
         return rval;
     }

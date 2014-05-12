@@ -24,13 +24,13 @@ import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 
 import com.jcope.debug.LLog;
 import com.jcope.ui.ImagePanel;
+import com.jcope.ui.JCOptionPane;
 import com.jcope.util.DimensionF;
 import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
 import com.jcope.vnc.shared.InputEvent;
@@ -205,7 +205,7 @@ public class MainFrame extends JFrame
             public void actionPerformed(ActionEvent ae)
             {
                 // TODO: enable chat input pane
-                String result = JOptionPane.showInputDialog(fthis, "What would you like your alias to be?", alias);
+                String result = JCOptionPane.showInputDialog(fthis, "What would you like your alias to be?", alias);
                 if (result != null)
                 {
                     if (result.equals(""))

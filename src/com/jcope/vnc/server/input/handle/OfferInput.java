@@ -49,10 +49,11 @@ public class OfferInput extends Handle
             
             if (dirbot != null)
             {
-                for (InputEvent e : events)
+                for (int idx=0; idx<events.length; idx++)
                 {
-                    if (!queueEvent(dirbot, e))
+                    if (!queueEvent(dirbot, events[idx]))
                     {
+                        LLog.w(String.format("Dropped %d received input events", events.length - idx));
                         break;
                     }
                 }

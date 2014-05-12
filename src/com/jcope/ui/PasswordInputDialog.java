@@ -6,7 +6,6 @@ import java.util.Arrays;
 
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.event.AncestorEvent;
@@ -76,10 +75,10 @@ public class PasswordInputDialog
                 {
                     confirmPass.setText("");
                 }
-                resultOption = JOptionPane.showOptionDialog(parent, panel, title,
-                    JOptionPane.NO_OPTION, JOptionPane.PLAIN_MESSAGE, null, options,
+                resultOption = JCOptionPane.showOptionDialog(parent, panel, title,
+                    JCOptionPane.NO_OPTION, JCOptionPane.PLAIN_MESSAGE, null, options,
                     options[0]);
-                if (JOptionPane.OK_OPTION == resultOption)
+                if (JCOptionPane.OK_OPTION == resultOption)
                 {
                     if ((tmp = pass.getPassword()).length > 0 && (!confirm || ((confirmTmp = confirmPass.getPassword()).length > 0 && tmp.length == confirmTmp.length && Arrays.equals(tmp, confirmTmp))))
                     {
@@ -87,8 +86,8 @@ public class PasswordInputDialog
                     }
                     if (confirm)
                     {
-                        resultOption = JOptionPane.showConfirmDialog(parent, (tmp == null || tmp.length <= 0 || confirmTmp == null || confirmTmp.length <= 0) ? "Password fields not filled.\nTry again?" : "Passwords do not match.\nTry again?");
-                        if (JOptionPane.OK_OPTION == resultOption)
+                        resultOption = JCOptionPane.showConfirmDialog(parent, (tmp == null || tmp.length <= 0 || confirmTmp == null || confirmTmp.length <= 0) ? "Password fields not filled.\nTry again?" : "Passwords do not match.\nTry again?");
+                        if (JCOptionPane.OK_OPTION == resultOption)
                         {
                             continue;
                         }

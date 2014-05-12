@@ -12,10 +12,10 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.concurrent.Semaphore;
 
-import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
 import com.jcope.debug.LLog;
+import com.jcope.ui.JCOptionPane;
 import com.jcope.ui.PasswordInputDialog;
 import com.jcope.util.TaskDispatcher;
 import com.jcope.vnc.client.input.Handler;
@@ -68,7 +68,7 @@ public class StateMachine implements Runnable
 	    
 	    if (rval == null)
 	    {
-	        String tmp = (String) JOptionPane.showInputDialog(frame, "Select screen", "0");
+	        String tmp = (String) JCOptionPane.showInputDialog(frame, "Select screen", "0");
 	        if (tmp != null)
 	        {
 	            try
@@ -169,7 +169,7 @@ public class StateMachine implements Runnable
     			    Integer tmpSelectedScreen;
     			    String tmp;
     			    
-    			    tmp = (String) JOptionPane.showInputDialog(frame, "Enter server address", "Server Address", JOptionPane.QUESTION_MESSAGE, null, null, serverAddress);
+    			    tmp = (String) JCOptionPane.showInputDialog(frame, "Enter server address", "Server Address", JCOptionPane.QUESTION_MESSAGE, null, null, serverAddress);
     			    if (tmp == null)
     			    {
     			        whyFailed = usrCancel;
@@ -179,7 +179,7 @@ public class StateMachine implements Runnable
     			    {
     			        serverAddress = tmp;
     			    }
-    			    tmp = (String) JOptionPane.showInputDialog(frame, "Enter server port", "Server Port", JOptionPane.QUESTION_MESSAGE, null, null, (new Integer(serverPort)).toString());
+    			    tmp = (String) JCOptionPane.showInputDialog(frame, "Enter server port", "Server Port", JCOptionPane.QUESTION_MESSAGE, null, null, (new Integer(serverPort)).toString());
     			    if (tmp == null)
     			    {
     			        whyFailed = usrCancel;
@@ -196,7 +196,7 @@ public class StateMachine implements Runnable
     			            // Do Nothing
     			        }
                     }
-                    tmpAccessMode = (ACCESS_MODE) JOptionPane.showInputDialog(frame, "Select access mode", "Select Access Mode", JOptionPane.QUESTION_MESSAGE, null, ACCESS_MODE.selectable(), defaultAccessMode);
+                    tmpAccessMode = (ACCESS_MODE) JCOptionPane.showInputDialog(frame, "Select access mode", "Select Access Mode", JCOptionPane.QUESTION_MESSAGE, null, ACCESS_MODE.selectable(), defaultAccessMode);
     			    if (tmpAccessMode == null)
     			    {
     			        whyFailed = usrCancel;
@@ -289,8 +289,8 @@ public class StateMachine implements Runnable
 				try
 				{
 					String msg = wasConnected ? "Connection lost, reconnect?" : "Failed to connect, retry?";
-					int result = JOptionPane.showConfirmDialog(frame, msg, msg, JOptionPane.ERROR_MESSAGE, JOptionPane.OK_CANCEL_OPTION);
-					if (JOptionPane.OK_OPTION == result)
+					int result = JCOptionPane.showConfirmDialog(frame, msg, msg, JCOptionPane.ERROR_MESSAGE, JCOptionPane.OK_CANCEL_OPTION);
+					if (JCOptionPane.OK_OPTION == result)
 					{
 						tryConnect = Boolean.TRUE;
 					}
@@ -439,6 +439,10 @@ public class StateMachine implements Runnable
                     rval[i] = list.remove(0);
                 }
                 list.clear();
+                if (size > avail)
+                {
+                    LLog.w(String.format("Dropped %d queued input events", size - avail));
+                }
             }
         }
         finally {
@@ -481,6 +485,7 @@ public class StateMachine implements Runnable
             if (size >= MAX_QUEUE_SIZE)
             {
                 // Do Nothing
+                LLog.w(String.format("Dropped input event: %s", event.getType().name()));
             }
             else if (size > 0)
             {

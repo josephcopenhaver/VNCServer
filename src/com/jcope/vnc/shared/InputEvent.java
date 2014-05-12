@@ -515,4 +515,9 @@ public class InputEvent implements Serializable
         
         return rval;
     }
+    
+    public INPUT_TYPE getType()
+    {
+        return type;
+    }
 }

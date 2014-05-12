@@ -20,10 +20,10 @@ import javax.swing.BorderFactory;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
 import com.jcope.debug.LLog;
+import com.jcope.ui.JCOptionPane;
 
 public class ScreenSelector
 {
@@ -104,7 +104,7 @@ public class ScreenSelector
         
         if (devices.length == 1)
         {
-            if (promptIfOnlyOneScreen == null || JOptionPane.OK_OPTION == JOptionPane.showConfirmDialog(parent, promptIfOnlyOneScreen))
+            if (promptIfOnlyOneScreen == null || JCOptionPane.OK_OPTION == JCOptionPane.showConfirmDialog(parent, promptIfOnlyOneScreen))
             {
                 return devices[0];
             }
@@ -168,9 +168,9 @@ public class ScreenSelector
             {
                 selections[i] = (Integer) i;
             }
-            Integer selection = (Integer) JOptionPane.showInputDialog(lastJFrame,
+            Integer selection = (Integer) JCOptionPane.showInputDialog(lastJFrame,
                     "Choose Display Device",
-                    "Choose Display Device", JOptionPane.PLAIN_MESSAGE,
+                    "Choose Display Device", JCOptionPane.PLAIN_MESSAGE,
                     null, selections, null);
             
             if (selection == null)

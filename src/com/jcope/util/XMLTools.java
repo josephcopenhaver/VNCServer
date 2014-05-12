@@ -64,7 +64,7 @@ public class XMLTools
         {
             // Do Nothing
         }
-        else if (obj != null && obj instanceof String[])
+        else if (obj instanceof String[])
         {
             rval = ((String[]) obj).length;
         }

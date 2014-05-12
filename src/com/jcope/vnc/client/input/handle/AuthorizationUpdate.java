@@ -2,8 +2,7 @@ package com.jcope.vnc.client.input.handle;
 
 import static com.jcope.debug.Debug.assert_;
 
-import javax.swing.JOptionPane;
-
+import com.jcope.ui.JCOptionPane;
 import com.jcope.vnc.client.StateMachine;
 import com.jcope.vnc.client.input.Handle;
 
@@ -22,7 +21,7 @@ public class AuthorizationUpdate extends Handle
         if (!isAuthorized)
         {
             stateMachine.disconnect();
-            JOptionPane.showMessageDialog(stateMachine.getFrame(), "Incorrect password or selected display not an option", "Access Denied", JOptionPane.ERROR_MESSAGE);
+            JCOptionPane.showMessageDialog(stateMachine.getFrame(), "Incorrect password or selected display not an option", "Access Denied", JCOptionPane.ERROR_MESSAGE);
         }
     }
     
