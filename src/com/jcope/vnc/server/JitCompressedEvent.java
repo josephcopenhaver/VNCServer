@@ -17,7 +17,9 @@ public class JitCompressedEvent
     private final Semaphore readSyncLock;
     private final Semaphore releaseSyncLock;
     
-    // TODO: don't duplicate the BufferPool ref's refCount
+    // Must have a local refcount
+    // using BufferPool ref's refCount is NOT an option
+    // this counter is for the container (which serves git compressed instances)
     private volatile int refCount;
     
     private volatile ByteBufferPool.PoolRef ref;
