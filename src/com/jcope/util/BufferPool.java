@@ -116,6 +116,11 @@ public abstract class BufferPool<T>
         
         public void release()
         {
+            release((Runnable[]) null);
+        }
+        
+        public void release(Runnable... lastReleaseRunnables)
+        {
             int newRefCount;
             try
             {
@@ -138,7 +143,19 @@ public abstract class BufferPool<T>
             if (newRefCount <= 0)
             {
                 assert_(newRefCount == 0);
-                BufferPool.this.release(this);
+                try
+                {
+                    BufferPool.this.release(this);
+                }
+                finally {
+                    if (lastReleaseRunnables != null)
+                    {
+                        for (Runnable r : lastReleaseRunnables)
+                        {
+                            r.run();
+                        }
+                    }
+                }
             }
         }
         
