@@ -15,17 +15,21 @@ public class JitCompressedEvent
     private static final ArrayList<JitCompressedEvent> objPool = new  ArrayList<JitCompressedEvent>();
     
     private final Semaphore readSyncLock;
+    private final Semaphore releaseSyncLock;
+    
+    // TODO: don't duplicate the BufferPool ref's refCount
+    private volatile int refCount;
     
     private volatile ByteBufferPool.PoolRef ref;
     private volatile SERVER_EVENT event;
     private volatile Object[] args;
     
     private final Runnable onDestroy;
-    private final Runnable onLastRelease;
     
     private JitCompressedEvent()
     {
         readSyncLock = new Semaphore(1, true);
+        releaseSyncLock = new Semaphore(1, true);
         reset();
         onDestroy = new Runnable() {
 
@@ -36,38 +40,11 @@ public class JitCompressedEvent
             }
             
         };
-        onLastRelease = new Runnable()
-        {
-
-            @Override
-            public void run()
-            {
-                ref.release();
-                reset();
-                try
-                {
-                    poolSyncLock.acquire();
-                }
-                catch (InterruptedException e)
-                {
-                    LLog.e(e);
-                }
-                try
-                {
-                    synchronized(objPool) {
-                        objPool.add(JitCompressedEvent.this);
-                    }
-                }
-                finally {
-                    poolSyncLock.release();
-                }
-            }
-            
-        };
     }
     
     private void reset()
     {
+        refCount = 1;
         ref = null;
         event = null;
         args = null;
@@ -111,12 +88,51 @@ public class JitCompressedEvent
     
     public void acquire()
     {
-        ref.acquire();
+        refCount++;
     }
     
     public void release()
     {
-        ref.release(onLastRelease);
+        try
+        {
+            releaseSyncLock.acquire();
+        }
+        catch (InterruptedException e)
+        {
+            LLog.e(e);
+        }
+        
+        try
+        {
+            if ((--refCount) <= 0)
+            {
+                if (ref != null)
+                {
+                    ref.release();
+                }
+                reset();
+                try
+                {
+                    poolSyncLock.acquire();
+                }
+                catch (InterruptedException e)
+                {
+                    LLog.e(e);
+                }
+                try
+                {
+                    synchronized(objPool) {
+                        objPool.add(this);
+                    }
+                }
+                finally {
+                    poolSyncLock.release();
+                }
+            }
+        }
+        finally {
+            releaseSyncLock.release();
+        }
     }
 
     public byte[] getCompressed()

@@ -11,7 +11,6 @@
 11. Gracefully handle a screen disappearing
 12. Gracefully handle a screen resize
 13. Along the way implement the client spying on others feature for remote admins
-14. Clipboard synchronization
 
 ?1. Invite people connected to the server to view another connected client's machine (view only)
 ?2. ... (allow yeilding control, but with an easy to hit override keystroke to gain it back immediately)
