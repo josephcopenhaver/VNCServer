@@ -1,5 +1,6 @@
 package com.jcope.vnc.server;
 
+import static com.jcope.debug.Debug.assert_;
 import static com.jcope.vnc.shared.ScreenSelector.getScreenDevicesOrdered;
 
 import java.awt.GraphicsDevice;
@@ -49,7 +50,7 @@ public class ClientHandler extends Thread
     
     private Semaphore handleIOSema = new Semaphore(1, true);
     private Semaphore queueSema = new Semaphore(1, true);
-    private HashMap<Integer, Boolean> nonSerialEventOutboundQueue = new HashMap<Integer, Boolean>();
+    private HashMap<Integer, SERVER_EVENT> nonSerialEventOutboundQueue = new HashMap<Integer, SERVER_EVENT>();
     private HashMap<Integer, Object[]> nonSerialEventQueue = new HashMap<Integer, Object[]>();
     private LinkedList<Integer> nonSerialOrderedEventQueue = new LinkedList<Integer>();
 	
@@ -466,7 +467,7 @@ public class ClientHandler extends Thread
     	                    if (nonSerialEventOutboundQueue.get(tidTmp) == null)
                             {
                                 dispatch = Boolean.TRUE;
-                                nonSerialEventOutboundQueue.put(tidTmp, Boolean.TRUE);
+                                nonSerialEventOutboundQueue.put(tidTmp, event);
                                 nonSerialOrderedEventQueue.addLast(tidTmp);
                             }
                             else
@@ -652,12 +653,16 @@ public class ClientHandler extends Thread
 	    return dirbot;
 	}
 	
-	public void handleEventAck(SERVER_EVENT event, Object[] refStack, int idxSegmentID)
+	public void handleEventAck(SERVER_EVENT ackForEvent, Object[] refStack, int idxSegmentID)
 	{
+	    ArrayList<SERVER_EVENT> evtlist = new ArrayList<SERVER_EVENT>();
 	    ArrayList<Object[]> plist = new ArrayList<Object[]>();
-	    int tTid = getNonSerialTID(event, refStack, idxSegmentID);
+	    int tTid = getNonSerialTID(ackForEvent, refStack, idxSegmentID);
+	    int idx = 0;
+        Exception firstE = null;
 	    int tid;
-	    Object[] sargs;
+	    SERVER_EVENT hiddenAckEvt;
+        Object[] sargs;
 	    JitCompressedEvent jce;
 	    
 	    try
@@ -678,16 +683,17 @@ public class ClientHandler extends Thread
             {
                 LLog.e(e);
             }
-            try
+    	    try
             {
                 synchronized(nonSerialEventQueue) {synchronized(nonSerialEventOutboundQueue) {synchronized(nonSerialOrderedEventQueue) {
                     do
                     {
                         tid = nonSerialOrderedEventQueue.removeFirst();
-                        nonSerialEventOutboundQueue.remove(tid);
+                        hiddenAckEvt = nonSerialEventOutboundQueue.remove(tid);
                         sargs = nonSerialEventQueue.remove(tid);
                         if (sargs != null)
                         {
+                            evtlist.add(hiddenAckEvt);
                             plist.add(sargs);
                         }
                     } while (tid != tTid);
@@ -696,16 +702,15 @@ public class ClientHandler extends Thread
             finally {
                 queueSema.release();
             }
-            
-            Exception firstE = null;
             for (Object[] targs : plist)
             {
+                hiddenAckEvt = evtlist.get(idx++);
                 jce = (JitCompressedEvent) targs[0];
                 try
                 {
                     if (firstE == null)
                     {
-                        nts_sendEvent(event, jce, (Object[]) targs[1]);
+                        nts_sendEvent(hiddenAckEvt, jce, (Object[]) targs[1]);
                     }
                 }
                 catch (Exception e)
@@ -726,10 +731,13 @@ public class ClientHandler extends Thread
                     }
                 }
             }
+            
             if (firstE != null)
             {
                 throw new RuntimeException(firstE);
             }
+            
+            assert_(plist.size() == idx);
 	    }
 	    finally {
 	        handleIOSema.release();
