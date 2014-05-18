@@ -34,7 +34,7 @@ public class SegmentationInfo
     
     public void loadConfig(int screenWidth, int screenHeight, int segmentWidth, int segmentHeight)
     {
-        numHorizontalSegments = ((screenWidth+ (segmentWidth-1))/segmentWidth);
+        numHorizontalSegments = ((screenWidth + (segmentWidth-1))/segmentWidth);
         numVerticalSegments = ((screenHeight + (segmentHeight-1))/segmentHeight);
         numSegments = numHorizontalSegments * numVerticalSegments;
         

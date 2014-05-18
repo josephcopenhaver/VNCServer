@@ -59,16 +59,10 @@ public class Scale
         return rval;
     }
     
-    public static boolean shrinkToFitWithin(float w, float h, float wMax,
-            float hMax, DimensionF outSize)
+    private static void getScaleFactors(boolean supportScalingUp, float w,
+            float h, float wMax, float hMax, DimensionF outScaleFactors)
     {
-        return scaleWithAspect(Boolean.FALSE, w, h, wMax, hMax, outSize);
-    }
-    
-    public static void factorsThatShrinkToFitWithin(float w, float h,
-            float wMax, float hMax, DimensionF outScaleFactors)
-    {
-        if (shrinkToFitWithin(w, h, wMax, hMax, outScaleFactors))
+        if (scaleWithAspect(supportScalingUp, w, h, wMax, hMax, outScaleFactors))
         {
             outScaleFactors.width /= w;
             outScaleFactors.height /= h;
@@ -78,6 +72,18 @@ public class Scale
             outScaleFactors.width = 1.0f;
             outScaleFactors.height = 1.0f;
         }
+    }
+    
+    public static boolean shrinkToFitWithin(float w, float h, float wMax,
+            float hMax, DimensionF outSize)
+    {
+        return scaleWithAspect(Boolean.FALSE, w, h, wMax, hMax, outSize);
+    }
+    
+    public static void factorsThatShrinkToFitWithin(float w, float h,
+            float wMax, float hMax, DimensionF outScaleFactors)
+    {
+        getScaleFactors(Boolean.FALSE, w, h, wMax, hMax, outScaleFactors);
     }
     
     public static boolean stretchToFit(float w, float h, float wMax,
@@ -89,15 +95,6 @@ public class Scale
     public static void factorsThatStretchToFit(float w, float h,
             float wMax, float hMax, DimensionF outScaleFactors)
     {
-        if (stretchToFit(w, h, wMax, hMax, outScaleFactors))
-        {
-            outScaleFactors.width /= w;
-            outScaleFactors.height /= h;
-        }
-        else
-        {
-            outScaleFactors.width = 1.0f;
-            outScaleFactors.height = 1.0f;
-        }
+        getScaleFactors(Boolean.TRUE, w, h, wMax, hMax, outScaleFactors);
     }
 }
