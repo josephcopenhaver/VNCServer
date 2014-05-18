@@ -191,9 +191,10 @@ public class ClientHandler extends Thread
 	{
 		try
 		{
+		    // Destroy actions are now LIFO
+            addOnDestroyAction(getUnbindAliasAction(this));
+            addOnDestroyAction(releaseIOResources);
 			addOnDestroyAction(killIOAction);
-			addOnDestroyAction(releaseIOResources);
-			addOnDestroyAction(getUnbindAliasAction(this));
 			
 			CompressedObjectReader reader = new CompressedObjectReader();
 			Object obj = null;
@@ -255,6 +256,7 @@ public class ClientHandler extends Thread
 	    }
 		
 	    Exception topE = null;
+	    Runnable r;
         
         try
 		{
@@ -267,8 +269,9 @@ public class ClientHandler extends Thread
 		
 		try
 		{
-			for (Runnable r : onDestroyActions)
+			for (int idx = onDestroyActions.size(); idx > 0;)
 			{
+			    r = onDestroyActions.get(--idx);
 				try
 				{
 				    r.run();

@@ -52,6 +52,28 @@ public class JitCompressedEvent
         args = null;
     }
     
+    public static void clearPool()
+    {
+        try
+        {
+            poolSyncLock.acquire();
+        }
+        catch (InterruptedException e)
+        {
+            LLog.e(e);
+        }
+        
+        try
+        {
+            synchronized(objPool) {
+                objPool.clear();
+            }
+        }
+        finally {
+            poolSyncLock.release();
+        }
+    }
+    
     public static JitCompressedEvent getInstance(SERVER_EVENT event, Object[] args)
     {
         JitCompressedEvent rval = null;

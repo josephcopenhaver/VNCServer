@@ -50,7 +50,13 @@ public class VncServer implements Runnable
 	    securityPolicy.readPolicy(file);
 	}
 	
-	public void run()
+    private void runCleanupActions()
+    {
+        JitCompressedEvent.clearPool();
+        GarbageUtil.cleanAllAsynchronously(stageLock, clientList);
+    }
+    
+    public void run()
 	{
 		while (true)
 		{
@@ -145,7 +151,7 @@ public class VncServer implements Runnable
 			clientList.remove(client);
 			if (clientList.size() == 0)
 			{
-			    GarbageUtil.cleanAllAsynchronously(stageLock, clientList);
+			    runCleanupActions();
 			}
 		}
 		
