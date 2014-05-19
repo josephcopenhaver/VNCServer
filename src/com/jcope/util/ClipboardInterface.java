@@ -2,9 +2,7 @@ package com.jcope.util;
 
 import static com.jcope.debug.Debug.assert_;
 
-import java.awt.Graphics2D;
 import java.awt.Image;
-import java.awt.RenderingHints;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
@@ -12,10 +10,14 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.Semaphore;
+
+import javax.imageio.ImageIO;
 
 import com.jcope.debug.LLog;
 
@@ -31,9 +33,9 @@ public class ClipboardInterface
         
         private final Image image;
 
-        public ImageSelection(Image image)
+        public ImageSelection(byte[] src) throws IOException
         {
-            this.image = image;
+            image = ImageIO.read(new ByteArrayInputStream(src));
         }
 
         @Override
@@ -110,7 +112,7 @@ public class ClipboardInterface
     
     private static Clipboard clipboard = null;
     
-    private static void getFlavor(ArrayList<Object> pairList, DataFlavor k)
+    private static void getFlavor(ArrayList<Object> pairList, DataFlavor k) throws IOException
     {
         Object v = null;
         
@@ -133,21 +135,10 @@ public class ClipboardInterface
             
             if (k.equals(DataFlavor.imageFlavor))
             {
-                if (Platform.isMac())
-                {
-                    // Because MAC is EVIL!
-                    BufferedImage image = (BufferedImage) v;
-                    int w = image.getWidth(null);
-                    int h = image.getHeight(null);
-                    BufferedImage nImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
-                    Graphics2D g2d = nImage.createGraphics();
-                    
-                    g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-                    g2d.drawImage(image, 0, 0, w, h, null);
-                    g2d.dispose();
-                    
-                    v = nImage;
-                }
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                ImageIO.write((BufferedImage) v, "png", baos);
+                
+                v = baos.toByteArray();
             }
             
             pairList.add(k);
@@ -160,7 +151,7 @@ public class ClipboardInterface
         clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
     }
     
-    public static Object[] get()
+    public static Object[] get() throws IOException
     {
         loadClipboard();
         try
@@ -181,7 +172,7 @@ public class ClipboardInterface
         }
     }
     
-    public static void set(Object[] contents)
+    public static void set(Object[] contents) throws IOException
     {
         DataFlavor dataFlavor;
         Transferable transferable;
@@ -193,7 +184,7 @@ public class ClipboardInterface
             
             if (dataFlavor.equals(DataFlavor.imageFlavor))
             {
-                transferable = new ImageSelection((Image) contents[1]);
+                transferable = new ImageSelection((byte[]) contents[1]);
             }
             else
             {

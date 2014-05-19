@@ -2,6 +2,9 @@ package com.jcope.vnc.server.input.handle;
 
 import static com.jcope.debug.Debug.assert_;
 
+import java.io.IOException;
+
+import com.jcope.debug.LLog;
 import com.jcope.util.ClipboardInterface;
 import com.jcope.util.ClipboardMonitor;
 import com.jcope.vnc.Server;
@@ -31,6 +34,8 @@ public class SetClipboard extends Handle
             clipboardMonitor = ClipboardMonitor.getInstance();
         }
         
+        boolean forwardChangeNotice = Boolean.TRUE;
+        
         ClipboardInterface.lock();
         try
         {
@@ -38,6 +43,11 @@ public class SetClipboard extends Handle
             try
             {
                 ClipboardInterface.set(args);
+            }
+            catch (IOException e)
+            {
+                LLog.e(e, Boolean.FALSE);
+                forwardChangeNotice = Boolean.FALSE;
             }
             finally {
                 clipboardMonitor.setEnabled(Boolean.TRUE);
@@ -48,7 +58,10 @@ public class SetClipboard extends Handle
         }
         
         // Notify all OTHER clients of the clipboard contents change
-        Manager.getInstance().sendToAllExcept(client, SERVER_EVENT.CLIPBOARD_CHANGED, (Object[]) null);
+        if (forwardChangeNotice)
+        {
+            Manager.getInstance().sendToAllExcept(client, SERVER_EVENT.CLIPBOARD_CHANGED, (Object[]) null);
+        }
     }
     
 }
