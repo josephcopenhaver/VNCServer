@@ -22,6 +22,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
     private static final ClipboardMonitor[] selfRef = new ClipboardMonitor[]{null};
     private static final Semaphore instanceSema = new Semaphore(1, Boolean.TRUE);
     
+    private volatile boolean enabled;
     private volatile boolean disposed;
     private Semaphore notificationSema;
     private volatile boolean changed;
@@ -33,6 +34,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
         listeners = new ArrayList<ClipboardListener>(1);
         
         // instance member initialization
+        enabled = Boolean.TRUE;
         disposed = Boolean.FALSE;
         notificationSema = new Semaphore(0, Boolean.TRUE);
         changed = Boolean.FALSE;
@@ -134,6 +136,11 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
             {
                 changed = Boolean.FALSE;
                 
+                if (!enabled)
+                {
+                    continue;
+                }
+                
                 for(ClipboardListener l : listeners)
                 {
                     if (changed)
@@ -204,5 +211,10 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
     public boolean removeListener(ClipboardListener l)
     {
         return listeners.remove(l);
+    }
+
+    public void setEnabled(boolean enabled)
+    {
+        this.enabled = enabled;
     }
 }

@@ -4,6 +4,7 @@ import static com.jcope.debug.Debug.DEBUG;
 import static com.jcope.debug.Debug.assert_;
 
 import java.awt.Point;
+import java.awt.datatransfer.Clipboard;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
@@ -19,8 +20,11 @@ import javax.swing.JFrame;
 
 import com.jcope.debug.LLog;
 import com.jcope.ui.ImagePanel;
+import com.jcope.util.ClipboardMonitor;
+import com.jcope.util.ClipboardMonitor.ClipboardListener;
 import com.jcope.vnc.shared.InputEvent;
 import com.jcope.vnc.shared.InputEventInfo.INPUT_TYPE;
+import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
 
 public class EventListenerDecorator
 {
@@ -32,6 +36,7 @@ public class EventListenerDecorator
     private static final Semaphore accessSema = new Semaphore(1, true);
     private static Point point = new Point();
     private static boolean traversalKeysEnabled = true;
+    private static ClipboardListener clipboardListener = null;
     
     static
     {
@@ -247,6 +252,23 @@ public class EventListenerDecorator
     
     private static void _decorate(JFrame parent, ImagePanel panel)
     {
+        if (stateMachine.doSyncClipboard())
+        {
+            // clipboard synchronization is enabled
+            
+            clipboardListener = new ClipboardListener() {
+
+                @Override
+                public void onChange(Clipboard clipboard)
+                {
+                    stateMachine.sendEvent(CLIENT_EVENT.CLIPBOARD_CHANGED);
+                }
+                
+            };
+            
+            ClipboardMonitor.getInstance().addListener(clipboardListener);
+        }
+        
         if (nativeDecorator != null) {nativeDecorator.decorate(parent);}
         //
         traversalKeysEnabled = parent.getFocusTraversalKeysEnabled();
@@ -260,6 +282,12 @@ public class EventListenerDecorator
     
     private static void undecorate(JFrame parent, ImagePanel panel)
     {
+        if (null != clipboardListener)
+        {
+            ClipboardMonitor.getInstance().removeListener(clipboardListener);
+            clipboardListener = null;
+        }
+        
         if (nativeDecorator != null) {nativeDecorator.undecorate();}
         //
         parent.removeKeyListener(keyListener);

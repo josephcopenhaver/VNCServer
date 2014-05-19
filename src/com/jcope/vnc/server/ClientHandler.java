@@ -584,6 +584,9 @@ public class ClientHandler extends Thread
                                 case SCREEN_SEGMENT_SIZE_UPDATE:
                                 case SCREEN_SEGMENT_UPDATE:
                                 case READ_INPUT_EVENTS:
+                                case CLIPBOARD_CHANGED:
+                                case GET_CLIPBOARD:
+                                case SET_CLIPBOARD:
                                     break;
 	                        }
 	                    }

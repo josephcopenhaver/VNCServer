@@ -349,20 +349,21 @@ public class Manager extends Thread
 		
 	};
 	
-	private Runnable actionSendEventToAll = new Runnable()
+	private Runnable actionSendEventToAllExcept = new Runnable()
 	{
 
 		@Override
 		public void run()
 		{
-			SERVER_EVENT evt = (SERVER_EVENT) stagedArgs[0];
-			Object[] evtArgs = (Object[]) stagedArgs[1];
+		    ClientHandler notThiz = stagedArgs[0] == null ? null : ((ClientHandler) stagedArgs[0]);
+			SERVER_EVENT evt = (SERVER_EVENT) stagedArgs[1];
+			Object[] evtArgs = (Object[]) stagedArgs[2];
 			JitCompressedEvent jce = JitCompressedEvent.getInstance(evt, evtArgs);
 			try
 			{
     			for (ArrayList<ClientHandler> clientList : clientsPerGraphicsDevice.values())
     			{
-    			    handleServerEvent(clientList, jce, evt);
+    			    handleServerEvent(notThiz, clientList, jce, evt);
     			}
 			}
 			finally {
@@ -395,10 +396,15 @@ public class Manager extends Thread
 		withLock(actionUnbindAllSet, (Object[]) set);
 	}
 	
-	private void sendToAll(SERVER_EVENT evt, Object... args)
+	public void sendToAll(SERVER_EVENT evt, Object... args)
 	{
-		withLock(actionSendEventToAll, evt, args); 
+		withLock(actionSendEventToAllExcept, null, evt, args); 
 	}
+    
+    public void sendToAllExcept(ClientHandler notThiz, SERVER_EVENT evt, Object... args)
+    {
+        withLock(actionSendEventToAllExcept, notThiz, evt, args); 
+    }
 	
 	public Object getSegmentOptimized(DirectRobot dirbot, int segmentID)
 	{

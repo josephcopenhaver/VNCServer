@@ -27,7 +27,8 @@ public class Client
     {
         REMOTE_ADDRESS(""),
         REMOTE_PORT(1987),
-        REMOTE_DISPLAY_NUM(null)
+        REMOTE_DISPLAY_NUM(null),
+        SYNCHRONIZE_CLIPBOARD(null)
         
         ;
         
@@ -50,6 +51,7 @@ public class Client
                     assert_(obj instanceof Integer);
                     break;
                 case REMOTE_DISPLAY_NUM:
+                case SYNCHRONIZE_CLIPBOARD:
                     assert_(obj == null || obj instanceof Integer);
                     break;
             }
@@ -68,6 +70,7 @@ public class Client
                     break;
                 case REMOTE_PORT:
                 case REMOTE_DISPLAY_NUM:
+                case SYNCHRONIZE_CLIPBOARD:
                     if (value instanceof String)
                     {
                         value = Integer.parseInt((String) value);

@@ -2,6 +2,7 @@ package com.jcope.vnc.server;
 
 import static com.jcope.debug.Debug.DEBUG;
 
+import java.awt.datatransfer.Clipboard;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -15,7 +16,11 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.xml.sax.SAXException;
 
 import com.jcope.debug.LLog;
+import com.jcope.util.ClipboardMonitor;
+import com.jcope.util.ClipboardMonitor.ClipboardListener;
 import com.jcope.vnc.Server.SERVER_PROPERTIES;
+import com.jcope.vnc.server.screen.Manager;
+import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
 public class VncServer implements Runnable
 {
@@ -58,6 +63,16 @@ public class VncServer implements Runnable
     
     public void run()
 	{
+        ClipboardMonitor.getInstance().addListener(new ClipboardListener(){
+
+            @Override
+            public void onChange(Clipboard clipboard)
+            {
+                Manager.getInstance().sendToAll(SERVER_EVENT.CLIPBOARD_CHANGED, (Object[]) null);
+            }
+            
+        });
+        
 		while (true)
 		{
 			try

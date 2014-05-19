@@ -25,32 +25,12 @@ public class StateMachine
 		SEND_CHAT_MSG,
 		ENABLE_ALIAS_MONITOR,
 		ENABLE_CONNECTION_MONITOR,
-		ACKNOWLEDGE_NON_SERIAL_EVENT
+		ACKNOWLEDGE_NON_SERIAL_EVENT,
+		GET_CLIPBOARD,
+		CLIPBOARD_CHANGED,
+		SET_CLIPBOARD
 		
 		;
-		
-		public boolean isSerial()
-        {
-            Boolean rval = null;
-            
-            switch (this)
-            {
-                case ACKNOWLEDGE_NON_SERIAL_EVENT:
-                    rval = Boolean.TRUE;
-                    break;
-                case ENABLE_ALIAS_MONITOR:
-                case ENABLE_CONNECTION_MONITOR:
-                case GET_SCREEN_SEGMENT:
-                case OFFER_INPUT:
-                case REQUEST_ALIAS:
-                case SELECT_SCREEN:
-                case SEND_CHAT_MSG:
-                    rval = Boolean.FALSE;
-                    break;
-            }
-            
-            return rval;
-        }
 	};
 	
 	public static enum SERVER_EVENT
@@ -84,7 +64,11 @@ public class StateMachine
 		// for monitoring connections to the server
 		CONNECTION_ESTABLISHED, // server socket was bound
 		FAILED_AUTHORIZATION, // a user failed to log in
-		CONNECTION_CLOSED
+		CONNECTION_CLOSED,
+		
+		GET_CLIPBOARD, // loads clipboard from client
+		CLIPBOARD_CHANGED, // notifies client that server clipboard contents have changed
+		SET_CLIPBOARD // sends clipboard contents to clients that have synchronization enabled
 		
 		;
 	    
@@ -109,6 +93,9 @@ public class StateMachine
                 case SCREEN_SEGMENT_SIZE_UPDATE:
                 case CLIENT_ALIAS_UPDATE:
                 case READ_INPUT_EVENTS:
+                case CLIPBOARD_CHANGED:
+                case GET_CLIPBOARD:
+                case SET_CLIPBOARD:
                     rval = Boolean.FALSE;
                     break;
                 
@@ -156,6 +143,7 @@ public class StateMachine
                 case SCREEN_SEGMENT_SIZE_UPDATE:
                 case CLIENT_ALIAS_UPDATE:
                 case READ_INPUT_EVENTS:
+                case SET_CLIPBOARD:
                     rval = Boolean.TRUE;
                     break;
                 
@@ -165,6 +153,8 @@ public class StateMachine
                 case CURSOR_GONE:
                 case SCREEN_GONE:
                 case SCREEN_SEGMENT_CHANGED:
+                case CLIPBOARD_CHANGED:
+                case GET_CLIPBOARD:
                     rval = Boolean.FALSE;
                     break;
             }

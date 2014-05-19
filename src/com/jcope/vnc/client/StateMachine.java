@@ -18,6 +18,7 @@ import com.jcope.debug.LLog;
 import com.jcope.ui.JCOptionPane;
 import com.jcope.ui.PasswordInputDialog;
 import com.jcope.util.TaskDispatcher;
+import com.jcope.vnc.Client.CLIENT_PROPERTIES;
 import com.jcope.vnc.client.input.Handler;
 import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
 import com.jcope.vnc.shared.HashFactory;
@@ -528,5 +529,13 @@ public class StateMachine implements Runnable
     public ACCESS_MODE getAccessMode()
     {
         return accessMode;
+    }
+
+    public boolean doSyncClipboard()
+    {
+        Object prop;
+        boolean rval = (null != (prop = CLIENT_PROPERTIES.SYNCHRONIZE_CLIPBOARD.getValue()) && ((Integer)prop) != 0 && getAccessMode() == ACCESS_MODE.FULL_CONTROL);
+        
+        return rval;
     }
 }

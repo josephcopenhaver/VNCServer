@@ -39,11 +39,14 @@ public class StateMachine
 		Handler.getInstance().handle(client, event, args);
 	}
 	
-    public static void handleServerEvent(ArrayList<ClientHandler> clients, JitCompressedEvent jce, SERVER_EVENT event)
+    public static void handleServerEvent(ClientHandler notThiz, ArrayList<ClientHandler> clients, JitCompressedEvent jce, SERVER_EVENT event)
     {
         for (ClientHandler client : clients)
         {
-            client.sendEvent(jce);
+            if (notThiz != client)
+            {
+                client.sendEvent(jce);
+            }
         }
     }
     
