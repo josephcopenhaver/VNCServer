@@ -63,6 +63,7 @@ public class Server
                 case SERVER_LISTEN_BACKLOG:
                 case SERVER_PORT:
                     assert_(obj instanceof Integer);
+                    break;
                 case SUPPORT_CLIPBOARD_SYNCHRONIZATION:
                     assert_(obj instanceof Boolean);
                     break;
@@ -87,6 +88,7 @@ public class Server
                     {
                         value = Integer.parseInt((String) value);
                     }
+                    break;
                 case SUPPORT_CLIPBOARD_SYNCHRONIZATION:
                     if (value instanceof String)
                     {
