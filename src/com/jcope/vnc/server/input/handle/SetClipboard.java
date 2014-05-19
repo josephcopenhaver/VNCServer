@@ -4,6 +4,7 @@ import static com.jcope.debug.Debug.assert_;
 
 import com.jcope.util.ClipboardInterface;
 import com.jcope.util.ClipboardMonitor;
+import com.jcope.vnc.Server;
 import com.jcope.vnc.server.ClientHandler;
 import com.jcope.vnc.server.input.Handle;
 import com.jcope.vnc.server.screen.Manager;
@@ -17,21 +18,33 @@ public class SetClipboard extends Handle
     public void handle(ClientHandler client, Object[] args)
     {
         assert_(null != args);
-        assert_(1 == args.length);
-        assert_(args[0] instanceof Object[]);
+        assert_(args.length > 0);
+        assert_(args.length % 2 == 0);
+        
+        if (!((Boolean)Server.SERVER_PROPERTIES.SUPPORT_CLIPBOARD_SYNCHRONIZATION.getValue()))
+        {
+            return;
+        }
         
         if (null == clipboardMonitor)
         {
             clipboardMonitor = ClipboardMonitor.getInstance();
         }
         
-        clipboardMonitor.setEnabled(Boolean.FALSE);
+        ClipboardInterface.lock();
         try
         {
-            ClipboardInterface.set((Object[]) args[0]);
+            clipboardMonitor.setEnabled(Boolean.FALSE);
+            try
+            {
+                ClipboardInterface.set(args);
+            }
+            finally {
+                clipboardMonitor.setEnabled(Boolean.TRUE);
+            }
         }
         finally {
-            clipboardMonitor.setEnabled(Boolean.TRUE);
+            ClipboardInterface.unlock();
         }
         
         // Notify all OTHER clients of the clipboard contents change

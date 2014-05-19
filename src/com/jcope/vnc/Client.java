@@ -28,7 +28,7 @@ public class Client
         REMOTE_ADDRESS(""),
         REMOTE_PORT(1987),
         REMOTE_DISPLAY_NUM(null),
-        SYNCHRONIZE_CLIPBOARD(null)
+        SYNCHRONIZE_CLIPBOARD(Boolean.FALSE)
         
         ;
         
@@ -51,8 +51,10 @@ public class Client
                     assert_(obj instanceof Integer);
                     break;
                 case REMOTE_DISPLAY_NUM:
-                case SYNCHRONIZE_CLIPBOARD:
                     assert_(obj == null || obj instanceof Integer);
+                    break;
+                case SYNCHRONIZE_CLIPBOARD:
+                    assert_(obj instanceof Boolean);
                     break;
             }
         }
@@ -70,10 +72,19 @@ public class Client
                     break;
                 case REMOTE_PORT:
                 case REMOTE_DISPLAY_NUM:
+                    if (value instanceof String)
+                    {
+                        value = Integer.parseInt((String) value);
+                    }
+                    break;
                 case SYNCHRONIZE_CLIPBOARD:
                     if (value instanceof String)
                     {
                         value = Integer.parseInt((String) value);
+                    }
+                    if (value instanceof Integer)
+                    {
+                        value = Boolean.valueOf(0 != ((Integer)value));
                     }
                     break;
             }

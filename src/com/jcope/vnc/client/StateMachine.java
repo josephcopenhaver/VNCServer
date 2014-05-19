@@ -531,10 +531,9 @@ public class StateMachine implements Runnable
         return accessMode;
     }
 
-    public boolean doSyncClipboard()
+    public boolean isClipboardSyncEnabled()
     {
-        Object prop;
-        boolean rval = (null != (prop = CLIENT_PROPERTIES.SYNCHRONIZE_CLIPBOARD.getValue()) && ((Integer)prop) != 0 && getAccessMode() == ACCESS_MODE.FULL_CONTROL);
+        boolean rval = (((Boolean)CLIENT_PROPERTIES.SYNCHRONIZE_CLIPBOARD.getValue()) && getAccessMode() == ACCESS_MODE.FULL_CONTROL);
         
         return rval;
     }

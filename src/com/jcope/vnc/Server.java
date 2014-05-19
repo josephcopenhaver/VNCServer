@@ -39,7 +39,8 @@ public class Server
         SERVER_BIND_ADDRESS("localhost"),
         SERVER_PORT(1987),
         SERVER_LISTEN_BACKLOG(0),
-        SERVER_SECURITY_POLICY("VncSecurityPolicy.xml")
+        SERVER_SECURITY_POLICY("VncSecurityPolicy.xml"),
+        SUPPORT_CLIPBOARD_SYNCHRONIZATION(Boolean.FALSE)
         
         ;
         
@@ -62,6 +63,8 @@ public class Server
                 case SERVER_LISTEN_BACKLOG:
                 case SERVER_PORT:
                     assert_(obj instanceof Integer);
+                case SUPPORT_CLIPBOARD_SYNCHRONIZATION:
+                    assert_(obj instanceof Boolean);
                     break;
             }
         }
@@ -83,6 +86,15 @@ public class Server
                     if (value instanceof String)
                     {
                         value = Integer.parseInt((String) value);
+                    }
+                case SUPPORT_CLIPBOARD_SYNCHRONIZATION:
+                    if (value instanceof String)
+                    {
+                        value = Integer.parseInt((String) value);
+                    }
+                    if (value instanceof Integer)
+                    {
+                        value = Boolean.valueOf(0 != ((Integer)value));
                     }
                     break;
             }

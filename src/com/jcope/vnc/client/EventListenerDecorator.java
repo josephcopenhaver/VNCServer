@@ -252,7 +252,7 @@ public class EventListenerDecorator
     
     private static void _decorate(JFrame parent, ImagePanel panel)
     {
-        if (stateMachine.doSyncClipboard())
+        if (stateMachine.isClipboardSyncEnabled())
         {
             // clipboard synchronization is enabled
             

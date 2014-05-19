@@ -15,7 +15,7 @@ public class GetClipboard extends Handle
     {
         assert_(null == args);
         
-        if (!stateMachine.doSyncClipboard())
+        if (!stateMachine.isClipboardSyncEnabled())
         {
             return;
         }

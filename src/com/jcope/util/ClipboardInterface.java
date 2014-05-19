@@ -11,11 +11,14 @@ import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.concurrent.Semaphore;
 
 import com.jcope.debug.LLog;
 
 public class ClipboardInterface
 {
+    private static final Semaphore lockSema = new Semaphore(1, Boolean.TRUE);
+    
     public static class ImageSelection implements Transferable
     {
         private static final DataFlavor[] transferDataFlavors = new DataFlavor[]{
@@ -134,5 +137,22 @@ public class ClipboardInterface
         finally {
             clipboard = null;
         }
+    }
+
+    public static void lock()
+    {
+        try
+        {
+            lockSema.acquire();
+        }
+        catch (InterruptedException e)
+        {
+            LLog.e(e);
+        }
+    }
+
+    public static void unlock()
+    {
+        lockSema.release();
     }
 }

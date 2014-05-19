@@ -13,15 +13,15 @@ public class SetClipboard extends Handle
     public void handle(StateMachine stateMachine, Object[] args)
     {
         assert_(null != args);
-        assert_(1 == args.length);
-        assert_(args[0] instanceof Object[]);
+        assert_(args.length > 0);
+        assert_(args.length % 2 == 0);
         
-        if (!stateMachine.doSyncClipboard())
+        if (!stateMachine.isClipboardSyncEnabled())
         {
             return;
         }
         
-        ClipboardInterface.set((Object[]) args[0]);
+        ClipboardInterface.set(args);
     }
     
 }
