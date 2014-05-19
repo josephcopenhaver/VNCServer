@@ -11,6 +11,7 @@ import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.concurrent.Semaphore;
 
 import com.jcope.debug.LLog;
@@ -60,6 +61,49 @@ public class ClipboardInterface
         DataFlavor.stringFlavor,
         DataFlavor.imageFlavor
     };
+    
+    public static Iterator<DataFlavor> getSupportedFlavorsIterator()
+    {
+        return new Iterator<DataFlavor>() {
+            
+            int idx = 0;
+
+            @Override
+            public boolean hasNext()
+            {
+                return (idx < supportedFlavors.length);
+            }
+
+            @Override
+            public DataFlavor next()
+            {
+                return supportedFlavors[idx++];
+            }
+
+            @Override
+            public void remove()
+            {
+                throw new UnsupportedOperationException();
+            }
+            
+        };
+    }
+    
+    public static boolean isFlavorSupported(DataFlavor flavor)
+    {
+        boolean rval = Boolean.FALSE;
+        
+        for (DataFlavor sFlavor : supportedFlavors)
+        {
+            if (sFlavor.equals(flavor))
+            {
+                rval = Boolean.TRUE;
+                break;
+            }
+        }
+        
+        return rval;
+    }
     
     private static Clipboard clipboard = null;
     
