@@ -33,21 +33,6 @@ public class ClipboardInterface
 
         public ImageSelection(Image image)
         {
-            if (Platform.isMac())
-            {
-                // Because MAC is EVIL!
-                int w = image.getWidth(null);
-                int h = image.getHeight(null);
-                BufferedImage nImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
-                Graphics2D g2d = nImage.createGraphics();
-                
-                g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-                g2d.drawImage(image, 0, 0, w, h, null);
-                g2d.dispose();
-                
-                image = nImage;
-            }
-            
             this.image = image;
         }
 
@@ -144,6 +129,27 @@ public class ClipboardInterface
         
         if (null != v)
         {
+            // Make objects transferable
+            
+            if (k.equals(DataFlavor.imageFlavor))
+            {
+                if (Platform.isMac())
+                {
+                    // Because MAC is EVIL!
+                    BufferedImage image = (BufferedImage) v;
+                    int w = image.getWidth(null);
+                    int h = image.getHeight(null);
+                    BufferedImage nImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+                    Graphics2D g2d = nImage.createGraphics();
+                    
+                    g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                    g2d.drawImage(image, 0, 0, w, h, null);
+                    g2d.dispose();
+                    
+                    v = nImage;
+                }
+            }
+            
             pairList.add(k);
             pairList.add(v);
         }
