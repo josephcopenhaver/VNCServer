@@ -40,6 +40,9 @@ public class AcknowledgeNonSerialEvent extends Handle
             case SCREEN_GONE:
             case SCREEN_RESIZED:
             case SCREEN_SEGMENT_SIZE_UPDATE:
+            case CLIPBOARD_CHANGED:
+            case GET_CLIPBOARD:
+            case SET_CLIPBOARD:
                 assert_(args.length == 1);
                 break;
             case SCREEN_SEGMENT_CHANGED:
@@ -50,9 +53,6 @@ public class AcknowledgeNonSerialEvent extends Handle
             case SCREEN_SEGMENT_UPDATE:
                 assert_(Boolean.FALSE);
                 // there is already a throttle for this
-                break;
-            default:
-                assert_(Boolean.FALSE);
                 break;
         }
         
