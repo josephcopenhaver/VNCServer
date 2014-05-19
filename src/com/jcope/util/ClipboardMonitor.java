@@ -20,12 +20,11 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
     private static Clipboard clipboard;  
     private static ArrayList<ClipboardListener> listeners;
     private static final ClipboardMonitor[] selfRef = new ClipboardMonitor[]{null};
-    private static final Semaphore InstanceSema = new Semaphore(1, Boolean.TRUE);
+    private static final Semaphore instanceSema = new Semaphore(1, Boolean.TRUE);
     
     private volatile boolean disposed;
     private Semaphore notificationSema;
     private volatile boolean changed;
-    private Semaphore syncSema;
     
     private ClipboardMonitor()
     {
@@ -37,7 +36,6 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
         disposed = Boolean.FALSE;
         notificationSema = new Semaphore(0, Boolean.TRUE);
         changed = Boolean.FALSE;
-        syncSema = new Semaphore(1, Boolean.TRUE);
         
         // instance config
         setName("Clipboard Monitor");
@@ -50,23 +48,9 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
     {
         boolean rval;
         
-        try
+        synchronized(selfRef)
         {
-            InstanceSema.acquire();
-        }
-        catch (InterruptedException e)
-        {
-            LLog.e(e);
-        }
-        try
-        {
-            synchronized(selfRef)
-            {
-                rval = (null != selfRef[0]);
-            }
-        }
-        finally {
-            InstanceSema.release();
+            rval = (null != selfRef[0]);
         }
         
         return rval;
@@ -80,7 +64,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
         {
             try
             {
-                InstanceSema.acquire();
+                instanceSema.acquire();
             }
             catch (InterruptedException e)
             {
@@ -99,7 +83,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                 }
             }
             finally {
-                InstanceSema.release();
+                instanceSema.release();
             }
         }
         
@@ -107,31 +91,16 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
     }
     
     @Override
-    public void lostOwnership(Clipboard arg0, Transferable arg1)
+    public void lostOwnership(Clipboard clipboard, Transferable transferable)
     {
         notificationSema.drainPermits();
-        try
-        {
-            syncSema.acquire();
-        }
-        catch (InterruptedException e)
-        {
-            LLog.e(e);
-        }
-        try
-        {
-            changed = Boolean.TRUE;
-        }
-        finally {
-            syncSema.release();
-        }
+        changed = Boolean.TRUE;
         notificationSema.release();
     }
     
     @Override
     public void run()
     {
-        boolean changed = Boolean.FALSE;
         ArrayList<ClipboardListener> deadList = new ArrayList<ClipboardListener>();
         
         while (!disposed)
@@ -139,11 +108,11 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
             // Gain clipboard ownership so that change notifications can take place again
             // Also secure the contents for internal processing through listeners
             
-            while (!disposed)
+            do
             {
                 try
                 {
-                    clipboard.setContents(clipboard.getContents(this), this);
+                    clipboard.setContents(clipboard.getContents(null), this);
                     break;
                 }
                 catch (Exception e)
@@ -159,27 +128,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                 {
                     LLog.e(e);
                 }
-            }
-            
-            if (this.changed)
-            {
-                try
-                {
-                    syncSema.acquire();
-                }
-                catch (InterruptedException e)
-                {
-                    LLog.e(e);
-                }
-                try
-                {
-                    changed = this.changed;
-                    this.changed = Boolean.FALSE;
-                }
-                finally {
-                    syncSema.release();
-                }
-            }
+            } while (!disposed);
             
             if (changed)
             {
@@ -187,6 +136,11 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                 
                 for(ClipboardListener l : listeners)
                 {
+                    if (changed)
+                    {
+                        break;
+                    }
+                    
                     try
                     {
                         l.onChange(clipboard);
@@ -221,15 +175,15 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
     
     public void dispose()
     {
-        boolean wasToggled;
+        boolean wasNotRunning;
         
         synchronized(this)
         {
-            wasToggled = (Boolean.FALSE == disposed);
+            wasNotRunning = disposed;
             disposed = Boolean.TRUE;
         }
         
-        if (wasToggled)
+        if (!wasNotRunning)
         {
             try
             {
