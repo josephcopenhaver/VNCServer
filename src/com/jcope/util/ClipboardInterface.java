@@ -2,13 +2,16 @@ package com.jcope.util;
 
 import static com.jcope.debug.Debug.assert_;
 
+import java.awt.Graphics2D;
 import java.awt.Image;
+import java.awt.RenderingHints;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -30,6 +33,21 @@ public class ClipboardInterface
 
         public ImageSelection(Image image)
         {
+            if (Platform.isMac())
+            {
+                // Because MAC is EVIL!
+                int w = image.getWidth(null);
+                int h = image.getHeight(null);
+                BufferedImage nImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+                Graphics2D g2d = nImage.createGraphics();
+                
+                g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                g2d.drawImage(image, 0, 0, w, h, null);
+                g2d.dispose();
+                
+                image = nImage;
+            }
+            
             this.image = image;
         }
 
