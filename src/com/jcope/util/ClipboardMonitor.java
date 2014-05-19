@@ -319,25 +319,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
     
     public void dispose()
     {
-        boolean wasNotRunning;
-        
-        synchronized(this)
-        {
-            wasNotRunning = disposed;
-            disposed = Boolean.TRUE;
-        }
-        
-        if (!wasNotRunning)
-        {
-            try
-            {
-                join();
-            }
-            catch (InterruptedException e)
-            {
-                LLog.e(e);
-            }
-        }
+        disposed = Boolean.TRUE;
     }
     
     public void addListener(ClipboardListener l)
