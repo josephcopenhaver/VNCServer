@@ -18,6 +18,7 @@ import org.xml.sax.SAXException;
 import com.jcope.debug.LLog;
 import com.jcope.util.ClipboardMonitor;
 import com.jcope.util.ClipboardMonitor.ClipboardListener;
+import com.jcope.vnc.Server;
 import com.jcope.vnc.Server.SERVER_PROPERTIES;
 import com.jcope.vnc.server.screen.Manager;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
@@ -63,15 +64,20 @@ public class VncServer implements Runnable
     
     public void run()
 	{
-        ClipboardMonitor.getInstance().addListener(new ClipboardListener(){
-
-            @Override
-            public void onChange(Clipboard clipboard)
-            {
-                Manager.getInstance().sendToAll(SERVER_EVENT.CLIPBOARD_CHANGED, (Object[]) null);
-            }
+        if (((Boolean)Server.SERVER_PROPERTIES.SUPPORT_CLIPBOARD_SYNCHRONIZATION.getValue()))
+        {
+            // TODO: listener does not appear to be firing on MAC
             
-        });
+            ClipboardMonitor.getInstance().addListener(new ClipboardListener(){
+    
+                @Override
+                public void onChange(Clipboard clipboard)
+                {
+                    Manager.getInstance().sendToAll(SERVER_EVENT.CLIPBOARD_CHANGED, (Object[]) null);
+                }
+                
+            });
+        }
         
 		while (true)
 		{
