@@ -10,6 +10,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.concurrent.Semaphore;
@@ -121,7 +122,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                     
                     if (!rval && null != obj && null != cObj)
                     {
-                        rval = obj.equals(cObj);
+                        rval = (obj instanceof byte[] && cObj instanceof byte[]) ? Arrays.equals(((byte[])obj), ((byte[])cObj)) : obj.equals(cObj);
                     }
                     
                     return rval;
