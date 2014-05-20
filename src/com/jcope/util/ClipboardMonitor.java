@@ -6,11 +6,15 @@ import java.awt.datatransfer.ClipboardOwner;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.concurrent.Semaphore;
+
+import javax.imageio.ImageIO;
 
 import com.jcope.debug.LLog;
 
@@ -91,10 +95,27 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                 private final Semaphore cacheSema = new Semaphore(1, Boolean.TRUE);
                 private HashMap<DataFlavor, Object> cache = new HashMap<DataFlavor, Object>();
                 
+                private Object getComparableData(DataFlavor flavor) throws UnsupportedFlavorException, IOException
+                {
+                    Object rval = clipboard.getData(flavor);
+                    
+                    if (null != rval)
+                    {
+                        if (flavor.equals(DataFlavor.imageFlavor))
+                        {
+                            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                            ImageIO.write((BufferedImage) rval, "png", baos);
+                            rval = baos.toByteArray();
+                        }
+                    }
+                    
+                    return rval;
+                }
+                
                 private boolean isDataMatch(DataFlavor flavor) throws UnsupportedFlavorException, IOException
                 {
                     Object cObj = cache.get(flavor);
-                    Object obj = clipboard.getData(flavor);
+                    Object obj = getComparableData(flavor);
                     
                     boolean rval = (null == obj && null == cObj);
                     
@@ -117,7 +138,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                         flavor = flavors.next();
                         if (clipboard.isDataFlavorAvailable(flavor))
                         {
-                            cache.put(flavor, clipboard.getData(flavor));
+                            cache.put(flavor, getComparableData(flavor));
                         }
                     }
                     
