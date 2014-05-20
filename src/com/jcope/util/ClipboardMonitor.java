@@ -29,8 +29,8 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
     private static final ClipboardMonitor[] selfRef = new ClipboardMonitor[]{null};
     private static final Semaphore instanceSema = new Semaphore(1, Boolean.TRUE);
     
-    private volatile boolean enabled;
     private volatile boolean disposed;
+    private Semaphore idleSema;
     private Semaphore notificationSema;
     private volatile boolean changed;
     private Thread macClipboardChangeObserver;
@@ -44,8 +44,8 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
         listeners = new ArrayList<ClipboardListener>(1);
         
         // instance member initialization
-        enabled = Boolean.TRUE;
         disposed = Boolean.FALSE;
+        idleSema = new Semaphore(1, Boolean.TRUE);
         notificationSema = new Semaphore(0, Boolean.TRUE);
         changed = Boolean.FALSE;
         
@@ -299,6 +299,14 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
     @Override
     public void run()
     {
+        try
+        {
+            idleSema.acquire();
+        }
+        catch (InterruptedException e)
+        {
+            LLog.e(e);
+        }
         while (!disposed)
         {
             // Gain clipboard ownership so that change notifications can take place again
@@ -330,11 +338,6 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
             {
                 changed = Boolean.FALSE;
                 
-                if (!enabled)
-                {
-                    continue;
-                }
-                
                 for(ClipboardListener l : listeners)
                 {
                     if (changed)
@@ -355,6 +358,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
             
             try
             {
+                idleSema.release();
                 notificationSema.acquire();
             }
             catch (InterruptedException e)
@@ -381,7 +385,22 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
 
     public void setEnabled(boolean enabled)
     {
-        this.enabled = enabled;
+        if (!enabled)
+        {
+            try
+            {
+                idleSema.acquire();
+            }
+            catch (InterruptedException e)
+            {
+                LLog.e(e);
+            }
+        }
+        else
+        {
+            changed = Boolean.FALSE;
+            idleSema.release();
+        }
     }
     
     /**
