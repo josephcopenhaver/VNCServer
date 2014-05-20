@@ -2,6 +2,7 @@ package com.jcope.util;
 
 import static com.jcope.debug.Debug.assert_;
 
+import java.awt.HeadlessException;
 import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
@@ -217,9 +218,25 @@ public class ClipboardInterface
         }
     }
     
+    public static Clipboard getClipboard()
+    {
+    	Clipboard rval = null;
+    	
+    	try
+    	{
+    		rval = Toolkit.getDefaultToolkit().getSystemClipboard();
+    	}
+    	catch (HeadlessException e)
+    	{
+    		LLog.e(new Exception("There is no clipboard here, STOP USING ME!", e), Boolean.TRUE, Boolean.TRUE);
+    	}
+    	
+		return rval;
+    }
+    
     private static void loadClipboard()
     {
-        clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+    	clipboard = getClipboard();
     }
     
     public static Object[] get() throws IOException, ClipboardBusyException

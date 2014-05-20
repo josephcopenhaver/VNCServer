@@ -1,6 +1,5 @@
 package com.jcope.util;
 
-import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.ClipboardOwner;
 import java.awt.datatransfer.DataFlavor;
@@ -22,6 +21,9 @@ import com.jcope.util.ClipboardInterface.ClipboardBusyException;
 
 public class ClipboardMonitor extends Thread implements ClipboardOwner
 {
+	// On mac the clipboard returned is TRUELY just a state-wise instance
+	// is is not a pointer to a single instance static global supported/updated object!
+	
     private static final boolean PLATFORM_IS_MAC =  Platform.isMac();
     
     public static interface ClipboardListener
@@ -32,7 +34,6 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
     private static volatile boolean hasInstance = Boolean.FALSE;
     private static final long busy_owner_retry_delay_ms = 200L;
     private static final long mac_observer_ms = 400L;
-    private static Clipboard clipboard;  
     private static ArrayList<ClipboardListener> listeners;
     private static final ClipboardMonitor[] selfRef = new ClipboardMonitor[]{null};
     private static final Semaphore instanceSema = new Semaphore(1, Boolean.TRUE);
@@ -48,7 +49,6 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
     {
         // static
         hasInstance = Boolean.TRUE;
-        clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
         listeners = new ArrayList<ClipboardListener>(1);
         
         // instance member initialization
@@ -78,7 +78,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                             }
                             try
                             {
-                                cacheSupportedData();
+                                cacheSupportedData(ClipboardInterface.getClipboard());
                             }
                             catch (UnsupportedFlavorException e)
                             {
@@ -103,9 +103,9 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                 private final Semaphore cacheSema = new Semaphore(1, Boolean.TRUE);
                 private volatile HashMap<DataFlavor, Object> cache = new HashMap<DataFlavor, Object>();
                 
-                private Object getComparableData(DataFlavor flavor) throws UnsupportedFlavorException, IOException, ClipboardBusyException
+                private Object getComparableData(Clipboard currentClipboard, DataFlavor flavor) throws UnsupportedFlavorException, IOException, ClipboardBusyException
                 {
-                    Object rval = ClipboardInterface.getData(clipboard, flavor);
+                    Object rval = ClipboardInterface.getData(currentClipboard, flavor);
                     
                     if (null != rval)
                     {
@@ -120,10 +120,10 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                     return rval;
                 }
                 
-                private boolean isDataMatch(HashMap<DataFlavor, Object> cache, DataFlavor flavor) throws UnsupportedFlavorException, IOException, ClipboardBusyException
+                private boolean isDataMatch(Clipboard clipboard, HashMap<DataFlavor, Object> cache, DataFlavor flavor) throws UnsupportedFlavorException, IOException, ClipboardBusyException
                 {
                     Object cObj = cache.get(flavor);
-                    Object obj = getComparableData(flavor);
+                    Object obj = getComparableData(clipboard, flavor);
                     
                     boolean rval = (null == obj && null == cObj);
                     
@@ -135,7 +135,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                     return rval;
                 }
                 
-                private void cacheSupportedData() throws UnsupportedFlavorException, IOException, ClipboardBusyException
+                private void cacheSupportedData(Clipboard currentClipboard) throws UnsupportedFlavorException, IOException, ClipboardBusyException
                 {
                     HashMap<DataFlavor, Object> cache = new HashMap<DataFlavor, Object>();
                     Iterator<DataFlavor> flavors = ClipboardInterface.getSupportedFlavorsIterator();
@@ -144,9 +144,9 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                     while (flavors.hasNext())
                     {
                         flavor = flavors.next();
-                        if (ClipboardInterface.isDataFlavorAvailable(clipboard, flavor))
+                        if (ClipboardInterface.isDataFlavorAvailable(currentClipboard, flavor))
                         {
-                            cache.put(flavor, getComparableData(flavor));
+                            cache.put(flavor, getComparableData(currentClipboard, flavor));
                         }
                     }
                     
@@ -156,7 +156,9 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                 @Override
                 public void run()
                 {
-                    DataFlavor[] prevFlavors = null;
+                	DataFlavor[] prevFlavors = null;
+                	Clipboard prevClipboard = null;
+                    Clipboard currentClipboard;
                     HashMap<DataFlavor, Object> cache;
                     DataFlavor[] flavors;
                     DataFlavor flavor;
@@ -165,7 +167,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                     
                     while (!disposed)
                     {
-                        fire = Boolean.TRUE;
+                    	fire = Boolean.TRUE;
                         errored = Boolean.TRUE;
                         try
                         {
@@ -180,57 +182,66 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                             try
                             {
                                 cache = this.cache;
+                                currentClipboard = ClipboardInterface.getClipboard();
                                 
-                                synchronized(cache) {
-                                    flavors = ClipboardInterface.getAvailableDataFlavors(clipboard);
-                                    
-                                    something_changed:
-                                    do
-                                    {
-                                        if (null == prevFlavors && null != flavors)
-                                        {
-                                            break;
-                                        }
-                                        else if (null != prevFlavors && null != flavors)
-                                        {
-                                            if (prevFlavors.length != flavors.length)
-                                            {
-                                                break;
-                                            }
-                                            
-                                            // Detect shift in availableDataFlavorSet
-                                            
-                                            for (int i=0; i<flavors.length; i++)
-                                            {
-                                                flavor = flavors[i];
-                                                if (!prevFlavors[i].equals(flavor))
-                                                {
-                                                    break something_changed;
-                                                }
-                                            }
-                                            
-                                            // Detect shift in value data associated
-                                            // with this DataFlavor set
-                                            
-                                            for (int i=0; i<flavors.length; i++)
-                                            {
-                                                flavor = flavors[i];
-                                                if (ClipboardInterface.isFlavorSupported(flavor) && !isDataMatch(cache, flavor))
-                                                {
-                                                    break something_changed;
-                                                }
-                                            }
-                                        }
-                                        
-                                        // No Change detected
-                                        fire = Boolean.FALSE;
-                                        
-                                    } while (Boolean.FALSE);
+                                if (currentClipboard == prevClipboard && null != prevClipboard)
+                                {
+                                	fire = Boolean.FALSE;
+                                	flavors = null; // Dummy statement to make compiler happy
+                                }
+                                else
+                                {
+	                                synchronized(cache) {
+	                                    flavors = ClipboardInterface.getAvailableDataFlavors(currentClipboard);
+	                                    
+	                                    something_changed:
+	                                    do
+	                                    {
+	                                        if (null == prevFlavors && null != flavors)
+	                                        {
+	                                            break;
+	                                        }
+	                                        else if (null != prevFlavors && null != flavors)
+	                                        {
+	                                            if (prevFlavors.length != flavors.length)
+	                                            {
+	                                                break;
+	                                            }
+	                                            
+	                                            // Detect shift in availableDataFlavorSet
+	                                            
+	                                            for (int i=0; i<flavors.length; i++)
+	                                            {
+	                                                flavor = flavors[i];
+	                                                if (!prevFlavors[i].equals(flavor))
+	                                                {
+	                                                    break something_changed;
+	                                                }
+	                                            }
+	                                            
+	                                            // Detect shift in value data associated
+	                                            // with this DataFlavor set
+	                                            
+	                                            for (int i=0; i<flavors.length; i++)
+	                                            {
+	                                                flavor = flavors[i];
+	                                                if (ClipboardInterface.isFlavorSupported(flavor) && !isDataMatch(currentClipboard, cache, flavor))
+	                                                {
+	                                                    break something_changed;
+	                                                }
+	                                            }
+	                                        }
+	                                        
+	                                        // No Change detected
+	                                        fire = Boolean.FALSE;
+	                                        
+	                                    } while (Boolean.FALSE);
+	                                }
                                 }
                                 
                                 if (fire)
                                 {
-                                    cacheSupportedData();
+                                    cacheSupportedData(currentClipboard);
                                     prevFlavors = flavors;
                                 }
                                 
@@ -355,6 +366,8 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
     {
         while (!disposed)
         {
+        	Clipboard clipboard = null;
+        	
             try
             {
                 idleSema.acquire();
@@ -364,35 +377,39 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                 LLog.e(e);
             }
             
-            if (!PLATFORM_IS_MAC)
+            do
             {
-                // MAC ownership notification pattern is broken
-                // therefore no need for this block on MAC
-                
-                do
+                // Gain clipboard ownership so that change notifications can take place again
+                // Also secure the contents for internal processing through listeners
+                try
                 {
-                    // Gain clipboard ownership so that change notifications can take place again
-                    // Also secure the contents for internal processing through listeners
-                    try
-                    {
-                        ClipboardInterface.setContents(clipboard, ClipboardInterface.getContents(clipboard, null), this);
-                        break;
-                    }
-                    catch (ClipboardBusyException e)
-                    {
-                        LLog.e(e, Boolean.FALSE);
-                    }
-                    
-                    try
-                    {
-                        Thread.sleep(busy_owner_retry_delay_ms);
-                    }
-                    catch (InterruptedException e)
-                    {
-                        LLog.e(e);
-                    }
-                } while (!disposed);
-            }
+                	clipboard = ClipboardInterface.getClipboard();
+                	if (!PLATFORM_IS_MAC)
+                	{
+                		// MAC ownership notification pattern is broken
+                        // therefore no need for this block on MAC
+                		ClipboardInterface.setContents(clipboard, ClipboardInterface.getContents(clipboard, null), this);
+                	}
+                    break;
+                }
+                catch (ClipboardBusyException e)
+                {
+                    LLog.e(e, Boolean.FALSE);
+                }
+                catch (Exception e)
+                {
+                	LLog.e(e, Boolean.FALSE);
+                }
+                
+                try
+                {
+                    Thread.sleep(busy_owner_retry_delay_ms);
+                }
+                catch (InterruptedException e)
+                {
+                    LLog.e(e);
+                }
+            } while (!disposed);
             
             if (changed)
             {
