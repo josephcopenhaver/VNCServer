@@ -21,12 +21,14 @@ import com.jcope.debug.LLog;
 
 public class ClipboardMonitor extends Thread implements ClipboardOwner
 {
+    private static final boolean PLATFORM_IS_MAC =  Platform.isMac();
+    
     public static interface ClipboardListener
     {
         public void onChange(Clipboard clipboard);
     }
     
-    public static volatile boolean hasInstance = Boolean.FALSE;
+    private static volatile boolean hasInstance = Boolean.FALSE;
     private static final long delay_ms = 200L;
     private static final long mac_observer_ms = 400L;
     private static Clipboard clipboard;  
@@ -54,7 +56,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
         notificationSema = new Semaphore(0, Boolean.TRUE);
         changed = Boolean.FALSE;
         
-        if (Platform.isMac())
+        if (PLATFORM_IS_MAC)
         {
             final Runnable[] syncObserverCacheCallbackRef = new Runnable[]{null};
             macClipboardChangeObserver = new Thread() {
@@ -94,7 +96,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                 }
                 
                 private final Semaphore cacheSema = new Semaphore(1, Boolean.TRUE);
-                private HashMap<DataFlavor, Object> cache = new HashMap<DataFlavor, Object>();
+                private volatile HashMap<DataFlavor, Object> cache = new HashMap<DataFlavor, Object>();
                 
                 private Object getComparableData(DataFlavor flavor) throws UnsupportedFlavorException, IOException
                 {
@@ -113,7 +115,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                     return rval;
                 }
                 
-                private boolean isDataMatch(DataFlavor flavor) throws UnsupportedFlavorException, IOException
+                private boolean isDataMatch(HashMap<DataFlavor, Object> cache, DataFlavor flavor) throws UnsupportedFlavorException, IOException
                 {
                     Object cObj = cache.get(flavor);
                     Object obj = getComparableData(flavor);
@@ -149,6 +151,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                 @Override
                 public void run()
                 {
+                    HashMap<DataFlavor, Object> cache;
                     DataFlavor[] prevFlavors = null;
                     DataFlavor[] flavors;
                     DataFlavor flavor;
@@ -170,49 +173,53 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                         {
                             try
                             {
-                                flavors = clipboard.getAvailableDataFlavors();
+                                cache = this.cache;
                                 
-                                something_changed:
-                                do
-                                {
-                                    if (null == prevFlavors && null != flavors)
+                                synchronized(cache) {
+                                    flavors = clipboard.getAvailableDataFlavors();
+                                    
+                                    something_changed:
+                                    do
                                     {
-                                        break;
-                                    }
-                                    else if (null != prevFlavors && null != flavors)
-                                    {
-                                        if (prevFlavors.length != flavors.length)
+                                        if (null == prevFlavors && null != flavors)
                                         {
                                             break;
                                         }
-                                        
-                                        for (int i=0; i<flavors.length; i++)
+                                        else if (null != prevFlavors && null != flavors)
                                         {
-                                            flavor = flavors[i];
-                                            if (!prevFlavors[i].equals(flavor))
+                                            if (prevFlavors.length != flavors.length)
                                             {
-                                                flavor = null;
-                                                break something_changed;
+                                                break;
                                             }
+                                            
+                                            for (int i=0; i<flavors.length; i++)
+                                            {
+                                                flavor = flavors[i];
+                                                if (!prevFlavors[i].equals(flavor))
+                                                {
+                                                    flavor = null;
+                                                    break something_changed;
+                                                }
+                                            }
+                                            
+                                            for (int i=0; i<flavors.length; i++)
+                                            {
+                                                flavor = flavors[i];
+                                                if (ClipboardInterface.isFlavorSupported(flavor) && !isDataMatch(cache, flavor))
+                                                {
+                                                    flavor = null;
+                                                    break something_changed;
+                                                }
+                                            }
+                                            
+                                            flavor = null;
                                         }
                                         
-                                        for (int i=0; i<flavors.length; i++)
-                                        {
-                                            flavor = flavors[i];
-                                            if (ClipboardInterface.isFlavorSupported(flavor) && !isDataMatch(flavor))
-                                            {
-                                                flavor = null;
-                                                break something_changed;
-                                            }
-                                        }
+                                        // No Change
+                                        fire = Boolean.FALSE;
                                         
-                                        flavor = null;
-                                    }
-                                    
-                                    // No Change
-                                    fire = Boolean.FALSE;
-                                    
-                                } while (Boolean.FALSE);
+                                    } while (Boolean.FALSE);
+                                }
                                 
                                 if (fire)
                                 {
@@ -224,6 +231,9 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                             {
                                 LLog.e(e, Boolean.FALSE);
                                 fire = Boolean.FALSE;
+                            }
+                            finally {
+                                cache = null;
                             }
                             
                             if (fire)
@@ -318,7 +328,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
     @Override
     public void lostOwnership(Clipboard clipboard, Transferable transferable)
     {
-        if (Platform.isMac())
+        if (PLATFORM_IS_MAC)
         {
             LLog.w("As of 5/19/2014, MAC does not broadcast clipboard ownership changes, so why is this logged?");
             return;
@@ -340,29 +350,32 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                 LLog.e(e);
             }
             
-            do
+            if (!PLATFORM_IS_MAC)
             {
-                // Gain clipboard ownership so that change notifications can take place again
-                // Also secure the contents for internal processing through listeners
-                try
+                do
                 {
-                    clipboard.setContents(clipboard.getContents(null), this);
-                    break;
-                }
-                catch (Exception e)
-                {
-                    LLog.e(e, Boolean.FALSE);
-                }
-                
-                try
-                {
-                    Thread.sleep(delay_ms);
-                }
-                catch (InterruptedException e)
-                {
-                    LLog.e(e);
-                }
-            } while (!disposed);
+                    // Gain clipboard ownership so that change notifications can take place again
+                    // Also secure the contents for internal processing through listeners
+                    try
+                    {
+                        clipboard.setContents(clipboard.getContents(null), this);
+                        break;
+                    }
+                    catch (Exception e)
+                    {
+                        LLog.e(e, Boolean.FALSE);
+                    }
+                    
+                    try
+                    {
+                        Thread.sleep(delay_ms);
+                    }
+                    catch (InterruptedException e)
+                    {
+                        LLog.e(e);
+                    }
+                } while (!disposed);
+            }
             
             if (changed)
             {
@@ -439,7 +452,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
      */
     public void syncObserverCache()
     {
-        if (!Platform.isMac())
+        if (!PLATFORM_IS_MAC)
         {
             return;
         }
