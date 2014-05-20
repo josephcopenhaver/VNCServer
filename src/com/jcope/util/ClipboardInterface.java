@@ -22,10 +22,6 @@ public class ClipboardInterface
     
     public static class ImageSelection implements Transferable
     {
-        private static final DataFlavor[] transferDataFlavors = new DataFlavor[]{
-            DataFlavor.imageFlavor
-        };
-        
         private final Image image;
 
         public ImageSelection(Image image)
@@ -47,7 +43,7 @@ public class ClipboardInterface
         @Override
         public DataFlavor[] getTransferDataFlavors()
         {
-            return transferDataFlavors;
+            return new DataFlavor[] { DataFlavor.imageFlavor };
         }
 
         @Override
@@ -177,6 +173,11 @@ public class ClipboardInterface
             }
             
             clipboard.setContents(transferable, ClipboardMonitor.getInstance());
+            
+            if (ClipboardMonitor.hasInstance())
+            {
+                ClipboardMonitor.getInstance().syncObserverCache(); 
+            }
         }
         finally {
             clipboard = null;
