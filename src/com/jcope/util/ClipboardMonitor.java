@@ -186,7 +186,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                                             break;
                                         }
                                         
-                                        for (int i=0; i<prevFlavors.length; i++)
+                                        for (int i=0; i<flavors.length; i++)
                                         {
                                             flavor = flavors[i];
                                             if (!prevFlavors[i].equals(flavor))
@@ -194,12 +194,19 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                                                 flavor = null;
                                                 break something_changed;
                                             }
+                                        }
+                                        
+                                        for (int i=0; i<flavors.length; i++)
+                                        {
+                                            flavor = flavors[i];
                                             if (ClipboardInterface.isFlavorSupported(flavor) && !isDataMatch(flavor))
                                             {
                                                 flavor = null;
                                                 break something_changed;
                                             }
                                         }
+                                        
+                                        flavor = null;
                                     }
                                     
                                     // No Change
@@ -242,6 +249,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
             };
             
             mac_syncObserverCacheCallback = syncObserverCacheCallbackRef[0];
+            syncObserverCacheCallbackRef[0] = null;
             
             macClipboardChangeObserver.setName("Mac Clipboard Observer");
             macClipboardChangeObserver.setDaemon(Boolean.TRUE);
@@ -321,21 +329,21 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
     @Override
     public void run()
     {
-        try
-        {
-            idleSema.acquire();
-        }
-        catch (InterruptedException e)
-        {
-            LLog.e(e);
-        }
         while (!disposed)
         {
-            // Gain clipboard ownership so that change notifications can take place again
-            // Also secure the contents for internal processing through listeners
+            try
+            {
+                idleSema.acquire();
+            }
+            catch (InterruptedException e)
+            {
+                LLog.e(e);
+            }
             
             do
             {
+                // Gain clipboard ownership so that change notifications can take place again
+                // Also secure the contents for internal processing through listeners
                 try
                 {
                     clipboard.setContents(clipboard.getContents(null), this);
