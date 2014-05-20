@@ -2,6 +2,9 @@ package com.jcope.vnc.server.input.handle;
 
 import static com.jcope.debug.Debug.assert_;
 
+import java.io.IOException;
+
+import com.jcope.debug.LLog;
 import com.jcope.util.ClipboardInterface;
 import com.jcope.vnc.Server;
 import com.jcope.vnc.server.ClientHandler;
@@ -27,6 +30,11 @@ public class GetClipboard extends Handle
         try
         {
             clipboardContents = ClipboardInterface.get();
+        }
+        catch (IOException e)
+        {
+            LLog.e(e, Boolean.FALSE);
+            clipboardContents = null;
         }
         finally {
             ClipboardInterface.unlock();

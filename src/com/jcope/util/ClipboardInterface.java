@@ -9,10 +9,15 @@ import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.Semaphore;
+
+import javax.imageio.ImageIO;
 
 import com.jcope.debug.LLog;
 
@@ -24,9 +29,9 @@ public class ClipboardInterface
     {
         private final Image image;
 
-        public ImageSelection(Image image)
+        public ImageSelection(byte[] src) throws IOException
         {
-            this.image = image;
+            image = ImageIO.read(new ByteArrayInputStream(src));
         }
 
         @Override
@@ -103,7 +108,7 @@ public class ClipboardInterface
     
     private static Clipboard clipboard = null;
     
-    private static void getFlavor(ArrayList<Object> pairList, DataFlavor k)
+    private static void getFlavor(ArrayList<Object> pairList, DataFlavor k) throws IOException
     {
         Object v = null;
         
@@ -122,6 +127,16 @@ public class ClipboardInterface
         
         if (null != v)
         {
+            // Make objects transferable
+            
+            if (k.equals(DataFlavor.imageFlavor))
+            {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                ImageIO.write((BufferedImage) v, "png", baos);
+                
+                v = baos.toByteArray();
+            }
+            
             pairList.add(k);
             pairList.add(v);
         }
@@ -132,7 +147,7 @@ public class ClipboardInterface
         clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
     }
     
-    public static Object[] get()
+    public static Object[] get() throws IOException
     {
         loadClipboard();
         try
@@ -153,7 +168,7 @@ public class ClipboardInterface
         }
     }
     
-    public static void set(Object[] contents)
+    public static void set(Object[] contents) throws IOException
     {
         DataFlavor dataFlavor;
         Transferable transferable;
@@ -165,7 +180,7 @@ public class ClipboardInterface
             
             if (dataFlavor.equals(DataFlavor.imageFlavor))
             {
-                transferable = new ImageSelection((Image) contents[1]);
+                transferable = new ImageSelection((byte[]) contents[1]);
             }
             else
             {
