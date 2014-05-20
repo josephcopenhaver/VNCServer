@@ -151,15 +151,14 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                 @Override
                 public void run()
                 {
-                    HashMap<DataFlavor, Object> cache;
                     DataFlavor[] prevFlavors = null;
+                    HashMap<DataFlavor, Object> cache;
                     DataFlavor[] flavors;
                     DataFlavor flavor;
                     boolean fire;
                     
                     while (!disposed)
                     {
-                        flavors = null;
                         fire = Boolean.TRUE;
                         try
                         {
@@ -192,30 +191,31 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                                                 break;
                                             }
                                             
+                                            // Detect shift in availableDataFlavorSet
+                                            
                                             for (int i=0; i<flavors.length; i++)
                                             {
                                                 flavor = flavors[i];
                                                 if (!prevFlavors[i].equals(flavor))
                                                 {
-                                                    flavor = null;
                                                     break something_changed;
                                                 }
                                             }
+                                            
+                                            // Detect shift in value data associated
+                                            // with this DataFlavor set
                                             
                                             for (int i=0; i<flavors.length; i++)
                                             {
                                                 flavor = flavors[i];
                                                 if (ClipboardInterface.isFlavorSupported(flavor) && !isDataMatch(cache, flavor))
                                                 {
-                                                    flavor = null;
                                                     break something_changed;
                                                 }
                                             }
-                                            
-                                            flavor = null;
                                         }
                                         
-                                        // No Change
+                                        // No Change detected
                                         fire = Boolean.FALSE;
                                         
                                     } while (Boolean.FALSE);
@@ -234,6 +234,8 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                             }
                             finally {
                                 cache = null;
+                                flavors = null;
+                                flavor = null;
                             }
                             
                             if (fire)
@@ -352,6 +354,9 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
             
             if (!PLATFORM_IS_MAC)
             {
+                // MAC ownership notification pattern is broken
+                // therefore no need for this block on MAC
+                
                 do
                 {
                     // Gain clipboard ownership so that change notifications can take place again
