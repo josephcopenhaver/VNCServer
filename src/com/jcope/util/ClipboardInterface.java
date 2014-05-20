@@ -5,6 +5,7 @@ import static com.jcope.debug.Debug.assert_;
 import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.ClipboardOwner;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
@@ -23,6 +24,80 @@ import com.jcope.debug.LLog;
 
 public class ClipboardInterface
 {
+    public static final class ClipboardBusyException extends Exception {
+
+        /**
+         * Generated serialVersionUID
+         */
+        private static final long serialVersionUID = 2972115936781692681L;
+        
+        ClipboardBusyException(IllegalStateException e)
+        {
+            super((Throwable) e);
+        }
+        
+    }
+    
+    public static boolean isDataFlavorAvailable(Clipboard clipboard, DataFlavor flavor) throws ClipboardBusyException
+    {
+        try
+        {
+            return clipboard.isDataFlavorAvailable(flavor);
+        }
+        catch(IllegalStateException e)
+        {
+            throw new ClipboardBusyException(e);
+        }
+    }
+    
+    public static DataFlavor[] getAvailableDataFlavors(Clipboard clipboard) throws ClipboardBusyException
+    {
+        try
+        {
+            return clipboard.getAvailableDataFlavors();
+        }
+        catch(IllegalStateException e)
+        {
+            throw new ClipboardBusyException(e);
+        }
+    }
+    
+    public static Object getData(Clipboard clipboard, DataFlavor flavor) throws ClipboardBusyException, UnsupportedFlavorException, IOException
+    {
+        try
+        {
+            return clipboard.getData(flavor);
+        }
+        catch(IllegalStateException e)
+        {
+            throw new ClipboardBusyException(e);
+        }
+    }
+    
+    public static Transferable getContents(Clipboard clipboard, Object requestor) throws ClipboardBusyException
+    {
+        try
+        {
+            return clipboard.getContents(requestor);
+        }
+        catch(IllegalStateException e)
+        {
+            throw new ClipboardBusyException(e);
+        }
+    }
+    
+    public static void setContents(Clipboard clipboard, Transferable contents, ClipboardOwner owner) throws ClipboardBusyException
+    {
+        try
+        {
+            clipboard.setContents(contents, owner);
+        }
+        catch(IllegalStateException e)
+        {
+            throw new ClipboardBusyException(e);
+        }
+    }
+    
     private static final Semaphore lockSema = new Semaphore(1, Boolean.TRUE);
     
     public static class ImageSelection implements Transferable
@@ -108,13 +183,13 @@ public class ClipboardInterface
     
     private static Clipboard clipboard = null;
     
-    private static void getFlavor(ArrayList<Object> pairList, DataFlavor k) throws IOException
+    private static void getFlavor(ArrayList<Object> pairList, DataFlavor k) throws IOException, ClipboardBusyException
     {
         Object v = null;
         
         try
         {
-            v = clipboard.getData(k);
+            v = getData(clipboard, k);
         }
         catch (UnsupportedFlavorException e)
         {
@@ -147,7 +222,7 @@ public class ClipboardInterface
         clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
     }
     
-    public static Object[] get() throws IOException
+    public static Object[] get() throws IOException, ClipboardBusyException
     {
         loadClipboard();
         try
@@ -168,10 +243,11 @@ public class ClipboardInterface
         }
     }
     
-    public static void set(Object[] contents) throws IOException
+    public static void set(Object[] contents) throws IOException, ClipboardBusyException
     {
         DataFlavor dataFlavor;
         Transferable transferable;
+        ClipboardMonitor clipboardMonitor;
         
         loadClipboard();
         try
@@ -187,12 +263,17 @@ public class ClipboardInterface
                 transferable = new StringSelection((String) contents[1]);
             }
             
-            clipboard.setContents(transferable, ClipboardMonitor.getInstance());
-            
             if (ClipboardMonitor.hasInstance())
             {
-                ClipboardMonitor.getInstance().syncObserverCache(); 
+                clipboardMonitor = ClipboardMonitor.getInstance();
+                clipboardMonitor.syncObserverCache(); 
             }
+            else
+            {
+                clipboardMonitor = null;
+            }
+            
+            setContents(clipboard, transferable, clipboardMonitor);
         }
         finally {
             clipboard = null;

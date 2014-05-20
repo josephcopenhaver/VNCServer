@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import com.jcope.debug.LLog;
 import com.jcope.util.ClipboardInterface;
+import com.jcope.util.ClipboardInterface.ClipboardBusyException;
 import com.jcope.util.ClipboardMonitor;
 import com.jcope.vnc.client.StateMachine;
 import com.jcope.vnc.client.input.Handle;
@@ -37,6 +38,10 @@ public class SetClipboard extends Handle
             ClipboardInterface.set(args);
         }
         catch (IOException e)
+        {
+            LLog.e(e, Boolean.FALSE);
+        }
+        catch (ClipboardBusyException e)
         {
             LLog.e(e, Boolean.FALSE);
         }

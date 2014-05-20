@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import com.jcope.debug.LLog;
 import com.jcope.util.ClipboardInterface;
+import com.jcope.util.ClipboardInterface.ClipboardBusyException;
 import com.jcope.vnc.client.StateMachine;
 import com.jcope.vnc.client.input.Handle;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
@@ -23,7 +24,7 @@ public class GetClipboard extends Handle
             return;
         }
         
-        Object[] clipboardContents;
+        Object[] clipboardContents = null;
         
         try
         {
@@ -32,7 +33,10 @@ public class GetClipboard extends Handle
         catch (IOException e)
         {
             LLog.e(e, Boolean.FALSE);
-            clipboardContents = null;
+        }
+        catch (ClipboardBusyException e)
+        {
+            LLog.e(e, Boolean.FALSE);
         }
         
         if (clipboardContents == null)

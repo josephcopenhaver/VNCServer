@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import com.jcope.debug.LLog;
 import com.jcope.util.ClipboardInterface;
+import com.jcope.util.ClipboardInterface.ClipboardBusyException;
 import com.jcope.util.ClipboardMonitor;
 import com.jcope.vnc.Server;
 import com.jcope.vnc.server.ClientHandler;
@@ -34,7 +35,7 @@ public class SetClipboard extends Handle
             clipboardMonitor = ClipboardMonitor.getInstance();
         }
         
-        boolean forwardChangeNotice = Boolean.TRUE;
+        boolean forwardChangeNotice = Boolean.FALSE;
         
         ClipboardInterface.lock();
         try
@@ -43,11 +44,15 @@ public class SetClipboard extends Handle
             try
             {
                 ClipboardInterface.set(args);
+                forwardChangeNotice = Boolean.TRUE;
             }
             catch (IOException e)
             {
                 LLog.e(e, Boolean.FALSE);
-                forwardChangeNotice = Boolean.FALSE;
+            }
+            catch (ClipboardBusyException e)
+            {
+                LLog.e(e, Boolean.FALSE);
             }
             finally {
                 clipboardMonitor.setEnabled(Boolean.TRUE);

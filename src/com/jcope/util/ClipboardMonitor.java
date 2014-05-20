@@ -18,6 +18,7 @@ import java.util.concurrent.Semaphore;
 import javax.imageio.ImageIO;
 
 import com.jcope.debug.LLog;
+import com.jcope.util.ClipboardInterface.ClipboardBusyException;
 
 public class ClipboardMonitor extends Thread implements ClipboardOwner
 {
@@ -29,7 +30,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
     }
     
     private static volatile boolean hasInstance = Boolean.FALSE;
-    private static final long delay_ms = 200L;
+    private static final long busy_owner_retry_delay_ms = 200L;
     private static final long mac_observer_ms = 400L;
     private static Clipboard clipboard;  
     private static ArrayList<ClipboardListener> listeners;
@@ -87,6 +88,10 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                             {
                                 LLog.e(e, Boolean.FALSE);
                             }
+                            catch (ClipboardBusyException e)
+                            {
+                                LLog.e(e, Boolean.FALSE);
+                            }
                             finally {
                                 cacheSema.release();
                             }
@@ -98,9 +103,9 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                 private final Semaphore cacheSema = new Semaphore(1, Boolean.TRUE);
                 private volatile HashMap<DataFlavor, Object> cache = new HashMap<DataFlavor, Object>();
                 
-                private Object getComparableData(DataFlavor flavor) throws UnsupportedFlavorException, IOException
+                private Object getComparableData(DataFlavor flavor) throws UnsupportedFlavorException, IOException, ClipboardBusyException
                 {
-                    Object rval = clipboard.getData(flavor);
+                    Object rval = ClipboardInterface.getData(clipboard, flavor);
                     
                     if (null != rval)
                     {
@@ -115,7 +120,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                     return rval;
                 }
                 
-                private boolean isDataMatch(HashMap<DataFlavor, Object> cache, DataFlavor flavor) throws UnsupportedFlavorException, IOException
+                private boolean isDataMatch(HashMap<DataFlavor, Object> cache, DataFlavor flavor) throws UnsupportedFlavorException, IOException, ClipboardBusyException
                 {
                     Object cObj = cache.get(flavor);
                     Object obj = getComparableData(flavor);
@@ -130,7 +135,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                     return rval;
                 }
                 
-                private void cacheSupportedData() throws UnsupportedFlavorException, IOException
+                private void cacheSupportedData() throws UnsupportedFlavorException, IOException, ClipboardBusyException
                 {
                     HashMap<DataFlavor, Object> cache = new HashMap<DataFlavor, Object>();
                     Iterator<DataFlavor> flavors = ClipboardInterface.getSupportedFlavorsIterator();
@@ -139,7 +144,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                     while (flavors.hasNext())
                     {
                         flavor = flavors.next();
-                        if (clipboard.isDataFlavorAvailable(flavor))
+                        if (ClipboardInterface.isDataFlavorAvailable(clipboard, flavor))
                         {
                             cache.put(flavor, getComparableData(flavor));
                         }
@@ -156,10 +161,12 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                     DataFlavor[] flavors;
                     DataFlavor flavor;
                     boolean fire;
+                    boolean errored;
                     
                     while (!disposed)
                     {
                         fire = Boolean.TRUE;
+                        errored = Boolean.TRUE;
                         try
                         {
                             cacheSema.acquire();
@@ -175,7 +182,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                                 cache = this.cache;
                                 
                                 synchronized(cache) {
-                                    flavors = clipboard.getAvailableDataFlavors();
+                                    flavors = ClipboardInterface.getAvailableDataFlavors(clipboard);
                                     
                                     something_changed:
                                     do
@@ -226,13 +233,18 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                                     cacheSupportedData();
                                     prevFlavors = flavors;
                                 }
+                                
+                                errored = Boolean.FALSE;
                             }
                             catch (Exception e)
                             {
                                 LLog.e(e, Boolean.FALSE);
-                                fire = Boolean.FALSE;
                             }
                             finally {
+                                if (errored)
+                                {
+                                    fire = Boolean.FALSE;
+                                }
                                 cache = null;
                                 flavors = null;
                                 flavor = null;
@@ -363,17 +375,17 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                     // Also secure the contents for internal processing through listeners
                     try
                     {
-                        clipboard.setContents(clipboard.getContents(null), this);
+                        ClipboardInterface.setContents(clipboard, ClipboardInterface.getContents(clipboard, null), this);
                         break;
                     }
-                    catch (Exception e)
+                    catch (ClipboardBusyException e)
                     {
                         LLog.e(e, Boolean.FALSE);
                     }
                     
                     try
                     {
-                        Thread.sleep(delay_ms);
+                        Thread.sleep(busy_owner_retry_delay_ms);
                     }
                     catch (InterruptedException e)
                     {
@@ -400,6 +412,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                     catch (Exception e)
                     {
                         LLog.e(e, Boolean.FALSE);
+                        // The show must go on
                     }
                 }
             }
