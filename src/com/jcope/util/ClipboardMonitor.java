@@ -452,25 +452,23 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
     {
         return listeners.remove(l);
     }
-
-    public void setEnabled(boolean enabled)
+    
+    public void lockAndPause()
     {
-        if (!enabled)
+        try
         {
-            try
-            {
-                idleSema.acquire();
-            }
-            catch (InterruptedException e)
-            {
-                LLog.e(e);
-            }
+            idleSema.acquire();
         }
-        else
+        catch (InterruptedException e)
         {
-            changed = Boolean.FALSE;
-            idleSema.release();
+            LLog.e(e);
         }
+    }
+    
+    public void unlockAndUnpause()
+    {
+        changed = Boolean.FALSE;
+        idleSema.release();
     }
     
     /**

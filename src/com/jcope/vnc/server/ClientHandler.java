@@ -267,73 +267,82 @@ public class ClientHandler extends Thread
 		    LLog.e(e,false);
 		}
 		
-		try
-		{
-			for (int idx = onDestroyActions.size(); idx > 0;)
-			{
-			    r = onDestroyActions.get(--idx);
-				try
-				{
-				    r.run();
-				}
-				catch(Exception e)
-				{
-				    if (topE == null)
-				    {
-				        topE = e;
-				    }
-				    else
-				    {
-				        System.err.println(e.getMessage());
-				        e.printStackTrace(System.err);
-				    }
-				}
-			}
-			if (topE != null)
+        try
+        {
+            try
             {
-                throw new RuntimeException(topE);
+                try
+                {
+                    serializedDispatcher.dispose();
+                }
+                finally {
+                    unserializedDispatcher.dispose();
+                }
             }
-		}
-		finally {
-			onDestroyActions.clear();
-			onDestroyActions = null;
-			try
-			{
-			    try
-			    {
-			        serializedDispatcher.dispose();
-			    }
-			    finally {
-			        unserializedDispatcher.dispose();
-			    }
-			}
-			finally {
-    			SwingUtilities.invokeLater(new Runnable() {
-    				
-    				@Override
-    				public void run()
+            finally {
+                SwingUtilities.invokeLater(new Runnable() {
+                    
+                    @Override
+                    public void run()
+                    {
+                        try
+                        {
+                            try
+                            {
+                                serializedDispatcher.join();
+                            }
+                            finally {
+                                unserializedDispatcher.join();
+                            }
+                        }
+                        catch (InterruptedException e)
+                        {
+                            LLog.e(e, Boolean.FALSE);
+                        }
+                    }
+                    
+                });
+            }
+        }
+        finally {
+    		try
+    		{
+    			for (int idx = onDestroyActions.size(); idx > 0;)
+    			{
+    			    r = onDestroyActions.get(--idx);
+    				try
     				{
-    					try
-    					{
-    						try
-    						{
-    							serializedDispatcher.join();
-    						}
-    						finally {
-    							unserializedDispatcher.join();
-    						}
-    					}
-    					catch (InterruptedException e)
-    					{
-    						LLog.e(e, Boolean.FALSE);
-    					}
+    				    r.run();
     				}
-    				
-    			});
-			}
-		}
-		
-		alive = false;
+    				catch(Exception e)
+    				{
+    				    if (topE == null)
+    				    {
+    				        topE = e;
+    				    }
+    				    else
+    				    {
+    				        System.err.println(e.getMessage());
+    				        e.printStackTrace(System.err);
+    				    }
+    				}
+    			}
+    			if (topE != null)
+                {
+                    throw new RuntimeException(topE);
+                }
+    		}
+    		finally {
+    		    try
+    		    {
+    		    onDestroyActions.clear();
+    			onDestroyActions = null;
+    		    }
+    		    finally {
+    		        alive = false;
+    		    }
+    		}
+        }
 	}
 	
 	public boolean isRunning()

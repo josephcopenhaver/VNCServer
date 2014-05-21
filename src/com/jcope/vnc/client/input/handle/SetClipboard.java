@@ -32,7 +32,7 @@ public class SetClipboard extends Handle
             clipboardMonitor = ClipboardMonitor.getInstance();
         }
         
-        clipboardMonitor.setEnabled(Boolean.FALSE);
+        clipboardMonitor.lockAndPause();
         try
         {
             ClipboardInterface.set(args);
@@ -46,7 +46,7 @@ public class SetClipboard extends Handle
             LLog.e(e, Boolean.FALSE);
         }
         finally {
-            clipboardMonitor.setEnabled(Boolean.TRUE);
+            clipboardMonitor.unlockAndUnpause();
         }
     }
     
