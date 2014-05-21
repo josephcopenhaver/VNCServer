@@ -66,8 +66,6 @@ public class VncServer implements Runnable
 	{
         if (((Boolean)Server.SERVER_PROPERTIES.SUPPORT_CLIPBOARD_SYNCHRONIZATION.getValue()))
         {
-            // TODO: listener does not appear to be firing on MAC
-            
             ClipboardMonitor.getInstance().addListener(new ClipboardListener(){
     
                 @Override

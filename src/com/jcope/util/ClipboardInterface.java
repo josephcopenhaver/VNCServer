@@ -283,7 +283,6 @@ public class ClipboardInterface
             if (ClipboardMonitor.hasInstance())
             {
                 clipboardMonitor = ClipboardMonitor.getInstance();
-                clipboardMonitor.syncObserverCache(); 
             }
             else
             {
@@ -291,6 +290,11 @@ public class ClipboardInterface
             }
             
             setContents(clipboard, transferable, clipboardMonitor);
+            
+            if (null != clipboardMonitor)
+            {
+                clipboardMonitor.syncObserverCache();
+            }
         }
         finally {
             clipboard = null;
