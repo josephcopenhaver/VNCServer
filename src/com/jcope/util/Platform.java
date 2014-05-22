@@ -3,72 +3,57 @@ package com.jcope.util;
 
 public class Platform
 {
+    private static String osNameLower = System.getProperty("os.name").toLowerCase();
     
     private static enum DETECTABLE_PLATFORM {
         
         WINDOWS("windows"),
-        MAC("mac os x")
+        MAC("mac os x"),
+        UNKNOWN(null) // sentinel
         
         
         ;
         
         
-        private Boolean isCurrent = null;
-        private String osHeaderLowerCase;
+        private final boolean isPlatform;
         
         DETECTABLE_PLATFORM(String osHeaderLowerCase)
         {
-            this.osHeaderLowerCase = osHeaderLowerCase;
-        }
-        
-        public String osHeaderLowerCase() {
-            return osHeaderLowerCase;
-        }
-        
-        public Boolean isCurrent()
-        {
-            return isCurrent;
-        }
-        
-        public void setCurrent(boolean isCurrent)
-        {
-            this.isCurrent = isCurrent;
-        }
-    };
-    
-    private static boolean isPlatform(DETECTABLE_PLATFORM platform)
-    {
-        Boolean rval = platform.isCurrent();
-        
-        if (null == rval)
-        {
-            platform.setCurrent(System.getProperty("os.name").toLowerCase().startsWith(platform.osHeaderLowerCase()));
-            
-            rval = platform.isCurrent();
-            
-            if (rval)
+            if (osHeaderLowerCase == null)
             {
-                for(DETECTABLE_PLATFORM other : DETECTABLE_PLATFORM.values())
+                isPlatform = (osNameLower != null);
+            }
+            else
+            {
+                if (osNameLower == null)
                 {
-                    if (!platform.equals(other))
+                    isPlatform = Boolean.FALSE;
+                }
+                else
+                {
+                    isPlatform = osNameLower.startsWith(osHeaderLowerCase);
+                    if (isPlatform)
                     {
-                        other.setCurrent(Boolean.FALSE);
+                        osHeaderLowerCase = null;
                     }
                 }
             }
         }
-        
-        return rval;
-    }
-	
-	public static boolean isWindows()
+    };
+    
+    public static boolean isWindows()
 	{
-		return isPlatform(DETECTABLE_PLATFORM.WINDOWS);
+		return DETECTABLE_PLATFORM.WINDOWS.isPlatform;
 	}
 	
 	public static boolean isMac()
 	{
-	    return isPlatform(DETECTABLE_PLATFORM.MAC);
+	    return DETECTABLE_PLATFORM.MAC.isPlatform;
+	}
+	
+	public static boolean isUnknown()
+	{
+	    return DETECTABLE_PLATFORM.UNKNOWN.isPlatform;
 	}
 
 }
