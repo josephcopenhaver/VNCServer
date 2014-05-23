@@ -101,7 +101,9 @@ public class ClipboardInterface
             "    tell process \"Preview\"\n" +
             "        keystroke \"a\" using command down\n" +
             "        keystroke \"c\" using command down\n" +
+            "        delay 1\n" +
             "        keystroke \"w\" using command down\n" +
+            "        delay 1\n" +
             "        do shell script \"rm \" & this_picture\n" +
             "    end tell\n" +
             "end tell\n";
