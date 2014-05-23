@@ -161,15 +161,21 @@ public class ClipboardInterface
             else if (contents.isDataFlavorSupported(DataFlavor.imageFlavor))
             {
                 File file = null;
+                FileWriter fw = null;
+                BufferedWriter bw = null;
                 try
                 {
                     file = TempFileFactory.get("osascript_image_input__", ".png");
                     String escapedFilePath = file.getAbsolutePath().replaceAll("\\\\", "\\\\").replaceAll("\"", "\\\"");
-                    String[] macCmd = new String[]{"osascript", "-e", String.format(mac_imgToClipboardApplescript, escapedFilePath)};
                     BufferedImage image = (BufferedImage) contents.getTransferData(DataFlavor.imageFlavor);
                     ImageIO.write(image, "png", file);
                     
-                    Process p = Runtime.getRuntime().exec(macCmd);
+                    file = TempFileFactory.get("script_sync_image__", ".applescript");
+                    bw = new BufferedWriter(fw = new FileWriter(file));
+                    bw.write(String.format(mac_imgToClipboardApplescript, escapedFilePath));
+                    bw.close();
+                    
+                    Process p = Runtime.getRuntime().exec(new String[] {"sh", "-c", String.format("osascript -e %s >~/git/tmp.txt 2>&1", file.getAbsolutePath())});
                     p.waitFor();
                 }
                 catch (IOException e)
@@ -183,6 +189,11 @@ public class ClipboardInterface
                 catch (InterruptedException e)
                 {
                     LLog.e(e);
+                }
+                finally {
+                    if (bw != null) try { bw.close(); } catch (IOException e) {}
+                    if (fw != null) try { fw.close(); } catch (IOException e) {}
+                    if (file != null) try { file.delete(); } catch (SecurityException e) {}
                 }
             }
             else
