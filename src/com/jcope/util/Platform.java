@@ -1,5 +1,9 @@
 package com.jcope.util;
 
+import static com.jcope.debug.Debug.DEBUG;
+
+import com.jcope.debug.LLog;
+
 
 
 public class Platform
@@ -36,6 +40,13 @@ public class Platform
                     {
                         osNameLower = null;
                     }
+                }
+            }
+            if (DEBUG)
+            {
+                if (isPlatform)
+                {
+                    LLog.w("PLATFORM IS: " + this.name());
                 }
             }
         }
