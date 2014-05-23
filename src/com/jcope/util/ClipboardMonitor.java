@@ -359,11 +359,12 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
     @Override
     public void run()
     {
+        Clipboard clipboard = null;
+        
+        IS_DISPOSED:
         while (!disposed)
         {
-        	Clipboard clipboard = null;
-        	
-            try
+        	try
             {
                 idleSema.acquire();
             }
@@ -372,66 +373,77 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                 LLog.e(e);
             }
             
-            do
+            try
             {
-                // Gain clipboard ownership so that change notifications can take place again
-                // Also secure the contents for internal processing through listeners
-                try
+                do
                 {
-                	clipboard = ClipboardInterface.getClipboard();
-                	if (!PLATFORM_IS_MAC)
-                	{
-                		// MAC ownership notification pattern is broken
-                        // therefore no need for this block on MAC
-                		ClipboardInterface.setContents(clipboard, ClipboardInterface.getContents(clipboard, null), this);
-                	}
-                    break;
-                }
-                catch (ClipboardBusyException e)
-                {
-                    LLog.e(e, Boolean.FALSE);
-                }
-                catch (Exception e)
-                {
-                	LLog.e(e, Boolean.FALSE);
-                }
-                
-                try
-                {
-                    Thread.sleep(busy_owner_retry_delay_ms);
-                }
-                catch (InterruptedException e)
-                {
-                    LLog.e(e);
-                }
-            } while (!disposed);
-            
-            if (changed)
-            {
-                changed = Boolean.FALSE;
-                
-                for(ClipboardListener l : listeners)
-                {
-                    if (changed)
+                    // Gain clipboard ownership so that change notifications can take place again
+                    // Also secure the contents for internal processing through listeners
+                    try
                     {
+                    	clipboard = ClipboardInterface.getClipboard();
+                    	if (!PLATFORM_IS_MAC)
+                    	{
+                    		// MAC ownership notification pattern is broken
+                            // therefore no need for this block on MAC
+                    		ClipboardInterface.setContents(clipboard, ClipboardInterface.getContents(clipboard, null), this);
+                    	}
                         break;
+                    }
+                    catch (ClipboardBusyException e)
+                    {
+                        LLog.e(e, Boolean.FALSE);
+                    }
+                    catch (Exception e)
+                    {
+                    	LLog.e(e, Boolean.FALSE);
                     }
                     
                     try
                     {
-                        l.onChange(clipboard);
+                        Thread.sleep(busy_owner_retry_delay_ms);
                     }
-                    catch (Exception e)
+                    catch (InterruptedException e)
                     {
-                        LLog.e(e, Boolean.FALSE);
-                        // The show must go on
+                        LLog.e(e);
+                    }
+                    
+                    if (disposed)
+                    {
+                        break IS_DISPOSED;
+                    }
+                } while (Boolean.TRUE);
+                
+                if (changed)
+                {
+                    changed = Boolean.FALSE;
+                    
+                    for (ClipboardListener l : listeners)
+                    {
+                        if (changed)
+                        {
+                            break;
+                        }
+                        
+                        try
+                        {
+                            l.onChange(clipboard);
+                        }
+                        catch (Exception e)
+                        {
+                            LLog.e(e, Boolean.FALSE);
+                            // The show must go on
+                        }
                     }
                 }
+            }
+            finally {
+                clipboard = null;
+                idleSema.release();
             }
             
             try
             {
-                idleSema.release();
                 notificationSema.acquire();
             }
             catch (InterruptedException e)
@@ -439,6 +451,8 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                 LLog.e(e);
             }
         }
+        
+        listeners.clear();
     }
     
     public void dispose()
