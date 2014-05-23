@@ -92,18 +92,18 @@ public class ClipboardInterface
     }
     
     private static final String mac_imgToClipboardApplescript = "set this_picture to \"%s\"\n" +
-            "tell application \"Preview\"\n" +
-            "    activate\n" +
-            "    open this_picture\n" +
-            "end tell\n" +
             "tell application \"System Events\"\n" +
+            "    tell application \"Preview\"\n" +
+            "        activate\n" +
+            "        do shell \"open -a /Applications/Preview.app \" & this_picture\n" +
+            "    end tell\n" +
             "    tell process \"Preview\"\n" +
             "        keystroke \"a\" using command down\n" +
             "        keystroke \"c\" using command down\n" +
             "        keystroke \"w\" using command down\n" +
+            "        do shell script \"rm \" & this_picture\n" +
             "    end tell\n" +
-            "end tell\n" + 
-            "do shell script \"rm \" & this_picture\n";
+            "end tell\n";
     
     public static void setContents(Clipboard clipboard, Transferable contents, ClipboardOwner owner) throws ClipboardBusyException
     {
@@ -134,7 +134,7 @@ public class ClipboardInterface
                     bw.flush();
                     bw.close();
                     
-                    Process p = Runtime.getRuntime().exec(new String[] {"sh", "-c", String.format("cat %s | pbcopy", file.getAbsolutePath())});
+                    Process p = Runtime.getRuntime().exec(new String[] {"sh", "-c", String.format("cat %s | pbcopy >~/git/tmp.txt 2>&1", file.getAbsolutePath())});
                     p.waitFor();
                 }
                 catch (IOException e)

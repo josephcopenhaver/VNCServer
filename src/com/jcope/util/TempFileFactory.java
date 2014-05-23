@@ -45,7 +45,7 @@ public class TempFileFactory
                 File f = null;
                 try
                 {
-                    f = File.createTempFile("tmp", "tmp");
+                    f = File.createTempFile("", ".tmp.sniff");
                 }
                 catch (IOException e)
                 {
@@ -56,6 +56,7 @@ public class TempFileFactory
                 {
                     LLog.e(new IOException("Could not create temp directory: " + subSystemTempPath.getAbsolutePath()));
                 }
+                f.delete();
             }
             sema.release();
         }
