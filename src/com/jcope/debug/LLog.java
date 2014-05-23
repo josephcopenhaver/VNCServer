@@ -22,9 +22,14 @@ public class LLog
 	    if (!DEBUG){if(!hardStop && !rethrow){return;}}
 	    try
 	    {
-    	    (rethrow ? System.err : System.out).println(e.getMessage());
-    		e.printStackTrace(rethrow ? System.err : System.out);
-    		if (hardStop)
+	        System.err.println(e.getMessage());
+	        e.printStackTrace(System.err);
+	        if (!rethrow)
+	        {
+	            System.out.println(e.getMessage());
+	            e.printStackTrace(System.out);
+	        }
+    	    if (hardStop)
     		{
     		    (rethrow ? System.err : System.out).flush();
     			System.exit(127);
