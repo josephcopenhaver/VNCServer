@@ -101,7 +101,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                 }
                 
                 private final Semaphore cacheSema = new Semaphore(1, Boolean.TRUE);
-                private volatile DataFlavor[] prevFlavors = null;
+                private volatile DataFlavor[][] prevFlavors = new DataFlavor[][] {null};
                 private volatile HashMap<DataFlavor, Object> cache = new HashMap<DataFlavor, Object>();
                 
                 private Object getComparableData(Clipboard clipboard, DataFlavor flavor) throws UnsupportedFlavorException, IOException, ClipboardBusyException
@@ -152,7 +152,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                     }
                     
                     this.cache = cache;
-                    prevFlavors = flavors;
+                    prevFlavors[0] = flavors;
                 }
                 
                 @Override
@@ -185,7 +185,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                                 clipboard = ClipboardInterface.getClipboard();
                                 
                                 synchronized(this.prevFlavors){synchronized(this.cache) {
-                                    prevFlavors = this.prevFlavors;
+                                    prevFlavors = this.prevFlavors[0];
                                     cache = this.cache;
                                     flavors = ClipboardInterface.getAvailableDataFlavors(clipboard);
                                     

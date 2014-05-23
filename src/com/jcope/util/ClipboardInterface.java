@@ -1,6 +1,7 @@
 package com.jcope.util;
 
 import static com.jcope.debug.Debug.assert_;
+import static com.jcope.util.Platform.PLATFORM_IS_MAC;
 
 import java.awt.HeadlessException;
 import java.awt.Image;
@@ -12,8 +13,11 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.image.BufferedImage;
+import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -87,15 +91,102 @@ public class ClipboardInterface
         }
     }
     
+    private static final String mac_imgToClipboardApplescript = "set this_picture to \"%s\"\n" +
+            "tell application \"Preview\"\n" +
+            "    activate\n" +
+            "    open this_picture\n" +
+            "end tell\n" +
+            "tell application \"System Events\"\n" +
+            "    tell process \"Preview\"\n" +
+            "        keystroke \"a\" using command down\n" +
+            "        keystroke \"c\" using command down\n" +
+            "        keystroke \"w\" using command down\n" +
+            "    end tell\n" +
+            "end tell\n";
+    
     public static void setContents(Clipboard clipboard, Transferable contents, ClipboardOwner owner) throws ClipboardBusyException
     {
-        try
+        if (!PLATFORM_IS_MAC)
         {
-            clipboard.setContents(contents, owner);
+            try
+            {
+                clipboard.setContents(contents, owner);
+            }
+            catch(IllegalStateException e)
+            {
+                throw new ClipboardBusyException(e);
+            }
         }
-        catch(IllegalStateException e)
+        else
         {
-            throw new ClipboardBusyException(e);
+            if (contents.isDataFlavorSupported(DataFlavor.stringFlavor))
+            {
+                File file = null;
+                FileWriter fw = null;
+                BufferedWriter bw = null;
+                try
+                {
+                    
+                    file = TempFileFactory.get("pbcopy_text_input__", ".txt");
+                    bw = new BufferedWriter(fw = new FileWriter(file));
+                    bw.write((String) contents.getTransferData(DataFlavor.stringFlavor));
+                    bw.flush();
+                    bw.close();
+                    
+                    Process p = Runtime.getRuntime().exec(String.format("cat %s | pbcopy", file.getAbsolutePath()));
+                    p.waitFor();
+                }
+                catch (IOException e)
+                {
+                    LLog.e(e, false);
+                }
+                catch (InterruptedException e)
+                {
+                    LLog.e(e);
+                }
+                catch (UnsupportedFlavorException e)
+                {
+                    LLog.e(e);
+                }
+                finally {
+                    if (bw != null) try { bw.close(); } catch (IOException e) {}
+                    if (fw != null) try { fw.close(); } catch (IOException e) {}
+                    if (file != null) try { file.delete(); } catch (SecurityException e) {}
+                }
+            }
+            else if (contents.isDataFlavorSupported(DataFlavor.imageFlavor))
+            {
+                File file = null;
+                try
+                {
+                    file = TempFileFactory.get("osascript_image_input__", ".png");
+                    String[] macCmd = new String[]{"osascript", "-e", String.format(mac_imgToClipboardApplescript, file.getAbsolutePath().replaceAll("\\\\", "\\\\").replaceAll("\"", "\\\""))};
+                    BufferedImage image = (BufferedImage) contents.getTransferData(DataFlavor.imageFlavor);
+                    ImageIO.write(image, "png", file);
+                    
+                    Process p = Runtime.getRuntime().exec(macCmd);
+                    p.waitFor();
+                }
+                catch (IOException e)
+                {
+                    LLog.e(e, false);
+                }
+                catch (UnsupportedFlavorException e)
+                {
+                    LLog.e(e);
+                }
+                catch (InterruptedException e)
+                {
+                    LLog.e(e);
+                }
+                finally {
+                    if (file != null) try { file.delete(); } catch (SecurityException e) {}
+                }
+            }
+            else
+            {
+                throw new RuntimeException("No supported dataflavor for mac");
+            }
         }
     }
     
