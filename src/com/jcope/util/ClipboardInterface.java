@@ -137,7 +137,7 @@ public class ClipboardInterface
                     bw.flush();
                     bw.close();
                     
-                    Process p = Runtime.getRuntime().exec(new String[] {"sh", "-c", String.format("cat %s | pbcopy >~/git/tmp.txt 2>&1", file.getAbsolutePath())});
+                    Process p = Runtime.getRuntime().exec(new String[] {"sh", "-c", String.format("cat %s | pbcopy", file.getAbsolutePath())});
                     p.waitFor();
                 }
                 catch (IOException e)
@@ -173,9 +173,10 @@ public class ClipboardInterface
                     file = TempFileFactory.get("script_sync_image__", ".applescript");
                     bw = new BufferedWriter(fw = new FileWriter(file));
                     bw.write(String.format(mac_imgToClipboardApplescript, escapedFilePath));
+                    bw.flush();
                     bw.close();
                     
-                    Process p = Runtime.getRuntime().exec(new String[] {"sh", "-c", String.format("osascript -e %s >~/git/tmp.txt 2>&1", file.getAbsolutePath())});
+                    Process p = Runtime.getRuntime().exec(new String[] {"osascript", "-e", file.getAbsolutePath()});
                     p.waitFor();
                 }
                 catch (IOException e)
