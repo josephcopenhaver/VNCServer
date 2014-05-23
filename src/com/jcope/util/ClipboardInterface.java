@@ -131,7 +131,7 @@ public class ClipboardInterface
                 try
                 {
                     
-                    file = TempFileFactory.get("pbcopy_text_input__", ".txt");
+                    file = TempFileFactory.get("pbcopy_text_input.", ".txt");
                     bw = new BufferedWriter(fw = new FileWriter(file));
                     bw.write((String) contents.getTransferData(DataFlavor.stringFlavor));
                     bw.flush();
@@ -165,19 +165,32 @@ public class ClipboardInterface
                 BufferedWriter bw = null;
                 try
                 {
-                    file = TempFileFactory.get("osascript_image_input__", ".png");
+                    file = TempFileFactory.get("osascript_image_input.", ".png");
                     String escapedFilePath = file.getAbsolutePath().replaceAll("\\\\", "\\\\").replaceAll("\"", "\\\"");
                     BufferedImage image = (BufferedImage) contents.getTransferData(DataFlavor.imageFlavor);
                     ImageIO.write(image, "png", file);
                     
-                    file = TempFileFactory.get("script_sync_image__", ".applescript");
-                    bw = new BufferedWriter(fw = new FileWriter(file));
-                    bw.write(String.format(mac_imgToClipboardApplescript, escapedFilePath));
-                    bw.flush();
-                    bw.close();
+                    File tmpFile = file;
                     
-                    Process p = Runtime.getRuntime().exec(new String[] {"osascript", file.getAbsolutePath()});
-                    p.waitFor();
+                    try
+                    {
+                        file = null;
+                        file = TempFileFactory.get("script_set_clipboard_image.", ".applescript");
+                        bw = new BufferedWriter(fw = new FileWriter(file));
+                        bw.write(String.format(mac_imgToClipboardApplescript, escapedFilePath));
+                        bw.flush();
+                        bw.close();
+                        
+                        Process p = Runtime.getRuntime().exec(new String[] {"osascript", file.getAbsolutePath()});
+                        p.waitFor();
+                        tmpFile = null;
+                    }
+                    finally {
+                        if (null != tmpFile)
+                        {
+                            tmpFile.delete();
+                        }
+                    }
                 }
                 catch (IOException e)
                 {
