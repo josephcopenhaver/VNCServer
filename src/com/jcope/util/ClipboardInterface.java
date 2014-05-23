@@ -95,8 +95,8 @@ public class ClipboardInterface
             "tell application \"System Events\"\n" +
             "    tell application \"Preview\"\n" +
             "        activate\n" +
-            "        do shell \"chmod +w \" & this_picture\n" +
-            "        do shell \"open -a /Applications/Preview.app \" & this_picture\n" +
+            "        do shell script \"chmod +w \" & this_picture\n" +
+            "        do shell script \"open -a /Applications/Preview.app \" & this_picture\n" +
             "    end tell\n" +
             "    tell process \"Preview\"\n" +
             "        keystroke \"a\" using command down\n" +
