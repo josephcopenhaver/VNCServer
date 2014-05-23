@@ -176,7 +176,7 @@ public class ClipboardInterface
                     bw.flush();
                     bw.close();
                     
-                    Process p = Runtime.getRuntime().exec(new String[] {"osascript", "-e", file.getAbsolutePath()});
+                    Process p = Runtime.getRuntime().exec(new String[] {"osascript", file.getAbsolutePath()});
                     p.waitFor();
                 }
                 catch (IOException e)
