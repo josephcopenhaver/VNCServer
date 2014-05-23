@@ -45,7 +45,7 @@ public class TempFileFactory
                 File f = null;
                 try
                 {
-                    f = File.createTempFile("", ".tmp.sniff");
+                    f = File.createTempFile("tmp.", ".sniff");
                 }
                 catch (IOException e)
                 {
