@@ -102,7 +102,8 @@ public class ClipboardInterface
             "        keystroke \"c\" using command down\n" +
             "        keystroke \"w\" using command down\n" +
             "    end tell\n" +
-            "end tell\n";
+            "end tell\n" + 
+            "do shell script \"rm \" & this_picture\n";
     
     public static void setContents(Clipboard clipboard, Transferable contents, ClipboardOwner owner) throws ClipboardBusyException
     {
@@ -133,7 +134,7 @@ public class ClipboardInterface
                     bw.flush();
                     bw.close();
                     
-                    Process p = Runtime.getRuntime().exec(String.format("cat %s | pbcopy", file.getAbsolutePath()));
+                    Process p = Runtime.getRuntime().exec(new String[] {"sh", "-c", String.format("cat %s | pbcopy", file.getAbsolutePath())});
                     p.waitFor();
                 }
                 catch (IOException e)
@@ -160,7 +161,8 @@ public class ClipboardInterface
                 try
                 {
                     file = TempFileFactory.get("osascript_image_input__", ".png");
-                    String[] macCmd = new String[]{"osascript", "-e", String.format(mac_imgToClipboardApplescript, file.getAbsolutePath().replaceAll("\\\\", "\\\\").replaceAll("\"", "\\\""))};
+                    String escapedFilePath = file.getAbsolutePath().replaceAll("\\\\", "\\\\").replaceAll("\"", "\\\"");
+                    String[] macCmd = new String[]{"osascript", "-e", String.format(mac_imgToClipboardApplescript, escapedFilePath)};
                     BufferedImage image = (BufferedImage) contents.getTransferData(DataFlavor.imageFlavor);
                     ImageIO.write(image, "png", file);
                     
@@ -178,9 +180,6 @@ public class ClipboardInterface
                 catch (InterruptedException e)
                 {
                     LLog.e(e);
-                }
-                finally {
-                    if (file != null) try { file.delete(); } catch (SecurityException e) {}
                 }
             }
             else
