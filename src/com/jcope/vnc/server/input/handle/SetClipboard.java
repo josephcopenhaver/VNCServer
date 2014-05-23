@@ -16,8 +16,6 @@ import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
 public class SetClipboard extends Handle
 {
-    private ClipboardMonitor clipboardMonitor = null;
-    
     @Override
     public void handle(ClientHandler client, Object[] args)
     {
@@ -30,11 +28,7 @@ public class SetClipboard extends Handle
             return;
         }
         
-        if (null == clipboardMonitor)
-        {
-            clipboardMonitor = ClipboardMonitor.getInstance();
-        }
-        
+        ClipboardMonitor clipboardMonitor = ClipboardMonitor.getInstance();
         boolean forwardChangeNotice = Boolean.FALSE;
         
         ClipboardInterface.lock();

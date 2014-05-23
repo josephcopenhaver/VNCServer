@@ -47,6 +47,7 @@ public class Manager extends Thread
 		super("Screen Manager");
 		clientsPerGraphicsDevice = new HashMap<GraphicsDevice, ArrayList<ClientHandler>>();
 		monitorForGraphicsDevice = new HashMap<GraphicsDevice, Monitor>();
+		start();
 	}
 	
 	public static Manager getInstance()
@@ -72,7 +73,6 @@ public class Manager extends Thread
 					{
 						rval = new Manager();
 						selfRef[0] = rval;
-						rval.start();
 					}
 				}
 			}

@@ -13,8 +13,6 @@ import com.jcope.vnc.client.input.Handle;
 
 public class SetClipboard extends Handle
 {
-    private ClipboardMonitor clipboardMonitor = null;
-    
     @Override
     public void handle(StateMachine stateMachine, Object[] args)
     {
@@ -27,10 +25,7 @@ public class SetClipboard extends Handle
             return;
         }
         
-        if (null == clipboardMonitor)
-        {
-            clipboardMonitor = ClipboardMonitor.getInstance();
-        }
+        ClipboardMonitor clipboardMonitor = ClipboardMonitor.getInstance();
         
         clipboardMonitor.lockAndPause();
         try
