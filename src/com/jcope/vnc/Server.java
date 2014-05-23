@@ -1,6 +1,7 @@
 package com.jcope.vnc;
 
 import static com.jcope.debug.Debug.assert_;
+import static com.jcope.util.Platform.PLATFORM_IS_WINDOWS;
 
 import java.awt.AWTException;
 import java.io.File;
@@ -21,7 +22,6 @@ import org.xml.sax.SAXException;
 import com.jcope.debug.LLog;
 import com.jcope.util.CurrentProcessInfo;
 import com.jcope.util.EnumPropertyInterface;
-import com.jcope.util.Platform;
 import com.jcope.vnc.server.VncServer;
 
 /**
@@ -173,7 +173,7 @@ public class Server
 			}
 			lockFiles.add(pidFile);
 			lockFiles.add(serverLockFile);
-			if (Platform.isWindows())
+			if (PLATFORM_IS_WINDOWS)
 			{
 				pidFileLock.release();
 				pidFileLock = null;

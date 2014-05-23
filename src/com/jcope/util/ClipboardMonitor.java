@@ -1,5 +1,7 @@
 package com.jcope.util;
 
+import static com.jcope.util.Platform.PLATFORM_IS_MAC;
+
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.ClipboardOwner;
 import java.awt.datatransfer.DataFlavor;
@@ -23,8 +25,6 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
 {
 	// On mac the clipboard cannot be cached for some reason..
 	
-    private static final boolean PLATFORM_IS_MAC =  Platform.isMac();
-    
     public static interface ClipboardListener
     {
         public void onChange(Clipboard clipboard);
