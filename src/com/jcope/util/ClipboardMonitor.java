@@ -101,7 +101,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                 }
                 
                 private final Semaphore cacheSema = new Semaphore(1, Boolean.TRUE);
-                private DataFlavor[] prevFlavors = null;
+                private volatile DataFlavor[] prevFlavors = null;
                 private volatile HashMap<DataFlavor, Object> cache = new HashMap<DataFlavor, Object>();
                 
                 private Object getComparableData(Clipboard clipboard, DataFlavor flavor) throws UnsupportedFlavorException, IOException, ClipboardBusyException
@@ -159,6 +159,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                 public void run()
                 {
                 	Clipboard clipboard;
+                	DataFlavor[] prevFlavors;
                     HashMap<DataFlavor, Object> cache;
                     DataFlavor[] flavors;
                     DataFlavor flavor;
@@ -181,10 +182,11 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                         {
                             try
                             {
-                                cache = this.cache;
                                 clipboard = ClipboardInterface.getClipboard();
                                 
-                                synchronized(cache) {
+                                synchronized(this.prevFlavors){synchronized(this.cache) {
+                                    prevFlavors = this.prevFlavors;
+                                    cache = this.cache;
                                     flavors = ClipboardInterface.getAvailableDataFlavors(clipboard);
                                     
                                     something_changed:
@@ -229,7 +231,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                                         fire = Boolean.FALSE;
                                         
                                     } while (Boolean.FALSE);
-                                }
+                                }}
                                 
                                 if (fire)
                                 {
@@ -248,6 +250,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                                     fire = Boolean.FALSE;
                                 }
                                 clipboard = null;
+                                prevFlavors = null;
                                 cache = null;
                                 flavors = null;
                                 flavor = null;
