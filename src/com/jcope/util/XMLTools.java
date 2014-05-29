@@ -86,24 +86,32 @@ public class XMLTools
         return children(parent, false);
     }
     
-    private static Iterable<Node> children(Node parent, final boolean forward)
+    private static Iterable<Node> children(final Node parent, final boolean forward)
     {
-        final NodeList children = parent.getChildNodes();
-        final int ub = children.getLength();
-        final int[] idxRef = new int[]{0};
-        final int inc;
-        
-        if (forward)
-        {
-            inc = 1; 
-        }
-        else
-        {
-            inc = -1;
-            idxRef[0] = ub-1;
-        }
-        
-        Iterable<Node> rval = new Iterable<Node>() {
+        return new Iterable<Node>() {
+            
+            boolean m_forward;
+            NodeList children;
+            int ub;
+            int idx;
+            int inc;
+            
+            {
+                m_forward = forward;
+                children = parent.getChildNodes();
+                ub = children.getLength();
+
+                if (m_forward)
+                {
+                    inc = 1;
+                    idx = 0;
+                }
+                else
+                {
+                    inc = -1;
+                    idx = ub - 1;
+                }
+            }
             
             @Override
             public Iterator<Node> iterator()
@@ -113,7 +121,7 @@ public class XMLTools
                     @Override
                     public boolean hasNext()
                     {
-                        return forward ? (idxRef[0] < ub) : (idxRef[0] >= 0);
+                        return m_forward ? (idx < ub) : (idx >= 0);
                     }
 
                     @Override
@@ -123,8 +131,8 @@ public class XMLTools
                         
                         if (hasNext())
                         {
-                            rval = children.item(idxRef[0]);
-                            idxRef[0] += inc;
+                            rval = children.item(idx);
+                            idx += inc;
                         }
                         else
                         {
@@ -145,8 +153,6 @@ public class XMLTools
                 return rval;
             }
         };
-        
-        return rval;
     }
     
     public static Document newDoc() throws ParserConfigurationException
