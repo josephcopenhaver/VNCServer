@@ -90,11 +90,11 @@ public class XMLTools
     {
         return new Iterable<Node>() {
             
-            boolean m_forward;
-            NodeList children;
-            int ub;
+            final boolean m_forward;
+            final NodeList children;
+            final int ub;
+            final int inc;
             int idx;
-            int inc;
             
             {
                 m_forward = forward;
