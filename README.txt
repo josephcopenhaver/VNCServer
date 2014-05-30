@@ -14,6 +14,12 @@ PREREQUISITS:
 
 BUILDING SOURCE:
 ===============
+***********************************
+* Note, ant command accepts modal *
+* vm runtime/compile-time hints:  *
+*     -Dmode=client (default)     *
+*     -Dmode=server               *
+***********************************
 0. set the debug opt accordingly in:
    com.jcope.debug.Debug.java
    // set to false to make faster/not printout crap

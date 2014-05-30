@@ -14,6 +14,22 @@
       </fail>
     </sequential>
   </macrodef>
+  <macrodef name="singlefilereplaceregexp">
+    <attribute name="file" />
+	<attribute name="match" />
+	<attribute name="replace" />
+	<attribute name="byline" default="false" />
+    <sequential>
+      <fail message="File does not exist: @{file}">
+        <condition><not>
+          <resourcecount count="1">
+            <fileset file="@{file}"/>
+          </resourcecount>
+        </not></condition>
+      </fail>
+	  <replaceregexp file="@{file}" match="@{match}" replace="@{replace}" byline="@{byline}"/>
+    </sequential>
+  </macrodef>
   <macrodef name="compilesrc">
     <attribute name="name" />
     <attribute name="excludes" default="" />
@@ -37,12 +53,32 @@
   <property name="build" location="bin"/>
   <property name="dist"  location="dist"/>
   <property name="not_built_marker"  location="${build}/empty"/>
+  
+  <target name="config" >
+    <record name="${logdir}/config.txt" action="start" append="false" />
+    <condition property="mode" value="client">
+        <not>  
+            <isset property="mode"/>
+        </not>
+    </condition>
+	<condition property="mode_ref_type" value="WeakReference">
+        <equals arg1="${mode}" arg2="server" />
+    </condition>
+	<condition property="mode_ref_type" value="SoftReference">
+        <not>  
+            <isset property="mode_ref_type"/>
+        </not>
+    </condition>
+	<singlefilereplaceregexp file="src/com/jcope/util/BufferPool.java" match="(?:WeakReference|SoftReference)" replace="${mode_ref_type}" byline="true"/>
+	<record name="${logdir}/config.txt" action="stop" />
+  </target>
 
   <target name="initlog" >
     <mkdir dir="${logdir}"/>
+	<antcall target="config"/>
   </target>
   
-  <target name="init" depends="initlog">
+  <target name="init" depends="initlog" >
   	<record name="${logdir}/init.txt" action="start" append="false" />
     <!-- Create the time stamp -->
     <tstamp/>

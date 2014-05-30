@@ -25,7 +25,7 @@ start() {
     if [ "$OPT_RUNNING" == "y" ]; then
         echo Service already running.
     else
-        (java -cp bin com.jcope.vnc.Server server.properties 2>&1 | tee server.log 2>&1) &
+        (java -server -cp bin com.jcope.vnc.Server server.properties 2>&1 | tee server.log 2>&1) &
         echo Service started.
     fi
 }
@@ -61,7 +61,7 @@ setup() {
 	if [ "$OPT_RESUME_AFTER_SETUP" == "y" ]; then
 		stop
 	fi
-	(java -cp bin com.jcope.vnc.ServerSetup server.properties 2>&1 | tee setup.log 2>&1)
+	(java -client -cp bin com.jcope.vnc.ServerSetup server.properties 2>&1 | tee setup.log 2>&1)
 	if [ "$OPT_RESUME_AFTER_SETUP" == "y" ]; then
 		start
 	fi
