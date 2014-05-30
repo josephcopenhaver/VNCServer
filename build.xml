@@ -42,7 +42,7 @@
 	  
       <!-- Compile the java code from ${src} into ${build} -->
 	  <!-- TODO: move com/jcope/util/Hashify.java to another git repository/library -->
-      <javac target="1.6" srcdir="${src}" destdir="${build}" excludes="com/jcope/util/Hashify.java,@{excludes}" classpath="@{classpath}" >
+      <javac target="1.6" srcdir="${src}" destdir="${build}" excludes="com/jcope/util/Hashify.java,${no_compile_selection},@{excludes}" classpath="@{classpath}" >
         <compilerarg value="-Xlint:unchecked"/>
       </javac>
   	  <record name="${logdir}/@{name}.txt" action="stop"/>
@@ -56,20 +56,48 @@
   
   <target name="config" >
     <record name="${logdir}/config.txt" action="start" append="false" />
-    <condition property="mode" value="client">
+    <condition property="compile_selection" value="all">
         <not>  
             <isset property="mode"/>
         </not>
     </condition>
-	<condition property="mode_ref_type" value="WeakReference">
-        <equals arg1="${mode}" arg2="server" />
-    </condition>
-	<condition property="mode_ref_type" value="SoftReference">
+	<condition property="compile_selection" value="${mode}">
         <not>  
-            <isset property="mode_ref_type"/>
+            <isset property="compile_selection"/>
         </not>
     </condition>
-	<singlefilereplaceregexp file="src/com/jcope/util/BufferPool.java" match="(?:WeakReference|SoftReference)" replace="${mode_ref_type}" byline="true"/>
+	<condition property="no_compile_selection" value="com/jcope/vnc/client/**/*.java,com/jcope/vnc/Client.java">
+        <equals arg1="${mode}" arg2="server" />
+    </condition>
+	<condition property="no_compile_selection" value="com/jcope/vnc/server/**/*.java,com/jcope/vnc/Server.java,com/jcope/vnc/ServerSetup.java">
+        <equals arg1="${mode}" arg2="client" />
+    </condition>
+	<condition property="no_compile_selection" value="">
+        <not>  
+            <isset property="no_compile_selection"/>
+        </not>
+    </condition>
+	<condition property="mode" value="client">
+        <not>  
+            <isset property="mode"/>
+        </not>
+    </condition>
+	<condition property="mode_cache_ref_type" value="Weak">
+        <equals arg1="${mode}" arg2="server" />
+    </condition>
+	<condition property="mode_cache_ref_type" value="Soft">
+        <not>  
+            <isset property="mode_cache_ref_type"/>
+        </not>
+    </condition>
+	<singlefilereplaceregexp file="${src}/com/jcope/util/BufferPool.java" match="(?:Weak|Soft)Reference" replace="${mode_cache_ref_type}Reference" byline="true"/>
+	
+	<!-- report the config -->
+	
+	<echo>mode=${mode}</echo>
+	<echo>mode_cache_ref_type=${mode_cache_ref_type}</echo>
+	<echo>compile_selection=${compile_selection}</echo>
+	<echo>no_compile_selection=${no_compile_selection}</echo>
 	<record name="${logdir}/config.txt" action="stop" />
   </target>
 
