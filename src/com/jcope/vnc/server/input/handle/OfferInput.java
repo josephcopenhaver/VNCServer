@@ -9,6 +9,7 @@ import com.jcope.debug.LLog;
 import com.jcope.util.TaskDispatcher;
 import com.jcope.vnc.server.ClientHandler;
 import com.jcope.vnc.server.DirectRobot;
+import com.jcope.vnc.server.InputEventPlayer;
 import com.jcope.vnc.server.input.Handle;
 import com.jcope.vnc.shared.InputEvent;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
@@ -121,7 +122,7 @@ public class OfferInput extends Handle
                     {
                         try
                         {
-                            InputEvent.perform(dirbot, event);
+                            InputEventPlayer.replay(dirbot, event);
                         }
                         finally {
                             queueSize--;

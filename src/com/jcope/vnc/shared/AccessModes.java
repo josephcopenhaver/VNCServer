@@ -3,12 +3,11 @@ package com.jcope.vnc.shared;
 import static com.jcope.vnc.shared.AccessModesCache.modesByName;
 import static com.jcope.vnc.shared.AccessModesCache.selectableList;
 import static com.jcope.vnc.shared.AccessModesCache.sortedList;
+import static com.jcope.vnc.shared.Tokens.ALL_TOKEN;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-
-import com.jcope.vnc.server.SecurityPolicy;
 
 public class AccessModes
 {
@@ -72,7 +71,7 @@ public class AccessModes
         
         public String commonName()
         {
-            String rval = equals(ALL) ? SecurityPolicy.ALL_TOKEN : name();
+            String rval = equals(ALL) ? ALL_TOKEN : name();
             
             return rval;
         }

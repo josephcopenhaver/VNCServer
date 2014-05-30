@@ -2,15 +2,12 @@ package com.jcope.vnc.shared;
 
 import static com.jcope.debug.Debug.assert_;
 
-import java.awt.Robot;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.io.Serializable;
 import java.util.Arrays;
 
-import com.jcope.vnc.server.DirectRobot;
-import com.jcope.vnc.server.screen.Manager;
 import com.jcope.vnc.shared.InputEventInfo.INPUT_TYPE;
 
 public class InputEvent implements Serializable
@@ -119,7 +116,12 @@ public class InputEvent implements Serializable
         this.mult = mult;
     }
     
-    private int x()
+    public int[] getData()
+    {
+        return new int[]{mult, mod, modex};
+    }
+    
+    public int x()
     {
         int rval = 0;
         
@@ -142,7 +144,7 @@ public class InputEvent implements Serializable
         return rval;
     }
     
-    private int y()
+    public int y()
     {
         int rval = 0;
         
@@ -188,7 +190,7 @@ public class InputEvent implements Serializable
         return rval;
     }
     
-    private int keycode()
+    public int keycode()
     {
         int rval = 0;
         
@@ -211,7 +213,7 @@ public class InputEvent implements Serializable
         return rval;
     }
     
-    private int mbutton()
+    public int mbutton()
     {
         int rval = 0;
         
@@ -232,181 +234,6 @@ public class InputEvent implements Serializable
         }
         
         return rval;
-    }
-    
-    public static void perform(DirectRobot dirbot, InputEvent event)
-    {
-        int modex = pushMods(dirbot, event.mod, event.modex);
-        
-        switch(event.type)
-        {
-            case MOUSE_DOWN:
-            case MOUSE_UP:
-            case MOUSE_PRESSED:
-            case MOUSE_MOVE:
-                Manager.getInstance().getOrigin(dirbot, InputEventInfo.ORIGIN);
-                break;
-            case KEY_DOWN:
-            case KEY_PRESSED:
-            case KEY_UP:
-            case WHEEL_SCROLL:
-                break;
-        }
-        
-        try
-        {
-            final int EOM = event.mult - 1;
-            for (int i=0; i<event.mult; i++)
-            {
-                switch(event.type)
-                {
-                    case KEY_PRESSED:
-                    case KEY_DOWN:
-                    {
-                        dirbot.keyPress(event.keycode());
-                        
-                        if (event.type == INPUT_TYPE.KEY_DOWN)
-                        {
-                            break;
-                        }
-                    }
-                    case KEY_UP:
-                    {
-                        dirbot.keyRelease(event.keycode());
-                        
-                        break;
-                    }
-                    case MOUSE_MOVE:
-                    {
-                        i = EOM;
-                        moveMouse(dirbot, event);
-                        
-                        break;
-                    }
-                    case MOUSE_PRESSED:
-                    case MOUSE_DOWN:
-                    {
-                        if (i == 0)
-                        {
-                            moveMouse(dirbot, event);
-                        }
-                        dirbot.mousePress(event.mbutton());
-                        
-                        if (event.type == INPUT_TYPE.MOUSE_DOWN)
-                        {
-                            break;
-                        }
-                    }
-                    case MOUSE_UP:
-                    {
-                        if (i == 0 && event.type == INPUT_TYPE.MOUSE_UP)
-                        {
-                            moveMouse(dirbot, event);
-                        }
-                        dirbot.mouseRelease(event.mbutton());
-                        
-                        break;
-                    }
-                    case WHEEL_SCROLL:
-                    {
-                        i = EOM;
-                        dirbot.mouseWheel((int) Math.ceil(event.mwheel()));
-                        
-                        break;
-                    }
-                }
-            }
-        }
-        finally {
-            popMods(dirbot, modex);
-        }
-    }
-    
-    private static void moveMouse(DirectRobot dirbot, InputEvent event)
-    {
-        int x, y;
-        
-        x = event.x();
-        y = event.y();
-        
-        dirbot.mouseMove(x, y, InputEventInfo.ORIGIN[0], InputEventInfo.ORIGIN[1]);
-    }
-    
-    private static int pushMods(DirectRobot dirbot, int mod, int modex)
-    {
-        int rval = 0;
-        Robot robot;
-        int mask;
-        
-        if (modex != 0)
-        {
-            robot = dirbot.robot;
-            
-            mask = java.awt.event.InputEvent.CTRL_DOWN_MASK;
-            if ((mask & modex) != 0)
-            {
-                rval |= mask;
-                robot.keyPress(KeyEvent.VK_CONTROL);
-            }
-            
-            mask = java.awt.event.InputEvent.SHIFT_DOWN_MASK;
-            if ((mask & modex) != 0)
-            {
-                rval |= mask;
-                robot.keyPress(KeyEvent.VK_SHIFT);
-            }
-            
-            mask = java.awt.event.InputEvent.ALT_DOWN_MASK;
-            if ((mask & modex) != 0)
-            {
-                rval |= mask;
-                robot.keyPress(KeyEvent.VK_ALT);
-            }
-            
-            mask = java.awt.event.InputEvent.META_DOWN_MASK;
-            if ((mask & modex) != 0)
-            {
-                rval |= mask;
-                robot.keyPress(KeyEvent.VK_META);
-            }
-        }
-        
-        return rval;
-    }
-    
-    private static void popMods(DirectRobot dirbot, int modex)
-    {
-        Robot robot;
-        int mask;
-        
-        if (modex != 0)
-        {
-            robot = dirbot.robot;
-            
-            mask = java.awt.event.InputEvent.CTRL_DOWN_MASK;
-            if ((mask & modex) != 0)
-            {
-                robot.keyRelease(KeyEvent.VK_CONTROL);
-            }
-            
-            mask = java.awt.event.InputEvent.SHIFT_DOWN_MASK;
-            if ((mask & modex) != 0)
-            {
-                robot.keyRelease(KeyEvent.VK_SHIFT);
-            }
-            
-            mask = java.awt.event.InputEvent.ALT_DOWN_MASK;
-            if ((mask & modex) != 0)
-            {
-                robot.keyRelease(KeyEvent.VK_ALT);
-            }
-            
-            mask = java.awt.event.InputEvent.META_DOWN_MASK;
-            if ((mask & modex) != 0)
-            {
-                robot.keyRelease(KeyEvent.VK_META);
-            }
-        }
     }
     
     public boolean merge(InputEvent next, boolean isFirstCollapse)

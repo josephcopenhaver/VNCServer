@@ -5,10 +5,11 @@ import java.util.concurrent.Semaphore;
 
 import com.jcope.debug.LLog;
 import com.jcope.vnc.shared.ByteBufferPool;
+import com.jcope.vnc.shared.JitCompressableInterface;
 import com.jcope.vnc.shared.Msg;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
-public class JitCompressedEvent
+public class JitCompressedEvent implements JitCompressableInterface
 {
     
     private static final Semaphore poolSyncLock = new Semaphore(1, true);

@@ -2,6 +2,7 @@ package com.jcope.vnc;
 
 import static com.jcope.debug.Debug.assert_;
 import static com.jcope.vnc.shared.ScreenSelector.getScreenDevices;
+import static com.jcope.vnc.shared.Tokens.ALL_TOKEN;
 
 import java.awt.GraphicsDevice;
 import java.io.File;
@@ -91,7 +92,7 @@ public class ServerSetup
             
             if (JCOptionPane.OK_OPTION == JCOptionPane.showConfirmDialog(frame, "Set a policy for all devices?"))
             {
-                deviceID = SecurityPolicy.ALL_TOKEN;
+                deviceID = ALL_TOKEN;
             }
             else
             {
@@ -245,7 +246,7 @@ public class ServerSetup
                     break;
                 }
                 
-                if (!passwordHash.equals(defaultPasswordHash) && !defaultPasswordHash.equals(SecurityPolicy.ALL_TOKEN))
+                if (!passwordHash.equals(defaultPasswordHash) && !defaultPasswordHash.equals(ALL_TOKEN))
                 {
                     passwordHash = HashFactory.hash(passwordHash);
                 }

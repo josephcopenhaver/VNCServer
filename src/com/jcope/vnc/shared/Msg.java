@@ -19,7 +19,6 @@ import java.util.zip.GZIPOutputStream;
 
 import com.jcope.debug.LLog;
 import com.jcope.util.ReusableByteArrayOutputStream;
-import com.jcope.vnc.server.JitCompressedEvent;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
@@ -181,7 +180,7 @@ public class Msg implements Serializable
 	    return rval;
 	}
 	
-	public static void send(BufferedOutputStream out, JitCompressedEvent jce, SERVER_EVENT event, Object... args) throws IOException
+	public static void send(BufferedOutputStream out, JitCompressableInterface jce, SERVER_EVENT event, Object... args) throws IOException
 	{
 		_send(out, jce, event, args);
 	}
@@ -191,7 +190,7 @@ public class Msg implements Serializable
 		_send(out, null, event, args);
 	}
 	
-	private static void _send(BufferedOutputStream out, JitCompressedEvent jce, Object event, Object... args) throws IOException
+	private static void _send(BufferedOutputStream out, JitCompressableInterface jce, Object event, Object... args) throws IOException
 	{
 	    ByteBufferPool.PoolRef outBufferRef = null;
 	    byte[] outBuffer;

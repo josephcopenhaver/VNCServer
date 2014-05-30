@@ -2,6 +2,7 @@ package com.jcope.vnc.server;
 
 import static com.jcope.debug.Debug.assert_;
 import static com.jcope.vnc.shared.ScreenSelector.getScreenDevices;
+import static com.jcope.vnc.shared.Tokens.ALL_TOKEN;
 
 import java.awt.GraphicsDevice;
 import java.io.File;
@@ -32,7 +33,6 @@ public class SecurityPolicy
                 }}
         }}
     };
-    public static final String ALL_TOKEN = "*";
     
     private HashMap<String, HashMap<ACCESS_MODE, String>> selectableDevices = new HashMap<String, HashMap<ACCESS_MODE, String>>(1);
     
