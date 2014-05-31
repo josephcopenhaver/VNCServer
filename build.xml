@@ -1,17 +1,39 @@
 <project name="JCope VNC Server" default="compile" basedir=".">
   <description>JCope VNCServer build file</description>
   <!-- set global properties for this build -->
-  <macrodef name="deleteifexists">
+  <macrodef name="failifexists">
     <attribute name="file" />
     <sequential>
-      <delete file="@{file}" failonerror="false" />
       <fail message="File exists: @{file}">
         <condition>
-          <resourcecount count="1">
+		  <resourcecount count="1">
             <fileset file="@{file}"/>
           </resourcecount>
         </condition>
       </fail>
+    </sequential>
+  </macrodef>
+  <macrodef name="failifexistsdir">
+    <attribute name="dir" />
+	<attribute name="arg1" default="" />
+	<attribute name="arg2" default="" />
+    <sequential>
+      <available property="err.dir-exists" file="@{dir}" type="dir" />
+	  <fail message="Directory exists: @{dir}">
+        <condition>
+          <and>
+		    <equals arg1="@{arg1}" arg2="@{arg2}" />
+			<isset property="err.dir-exists" />
+		  </and>
+        </condition>
+      </fail>
+    </sequential>
+  </macrodef>
+  <macrodef name="deleteifexists">
+    <attribute name="file" />
+    <sequential>
+      <delete file="@{file}" failonerror="false" />
+      <failifexists file="@{file}" />
     </sequential>
   </macrodef>
   <macrodef name="singlefilereplaceregexp">
@@ -90,7 +112,6 @@
             <isset property="mode_cache_ref_type"/>
         </not>
     </condition>
-	<singlefilereplaceregexp file="${src}/com/jcope/util/BufferPool.java" match="(?:Weak|Soft)Reference" replace="${mode_cache_ref_type}Reference" byline="true"/>
 	
 	<!-- report the config -->
 	
@@ -98,6 +119,16 @@
 	<echo>mode_cache_ref_type=${mode_cache_ref_type}</echo>
 	<echo>compile_selection=${compile_selection}</echo>
 	<echo>no_compile_selection=${no_compile_selection}</echo>
+	
+	<!-- Check the cleanliness of the intent for the config -->
+	
+	<failifexistsdir dir="${build}/com/jcope/vnc/client" arg1="${compile_selection}" arg2="server" />
+	<failifexistsdir dir="${build}/com/jcope/vnc/server" arg1="${compile_selection}" arg2="client" />
+	
+	<!-- Prep modal files before any possible compilation -->
+	
+	<singlefilereplaceregexp file="${src}/com/jcope/util/BufferPool.java" match="(?:Weak|Soft)Reference" replace="${mode_cache_ref_type}Reference" byline="true"/>
+	
 	<record name="${logdir}/config.txt" action="stop" />
   </target>
 
