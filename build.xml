@@ -18,12 +18,11 @@
 	<attribute name="arg1" default="" />
 	<attribute name="arg2" default="" />
     <sequential>
-      <available property="err.dir-exists" file="@{dir}" type="dir" />
 	  <fail message="Directory exists: @{dir}">
         <condition>
           <and>
 		    <equals arg1="@{arg1}" arg2="@{arg2}" />
-			<isset property="err.dir-exists" />
+		    <available file="@{dir}" type="dir" />
 		  </and>
         </condition>
       </fail>
