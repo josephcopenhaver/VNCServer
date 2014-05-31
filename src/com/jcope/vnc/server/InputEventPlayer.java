@@ -17,9 +17,9 @@ public class InputEventPlayer
         int mult, mod, modex;
         int[] data = event.getData();
         
-        mult = data[1];
-        mod = data[2];
-        modex = data[3];
+        mult = data[0];
+        mod = data[1];
+        modex = data[2];
         
         modex = pushMods(dirbot, mod, modex);
         
