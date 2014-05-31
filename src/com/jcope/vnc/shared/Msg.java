@@ -180,7 +180,7 @@ public class Msg implements Serializable
 	    return rval;
 	}
 	
-	public static void send(BufferedOutputStream out, JitCompressableInterface jce, SERVER_EVENT event, Object... args) throws IOException
+	public static void send(BufferedOutputStream out, JitCompressable jce, SERVER_EVENT event, Object... args) throws IOException
 	{
 		_send(out, jce, event, args);
 	}
@@ -190,7 +190,7 @@ public class Msg implements Serializable
 		_send(out, null, event, args);
 	}
 	
-	private static void _send(BufferedOutputStream out, JitCompressableInterface jce, Object event, Object... args) throws IOException
+	private static void _send(BufferedOutputStream out, JitCompressable jce, Object event, Object... args) throws IOException
 	{
 	    ByteBufferPool.PoolRef outBufferRef = null;
 	    byte[] outBuffer;

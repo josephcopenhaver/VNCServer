@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.Properties;
 
-import com.jcope.util.EnumPropertyInterface;
+import com.jcope.util.TypeSafeEnumPropertyPattern;
 import com.jcope.vnc.client.StateMachine;
 
 /**
@@ -23,7 +23,7 @@ import com.jcope.vnc.client.StateMachine;
 
 public class Client
 {
-    public static enum CLIENT_PROPERTIES implements EnumPropertyInterface
+    public static enum CLIENT_PROPERTIES implements TypeSafeEnumPropertyPattern
     {
         REMOTE_ADDRESS(""),
         REMOTE_PORT(1987),

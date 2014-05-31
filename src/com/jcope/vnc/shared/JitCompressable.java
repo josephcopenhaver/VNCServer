@@ -1,6 +1,6 @@
 package com.jcope.vnc.shared;
 
-public interface JitCompressableInterface
+public interface JitCompressable
 {
     abstract byte[] getCompressed();
 }

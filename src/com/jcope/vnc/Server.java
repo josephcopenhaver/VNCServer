@@ -21,7 +21,7 @@ import org.xml.sax.SAXException;
 
 import com.jcope.debug.LLog;
 import com.jcope.util.CurrentProcessInfo;
-import com.jcope.util.EnumPropertyInterface;
+import com.jcope.util.TypeSafeEnumPropertyPattern;
 import com.jcope.vnc.server.VncServer;
 
 /**
@@ -34,7 +34,7 @@ import com.jcope.vnc.server.VncServer;
 
 public class Server
 {
-    public static enum SERVER_PROPERTIES implements EnumPropertyInterface
+    public static enum SERVER_PROPERTIES implements TypeSafeEnumPropertyPattern
     {
         SERVER_BIND_ADDRESS("localhost"),
         SERVER_PORT(1987),
