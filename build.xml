@@ -63,19 +63,28 @@
 	  
       <!-- Compile the java code from ${src} into ${build} -->
 	  <!-- TODO: move com/jcope/util/Hashify.java to another git repository/library -->
-      <javac target="1.6" srcdir="${src}" destdir="${build}" excludes="com/jcope/util/Hashify.java,${no_compile_selection},@{excludes}" classpath="@{classpath}" >
+      <javac target="1.6" srcdir="${src}" destdir="${build}" excludes="com/jcope/util/Hashify.java,@{excludes}" classpath="@{classpath}" >
         <compilerarg value="-Xlint:unchecked"/>
       </javac>
   	  <record name="${logdir}/@{name}.txt" action="stop"/>
     </sequential>
   </macrodef>
   <property name="logdir" location="build.log"/>
+  <property name="nocompiledir" location="nosrc"/>
   <property name="src" location="src"/>
   <property name="build" location="bin"/>
   <property name="dist"  location="dist"/>
   <property name="not_built_marker"  location="${build}/empty"/>
   
-  <target name="config" >
+  <target name="limit_compile_set" if="do.limit_compile_set">
+    <record name="${logdir}/limit_compile_set.txt" action="start" append="false" />
+	  <move todir="${nocompiledir}">
+	    <fileset dir="${src}" includes="${no_compile_selection}" />
+	  </move>
+	<record name="${logdir}/limit_compile_set.txt" action="stop" />
+  </target>
+  
+  <target name="config">
     <record name="${logdir}/config.txt" action="start" append="false" />
     <condition property="compile_selection" value="all">
         <not>  
@@ -128,7 +137,22 @@
 	
 	<singlefilereplaceregexp file="${src}/com/jcope/util/BufferPool.java" match="(?:Weak|Soft)Reference" replace="${mode_cache_ref_type}Reference" byline="true"/>
 	
+	<mkdir dir="${nocompiledir}"/>
+	<move todir="${src}">
+		<fileset dir="${nocompiledir}">
+			<include name="**/*.java"/>
+		</fileset>
+	</move>
+	<delete dir="${nocompiledir}"/>
+	
+	<condition property="do.limit_compile_set">
+        <not>
+			<equals arg1="${no_compile_selection}" arg2="" />
+		</not>
+    </condition>
+	
 	<record name="${logdir}/config.txt" action="stop" />
+	<antcall target="limit_compile_set"/>
   </target>
 
   <target name="initlog" >
