@@ -53,7 +53,8 @@
   </macrodef>
   <macrodef name="compilesrc">
     <attribute name="name" />
-    <attribute name="excludes" default="" />
+    <attribute name="includes" default="${set_to_compile}" />
+    <attribute name="excludes" default="${no_compile_selection}" />
     <attribute name="classpath" default="" />
     <sequential>
       <record name="${logdir}/@{name}.txt" action="start" append="false" />
@@ -63,28 +64,20 @@
 	  
       <!-- Compile the java code from ${src} into ${build} -->
 	  <!-- TODO: move com/jcope/util/Hashify.java to another git repository/library -->
-      <javac target="1.6" srcdir="${src}" destdir="${build}" excludes="com/jcope/util/Hashify.java,@{excludes}" classpath="@{classpath}" >
+	  <javac target="1.6" srcdir="${src}" destdir="${build}" includes="@{includes}" excludes="com/jcope/util/Hashify.java,@{excludes}" classpath="@{classpath}" >
         <compilerarg value="-Xlint:unchecked"/>
       </javac>
   	  <record name="${logdir}/@{name}.txt" action="stop"/>
     </sequential>
   </macrodef>
   <property name="logdir" location="build.log"/>
-  <property name="nocompiledir" location="nosrc"/>
   <property name="src" location="src"/>
   <property name="build" location="bin"/>
   <property name="dist"  location="dist"/>
   <property name="not_built_marker"  location="${build}/empty"/>
   
-  <target name="limit_compile_set" if="do.limit_compile_set">
-    <record name="${logdir}/limit_compile_set.txt" action="start" append="false" />
-	  <move todir="${nocompiledir}">
-	    <fileset dir="${src}" includes="${no_compile_selection}" />
-	  </move>
-	<record name="${logdir}/limit_compile_set.txt" action="stop" />
-  </target>
-  
   <target name="config">
+	<mkdir dir="${logdir}"/>
     <record name="${logdir}/config.txt" action="start" append="false" />
     <condition property="compile_selection" value="all">
         <not>  
@@ -120,12 +113,24 @@
             <isset property="mode_cache_ref_type"/>
         </not>
     </condition>
+	<condition property="set_to_compile" value="com/jcope/vnc/Client.java">
+        <and><equals arg1="${mode}" arg2="client" /><not><equals arg1="${no_compile_selection}" arg2="" /></not></and>
+    </condition>
+	<condition property="set_to_compile" value="com/jcope/vnc/Server.java,com/jcope/vnc/ServerSetup.java">
+        <and><equals arg1="${mode}" arg2="server" /><not><equals arg1="${no_compile_selection}" arg2="" /></not></and>
+    </condition>
+	<condition property="set_to_compile" value="**/*.java">
+        <not>  
+            <isset property="set_to_compile"/>
+        </not>
+    </condition>
 	
 	<!-- report the config -->
 	
 	<echo>mode=${mode}</echo>
 	<echo>mode_cache_ref_type=${mode_cache_ref_type}</echo>
 	<echo>compile_selection=${compile_selection}</echo>
+	<echo>set_to_compile=${set_to_compile}</echo>
 	<echo>no_compile_selection=${no_compile_selection}</echo>
 	
 	<!-- Check the cleanliness of the intent for the config -->
@@ -137,30 +142,10 @@
 	
 	<singlefilereplaceregexp file="${src}/com/jcope/util/BufferPool.java" match="(?:Weak|Soft)Reference" replace="${mode_cache_ref_type}Reference" byline="true"/>
 	
-	<mkdir dir="${nocompiledir}"/>
-	<move todir="${src}">
-		<fileset dir="${nocompiledir}">
-			<include name="**/*.java"/>
-		</fileset>
-	</move>
-	<delete dir="${nocompiledir}"/>
-	
-	<condition property="do.limit_compile_set">
-        <not>
-			<equals arg1="${no_compile_selection}" arg2="" />
-		</not>
-    </condition>
-	
 	<record name="${logdir}/config.txt" action="stop" />
-	<antcall target="limit_compile_set"/>
-  </target>
-
-  <target name="initlog" >
-    <mkdir dir="${logdir}"/>
-	<antcall target="config"/>
   </target>
   
-  <target name="init" depends="initlog" >
+  <target name="init" depends="config" >
   	<record name="${logdir}/init.txt" action="start" append="false" />
     <!-- Create the time stamp -->
     <tstamp/>
@@ -201,7 +186,7 @@
   </target>
 
   <target name="clean"
-        description="clean up" depends="initlog" >
+        description="clean up" depends="config" >
   	<record name="${logdir}/clean.txt" action="start" append="false" />
     <!-- Delete the ${build} and ${dist} directory trees -->
     <delete dir="${build}"/>
