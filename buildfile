@@ -141,7 +141,6 @@ OUTPUT_BIN_DIR = 'bin'
 
 layout = Layout.new
 layout[:source, :main, :java] = SRC_JAVA_PATH
-layout[:target, :main] = OUTPUT_BIN_DIR
 layout[:target, :main, :classes] = OUTPUT_BIN_DIR
 #layout
 
@@ -150,7 +149,8 @@ define 'JCOPE_VNC', :layout=>layout do
 	compile.options.source = '1.6'
 	
 	bs = Buildr.settings.build
-	mode = bs['mode']
+	_mode = bs['mode']
+	mode = _mode
 	native_support = bs['native_support']
 	assert {[nil, true, false].include?(native_support)}
 	includes = nil
@@ -183,9 +183,10 @@ define 'JCOPE_VNC', :layout=>layout do
 	printf "\n\nCONFIG:\n\n"
 	#
 	printf "OPTIONS:\n"
-	printf "mode=%s\n", mode
+	printf "mode=%s\n", _mode
 	printf "native_support=%s\n", native_support
-	printf "\nRESULTS:\n"
+	printf "\nRESULTANTS:\n"
+	printf "mode=%s\n", mode
 	printf "includes=%s\n", includes
 	printf "excludes=%s\n", excludes
 	#
