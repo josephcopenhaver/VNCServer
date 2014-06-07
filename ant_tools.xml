@@ -1,0 +1,56 @@
+<project name="ANT build.xml tools" default="compile" basedir=".">
+  <macrodef name="compilesrc">
+    <attribute name="name" />
+    <attribute name="target" />
+    <attribute name="srcdir" />
+    <attribute name="destdir" />
+    <attribute name="includes" />
+    <attribute name="excludes" default="" />
+    <attribute name="classpath" default="" />
+    <sequential>
+      <record name="${logdir}/@{name}.txt" action="start" append="false" />
+      
+	  <!-- Compile the java code from ${src} into ${build} -->
+	  <!-- TODO: move com/jcope/util/Hashify.java to another git repository/library -->
+	  <javac target="@{target}" srcdir="@{srcdir}" destdir="@{destdir}" includes="@{includes}" excludes="@{excludes}" classpath="@{classpath}" >
+        <compilerarg value="-Xlint:unchecked"/>
+      </javac>
+  	  <record name="${logdir}/@{name}.txt" action="stop"/>
+    </sequential>
+  </macrodef>
+  <macrodef name="singlefilereplaceregexp">
+    <attribute name="file" />
+	<attribute name="match" />
+	<attribute name="replace" />
+	<attribute name="byline" default="false" />
+    <sequential>
+      <fail message="File does not exist: @{file}">
+        <condition><not>
+          <resourcecount count="1">
+            <fileset file="@{file}"/>
+          </resourcecount>
+        </not></condition>
+      </fail>
+	  <replaceregexp file="@{file}" match="@{match}" replace="@{replace}" byline="@{byline}"/>
+    </sequential>
+  </macrodef>
+  <property name="logdir" location="build.log"/>
+  
+  <target name="compile" description="compile the source" >
+	<mkdir dir="${logdir}"/>
+	<!--
+	ant -Dtarget_version=1.6 -Dsrc=D:/linux/git/VNCServer-workspace/VNCServer/src/main/java -Ddst=D:/linux/git/VNCServer-workspace/VNCServer/target/classes -Dincludes=com/jcope/vnc/Client.java -Dexcludes=com/jcope/vnc/server/**/*.java,com/jcope/vnc/Server.java,com/jcope/vnc/ServerSetup.java
+	- - >
+  	<compilesrc name="compile" target="1.6" srcdir="D:/linux/git/VNCServer-workspace/VNCServer/src/main/java" destdir="D:/linux/git/VNCServer-workspace/VNCServer/target/classes" includes="com/jcope/vnc/Client.java" excludes="com/jcope/vnc/server/**/*.java,com/jcope/vnc/Server.java,com/jcope/vnc/ServerSetup.java" />
+	-->
+  	<compilesrc name="compile" target="${target_version}" srcdir="${src}" destdir="${dst}" includes="${includes}" excludes="${excludes}" />
+  </target>
+  
+  <target name="apply_regex" description="applies a filter and replace regex to a file's lines" >
+    <condition property="byline" value="true">
+      <not><isset property="byline"/></not>
+    </condition>
+    <singlefilereplaceregexp file="${file}" match="${match}" replace="${replace}" byline="${byline}" />
+  </target>
+
+</project>
