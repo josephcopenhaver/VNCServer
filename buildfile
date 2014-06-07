@@ -92,23 +92,6 @@ class SelectiveCompiler < Compiler::Base
 		dst = target
 		includes = @options[:includes]
 		excludes = @options[:excludes]
-		if excludes != nil && excludes != ""
-			noBin = excludes.split(',')
-			noBin.map! do |v|
-				if v.end_with? '/**/*.java'
-					v = '^' + (Regexp.escape v[0..-10]) + '.*\.class'
-				elsif v.end_with? '.java'
-					v = '^' + (Regexp.escape v[0..-6]) + '\.class$'
-				end
-				Regexp.new v
-			end
-			noBin = Regexp.union(noBin)
-			FileList["#{target}/**/*"].each do |file|
-				if (!File.directory?(file)) && Util.relative_path(file, target) =~ noBin
-					raise (AssertionError.new "must clean first")
-				end
-			end
-		end
 		antTool(["-Dtarget_version=#{target_version}", "-Dsrc=#{src}", "-Ddst=#{dst}", "\"-Dincludes=#{includes}\"", "\"-Dexcludes=#{excludes}\""])
 	end
 		
@@ -121,11 +104,52 @@ class SelectiveCompiler < Compiler::Base
 	end
 
 	def compile_map(sources, target)
+		# 1. ensure bin dir state does NOT include
+		#  any explicitly ignored (probably modal) files
+		#  this would indicate a clean is most likely required
+		excludes = nil
+		excludes_bin_regex = @options[:excludes_bin_regex]
+		if excludes_bin_regex == nil || !excludes_bin_regex.instance_of?(Regexp)
+			# construct the bin regex
+			excludes_bin_regex = nil
+			excludes = @options[:excludes]
+			if excludes != nil && excludes != ""
+				excludes_bin_regex = excludes.split(',')
+				excludes_bin_regex.map! do |v|
+					if v.end_with? '/**/*.java'
+						v = '^' + (Regexp.escape v[0..-10]) + '.*\.class'
+					elsif v.end_with? '.java'
+						v = '^' + (Regexp.escape v[0..-6]) + '\.class$'
+					end
+					Regexp.new v
+				end
+				excludes_bin_regex = Regexp.union(excludes_bin_regex)
+			end
+			@options[:excludes_bin_regex] = excludes_bin_regex
+		end
+		if excludes_bin_regex != nil
+			# apply the bin exclusion regex if defined
+			FileList["#{target}/**/*"].each do |file|
+				if (!File.directory?(file))
+					relPath = Util.relative_path(file, target)
+					if relPath =~ excludes_bin_regex
+						raise (AssertionError.new "Clean task highly recommended before continuing: found file explicitly excluded in a compiled state, \"#{relPath}\"")
+					end
+				end
+			end
+		end
+		#
+		# when creating the file map,
+		# explicitly exclude files not part of this modal/
+		# selective file set build
+		#
 		excludes_regex = @options[:excludes_regex]
 		if excludes_regex != nil && excludes_regex.instance_of?(Regexp)
 			excludes = excludes_regex
 		else
-			excludes = @options[:excludes]
+			if excludes == nil
+				excludes = @options[:excludes]
+			end
 			if excludes != nil
 				if excludes != ""
 					excludes = excludes.split(',')
@@ -144,6 +168,9 @@ class SelectiveCompiler < Compiler::Base
 				@options[:excludes_regex] = excludes
 			end
 		end
+		#
+		# Construct the possibly applicable filtered to-compile set of files
+		#
 		target_ext = self.class.target_ext
 		ext_glob = Array(self.class.source_ext).join(',')
 		sources.flatten.map{|f| File.expand_path(f)}.inject({}) do |map, source|
