@@ -10,10 +10,25 @@ ENV['JAVA_OPTS'] ||= '-Xlint:unchecked'
 
 
 class AssertionError < RuntimeError
+	class << self
+		@@msg=nil
+		def msg
+			@@msg
+		end
+		def msg=msg
+			@@msg=msg
+		end
+	end
+end
+
+def assert_msg msg
+	AssertionError.msg=msg
 end
 
 def assert &block
-    raise AssertionError unless yield
+	msg = AssertionError.msg
+	AssertionError.msg = nil
+    raise ((msg == nil) ? AssertionError : (AssertionError.new msg)) unless yield
 end
 
 def antTool cmdArray
@@ -77,6 +92,23 @@ class SelectiveCompiler < Compiler::Base
 		dst = target
 		includes = @options[:includes]
 		excludes = @options[:excludes]
+		if excludes != nil && excludes != ""
+			noBin = excludes.split(',')
+			noBin.map! do |v|
+				if v.end_with? '/**/*.java'
+					v = '^' + (Regexp.escape v[0..-10]) + '.*\.class'
+				elsif v.end_with? '.java'
+					v = '^' + (Regexp.escape v[0..-6]) + '\.class$'
+				end
+				Regexp.new v
+			end
+			noBin = Regexp.union(noBin)
+			FileList["#{target}/**/*"].each do |file|
+				if (!File.directory?(file)) && Util.relative_path(file, target) =~ noBin
+					raise (AssertionError.new "must clean first")
+				end
+			end
+		end
 		antTool(["-Dtarget_version=#{target_version}", "-Dsrc=#{src}", "-Ddst=#{dst}", "\"-Dincludes=#{includes}\"", "\"-Dexcludes=#{excludes}\""])
 	end
 		
@@ -167,12 +199,12 @@ define 'JCOPE_VNC', :layout=>layout do
 		if mode == "client"
 			includes = "com/jcope/vnc/Client.java"
 			excludes = "com/jcope/vnc/server/**/*.java,com/jcope/vnc/Server.java,com/jcope/vnc/ServerSetup.java"
+			if native_support
+				includes += ",com/jcope/vnc/client/NativeDecorator.java"
+			end
 		else
 			includes = "com/jcope/vnc/Server.java,com/jcope/vnc/ServerSetup.java"
 			excludes = "com/jcope/vnc/client/**/*.java,com/jcope/vnc/Client.java"
-		end
-		if !native_support
-			excludes += ",com/jcope/vnc/client/NativeDecorator.java"
 		end
 		options = compile.options
 		options.includes = includes
@@ -202,7 +234,7 @@ define 'JCOPE_VNC', :layout=>layout do
 	
 	task :cleangit => :clean do
 		mkdir?(OUTPUT_BIN_DIR)
-		FileUtils.touch(OUTPUT_BIN_DIR + '/empty')
+		FileUtils.touch("#{OUTPUT_BIN_DIR}/empty")
 		rm_r?('build.log')
 		['setup.log', 'client.log', 'server.log', 'server.lock', 'server.pid'].each do |file|
 			rm?(file)
