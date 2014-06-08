@@ -46,7 +46,7 @@
   	<compilesrc name="compile" target="${target_version}" srcdir="${src}" destdir="${dst}" includes="${includes}" excludes="${excludes}" />
   </target>
   
-  <target name="apply_regex" description="applies a filter and replace regex to a file's lines" >
+  <target name="regexp_replace" description="applies a filter and replace regex to a file's lines" >
     <condition property="byline" value="true">
       <not><isset property="byline"/></not>
     </condition>

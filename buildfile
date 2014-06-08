@@ -253,7 +253,7 @@ define 'JCOPE_VNC', :layout=>layout do
 	
 	# change modal files using minimalistic ant command
 	mode_cache_ref_type = (mode == "client") ? "Soft" : "Weak"
-	antTool(["apply_regex", "-Dfile=#{SRC_JAVA_PATH}/com/jcope/util/BufferPool.java", "\"-Dmatch=(?:Weak|Soft)Reference\"", "-Dreplace=#{mode_cache_ref_type}Reference"])
+	antTool(["regexp_replace", "-Dfile=#{SRC_JAVA_PATH}/com/jcope/util/BufferPool.java", "\"-Dmatch=(?:Weak|Soft)Reference\"", "-Dreplace=#{mode_cache_ref_type}Reference"])
 	
 	clean do
 		rm_r?(OUTPUT_BIN_DIR)
