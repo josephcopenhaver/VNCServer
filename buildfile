@@ -117,7 +117,7 @@ class SelectiveCompiler < Compiler::Base
 				excludes_bin_regex = excludes.split(',')
 				excludes_bin_regex.map! do |v|
 					if v.end_with? '/**/*.java'
-						v = '^' + (Regexp.escape v[0..-10]) + '.*\.class'
+						v = '^' + (Regexp.escape v[0..-10]) + '.*\.class$'
 					elsif v.end_with? '.java'
 						v = '^' + (Regexp.escape v[0..-6]) + '\.class$'
 					end
