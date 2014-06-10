@@ -68,8 +68,26 @@ RUN VNC CLIENT:
 
 
 
+OTHER BUILD TARGETS:
+===================
+*************************************
+* Note buildr automatically defines *
+* the follow target's behavior, see *
+* their documentation for           *
+* explanation:                      *
+*     clean                         *
+*     compile                       *
+*     resources                     *
+*     build                         *
+*************************************
+1. cleangit - Runs clean and attempts to
+   restore the git repository to a state
+   that is easily commitable from the root
+
+
+
 OPTIONAL BUILD ARGUMENTS in build.yaml:
-===============================
+======================================
 #mode: client # OR server 
 		(customize the java build for a specific application target, better for release purposes)
 #native_support: true

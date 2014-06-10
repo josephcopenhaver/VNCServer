@@ -10,25 +10,14 @@ ENV['JAVA_OPTS'] ||= '-Xlint:unchecked'
 
 
 class AssertionError < RuntimeError
-	class << self
-		@@msg=nil
-		def msg
-			@@msg
-		end
-		def msg=msg
-			@@msg=msg
-		end
-	end
 end
 
-def assert_msg msg
-	AssertionError.msg=msg
+def assert_msg msg, &block
+	raise ((msg == nil) ? AssertionError : (AssertionError.new msg)) unless yield
 end
 
 def assert &block
-	msg = AssertionError.msg
-	AssertionError.msg = nil
-    raise ((msg == nil) ? AssertionError : (AssertionError.new msg)) unless yield
+	assert_msg nil, &block
 end
 
 def antTool cmdArray
