@@ -5,8 +5,14 @@ VNCServer
 
 PREREQUISITS:
 ============
-0. apache ant already installed
-1. If on windows then you need perl (for custom tee command)
+**************************************************
+* Note if you use jruby for ease of installation *
+* you need to build using "jruby -S buildr"      *
+* instead of simply "buildr"                     *
+**************************************************
+0. apache ant already installed and executable from command line (  ant -v  )
+1. buildr installed (  http://buildr.apache.org/  ) and executable from command line (  buildr --version  )
+2. If on windows then you need perl (for custom tee command)
    or you should drop all references to the tee command in the
    .bat scripts.
 
@@ -14,18 +20,16 @@ PREREQUISITS:
 
 BUILDING SOURCE:
 ===============
-***********************************
-* Note, ant command accepts modal *
-* vm runtime/compile-time hints:  *
-*     -Dmode=client (default)     *
-*     -Dmode=server               *
-***********************************
-0. set the debug opt accordingly in:
-   com.jcope.debug.Debug.java
-   // set to false to make faster/not printout crap
-   public static final boolean DEBUG = Boolean.TRUE;
-1. run ant in the workspace dir:
-   ant
+0a. set the debug opt accordingly in:
+    com.jcope.debug.Debug.java
+    // set to false to make faster/not printout crap
+    public static final boolean DEBUG = Boolean.TRUE;
+0b. If you get issues around downloading dependencies,
+    then set your "HTTP_PROXY" environment variable
+    before building or double check your internet
+    connection. Dependencies are only fetched once.
+1. run buildr in the workspace dir:
+   buildr
 
 
 
@@ -64,12 +68,22 @@ RUN VNC CLIENT:
 
 
 
-OTHER ANT BUILD TARGETS:
+OPTIONAL BUILD ARGUMENTS in build.yaml:
 ===============================
-(See build.xml for more detail)
--------------------------------
-ant ncompile
-ant clean
-ant cleangit
+#mode: client # OR server 
+		(customize the java build for a specific application target, better for release purposes)
+#native_support: true
+	NOT WORKING YET:
+		Compile the software with
+		support for natively taking over
+		keystrokes/overriding global handles
+		using:
+		https://code.google.com/p/jnativehook/
+		Last known compatible version: 1.1.4
+		Drop JNativeHook.jar into "lib" dir
 
 
+
+PROJECT CONFIGURATION FUTURE PLANS:
+===============================
+1. Integrate task scripts into the project buildfile (service/client)
