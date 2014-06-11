@@ -1,6 +1,5 @@
 # runtime dependencies
 require 'FileUtils'
-require 'Open3'
 
 # Build dependencies
 repositories.remote << 'http://repo1.maven.org/maven2'
@@ -17,23 +16,8 @@ def assert *msg
 	raise (msg.length == 0 ? AssertionError : (AssertionError.new *msg)) unless yield
 end
 
-# jruby's support of popen seems to always use a shell like wrapper, regardless of how one tries to popen.
-# This is unacceptable to me, so it shall not be allowed as a runtime for building
-#
-assert("Must not use jruby until they get their popen support right!"){!defined? JRUBY_VERSION}
-
 def antTool cmdArray
-	cmd = "ant"
-	assert {
-		Open3.popen2e([cmd, cmd], "-buildfile", "ant_tools.xml", *cmdArray) do |stdin, stdout_and_stderr, wait_thr|
-			# relay child process output
-			while l = stdout_and_stderr.gets
-				puts l
-			end
-			# wait till end of child process and return true if process exited normally
-			wait_thr.value.exitstatus == 0
-		end
-	}
+	assert { system("ant", "-buildfile", "ant_tools.xml", *cmdArray) }
 end
 
 def rm? file
@@ -92,7 +76,7 @@ class SelectiveCompiler < Compiler::Base
 		dst = target
 		includes = @options[:includes]
 		excludes = @options[:excludes]
-		antTool(["-Dtarget_version=#{target_version}", "-Dsrc=#{src}", "-Ddst=#{dst}", "-Dincludes=#{includes}", "-Dexcludes=#{excludes}"])
+		antTool(["-Dtarget_version=#{target_version}", "-Dsrc=#{src}", "-Ddst=#{dst}", "\"-Dincludes=#{includes}\"", "\"-Dexcludes=#{excludes}\""])
 	end
 		
 	def check_options(options, *supported)
@@ -252,8 +236,10 @@ define 'JCOPE_VNC', :layout=>layout do
 	printf "\n:CONFIG\n\n\n"
 	
 	# change modal files using minimalistic ant command
+	# TODO: figure out the proper way to run commands and escape command arguments
+	#   this seems to be absolute hell in ruby and remaining cross platform
 	mode_cache_ref_type = (mode == "client") ? "Soft" : "Weak"
-	antTool(["regexp_replace", "-Dfile=#{SRC_JAVA_PATH}/com/jcope/util/BufferPool.java", "-Dmatch=(?:Weak|Soft)Reference", "-Dreplace=#{mode_cache_ref_type}Reference"])
+	antTool(["regexp_replace", "-Dfile=#{SRC_JAVA_PATH}/com/jcope/util/BufferPool.java", "\"-Dmatch=(?:Weak^|Soft)Reference\"", "-Dreplace=#{mode_cache_ref_type}Reference"])
 	
 	clean do
 		rm_r?(OUTPUT_BIN_DIR)
