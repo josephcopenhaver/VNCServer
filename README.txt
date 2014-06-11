@@ -5,11 +5,10 @@ VNCServer
 
 PREREQUISITS:
 ============
-**************************************************
-* Note if you use jruby for ease of installation *
-* you need to build using "jruby -S buildr"      *
-* instead of simply "buildr"                     *
-**************************************************
+***************************************************
+* Note jruby is not supported, there are critical *
+* issues with their popen support.                *
+***************************************************
 0. apache ant already installed and executable from command line (  ant -v  )
 1. buildr installed (  http://buildr.apache.org/  ) and executable from command line (  buildr --version  )
 2. If on windows then you need perl (for custom tee command)
