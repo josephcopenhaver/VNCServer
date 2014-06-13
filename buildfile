@@ -1,6 +1,5 @@
 # runtime dependencies
 require 'FileUtils'
-require 'Shellwords'
 
 # Build dependencies
 repositories.remote << 'http://repo1.maven.org/maven2'
@@ -29,10 +28,7 @@ def antSyscall *args
 		end
 		#printf "cmd /c \"%s\"\n", args.join(" ")
 	else
-		args.map! do |v|
-			Shellwords.shellescape v
-		end
-		#printf "\"%s\"\n", args.join(" ")
+		assert("Why use jruby when you are not on windows?") {(!(defined? JRUBY_VERSION))} # you can try commenting this out, but I never tested that
 	end
 	system(*args)
 end
