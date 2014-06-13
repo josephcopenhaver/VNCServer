@@ -17,6 +17,8 @@ import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.HashMap;
 import java.util.concurrent.Semaphore;
 
@@ -72,9 +74,33 @@ public class MainFrame extends JFrame
 	private Semaphore isChangingFullScreenLock = new Semaphore(1, true);
 	private boolean isFullScreen = false;
 	private GraphicsDevice currentFullScreenDevice = null;
+	
+	private final Semaphore iconifiedSema;
 
 	public MainFrame(final StateMachine stateMachine)
 	{
+	    
+	    iconifiedSema = stateMachine.getIconifiedSemaphore();
+	    
+	    addWindowListener(new WindowAdapter() {
+            
+	        @Override
+            public void windowIconified(WindowEvent evt) {
+                try
+                {
+                    iconifiedSema.acquire();
+                }
+                catch (InterruptedException e)
+                {
+                    LLog.e(e);
+                }
+            }
+            
+            @Override
+            public void windowDeiconified(WindowEvent evt) {
+                iconifiedSema.release();
+            }
+        });
 	    
 	    add(scrollPane);
 	    

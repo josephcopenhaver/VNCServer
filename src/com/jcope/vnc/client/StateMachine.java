@@ -20,6 +20,7 @@ import com.jcope.ui.PasswordInputDialog;
 import com.jcope.util.TaskDispatcher;
 import com.jcope.vnc.Client.CLIENT_PROPERTIES;
 import com.jcope.vnc.client.input.Handler;
+import com.jcope.vnc.client.input.handle.ScreenSegmentChanged;
 import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
 import com.jcope.vnc.shared.HashFactory;
 import com.jcope.vnc.shared.InputEvent;
@@ -49,6 +50,8 @@ public class StateMachine implements Runnable
     private Semaphore queueAccessSema = new Semaphore(1, true);
     private volatile ArrayList<InputEvent> outQueue = null;
     private ACCESS_MODE accessMode = null;
+    
+    private Semaphore iconifiedSema = new Semaphore(1, true);
     
     public StateMachine(String serverAddress, int serverPort, Integer selectedScreenNum, String password) throws UnknownHostException, IOException
 	{
@@ -385,23 +388,28 @@ public class StateMachine implements Runnable
 	{
 	    try
 	    {
-    		if (socket != null)
-    		{
-    		    try
-    		    {
-    		        socket.close();
-    		    }
-    		    catch (IOException e)
-    		    {
-    		        // Do Nothing
-    		    }
-    		    finally {
-    		        socket = null;
-    		    }
-    		}
+            try {
+                ScreenSegmentChanged.segmentFetcher.clear();
+            }
+            finally {
+                dispatcher.clear();
+            }
 	    }
 	    finally {
-	        dispatcher.clear();
+            if (socket != null)
+            {
+                try
+                {
+                    socket.close();
+                }
+                catch (IOException e)
+                {
+                    // Do Nothing
+                }
+                finally {
+                    socket = null;
+                }
+            }
 	    }
 	}
 	
@@ -536,5 +544,10 @@ public class StateMachine implements Runnable
         boolean rval = (((Boolean)CLIENT_PROPERTIES.SYNCHRONIZE_CLIPBOARD.getValue()) && getAccessMode() == ACCESS_MODE.FULL_CONTROL);
         
         return rval;
+    }
+
+    public Semaphore getIconifiedSemaphore()
+    {
+        return iconifiedSema;
     }
 }
