@@ -1,5 +1,6 @@
 # runtime dependencies
 require 'FileUtils'
+require 'Shellwords'
 
 # Build dependencies
 repositories.remote << 'http://repo1.maven.org/maven2'
@@ -8,6 +9,33 @@ repositories.remote << 'http://repo1.maven.org/maven2'
 ENV['JAVA_OPTS'] ||= '-Xlint:unchecked'
 
 
+IS_WINDOWS = [nil]
+def antSyscall *args
+	if IS_WINDOWS[0] == nil
+		IS_WINDOWS[0] = (ENV['OS'] == 'Windows_NT')
+	end
+	if IS_WINDOWS[0] then
+		args.map! do |v|
+			# this at least works on jruby windows and Apache Ant(TM) version 1.8.4
+			# not sure about real-ruby
+			if /[%\*\s\t\v"\|\<\>\&\^]/ =~ v
+				#
+				# still not sure if the '%' symbol needs to be part of this set
+				# %STR% tokens may be expanded as a result
+				#
+				v = ('"' + v.gsub('"', '""') + '"').gsub(/([\|\<\>\&\^])/, "^\\1")
+			end
+			v
+		end
+		#printf "cmd /c \"%s\"\n", args.join(" ")
+	else
+		args.map! do |v|
+			Shellwords.shellescape v
+		end
+		#printf "\"%s\"\n", args.join(" ")
+	end
+	system(*args)
+end
 
 class AssertionError < RuntimeError
 end
@@ -17,7 +45,7 @@ def assert *msg
 end
 
 def antTool cmdArray
-	assert { system("ant", "-buildfile", "ant_tools.xml", *cmdArray) }
+	assert { antSyscall("ant", "-buildfile", "ant_tools.xml", *cmdArray) }
 end
 
 def rm? file
@@ -76,7 +104,7 @@ class SelectiveCompiler < Compiler::Base
 		dst = target
 		includes = @options[:includes]
 		excludes = @options[:excludes]
-		antTool(["-Dtarget_version=#{target_version}", "-Dsrc=#{src}", "-Ddst=#{dst}", "\"-Dincludes=#{includes}\"", "\"-Dexcludes=#{excludes}\""])
+		antTool(["-Dtarget_version=#{target_version}", "-Dsrc=#{src}", "-Ddst=#{dst}", "-Dincludes=#{includes}", "-Dexcludes=#{excludes}"])
 	end
 		
 	def check_options(options, *supported)
@@ -239,7 +267,7 @@ define 'JCOPE_VNC', :layout=>layout do
 	# TODO: figure out the proper way to run commands and escape command arguments
 	#   this seems to be absolute hell in ruby and remaining cross platform
 	mode_cache_ref_type = (mode == "client") ? "Soft" : "Weak"
-	antTool(["regexp_replace", "-Dfile=#{SRC_JAVA_PATH}/com/jcope/util/BufferPool.java", "\"-Dmatch=(?:Weak^|Soft)Reference\"", "-Dreplace=#{mode_cache_ref_type}Reference"])
+	antTool(["regexp_replace", "-Dfile=#{SRC_JAVA_PATH}/com/jcope/util/BufferPool.java", "-Dmatch=(?:Weak|Soft)Reference", "-Dreplace=#{mode_cache_ref_type}Reference"])
 	
 	clean do
 		rm_r?(OUTPUT_BIN_DIR)
