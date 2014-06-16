@@ -27,7 +27,7 @@ def antSyscall *args
 		end
 		#printf "cmd /c \"%s\"\n", args.join(" ")
 	else
-		assert("Why use jruby when you are not on windows?") {(!(defined? JRUBY_VERSION))} # you can try commenting this out, but I never tested that
+		assert("Why use jruby when you are not on windows?") {!(defined? JRUBY_VERSION)} # you can try commenting this out, but I never tested that
 	end
 	system(*args)
 end
@@ -39,8 +39,8 @@ def assert *msg
 	raise (msg.length == 0 ? AssertionError : (AssertionError.new *msg)) unless yield
 end
 
-def antTool cmdArray
-	assert { antSyscall("ant", "-buildfile", "ant_tools.xml", *cmdArray) }
+def antTool *cmdArgs
+	assert { antSyscall("ant", "-buildfile", "ant_tools.xml", *cmdArgs) }
 end
 
 def rm? file
@@ -99,7 +99,7 @@ class SelectiveCompiler < Compiler::Base
 		dst = target
 		includes = @options[:includes]
 		excludes = @options[:excludes]
-		antTool(["-Dtarget_version=#{target_version}", "-Dsrc=#{src}", "-Ddst=#{dst}", "-Dincludes=#{includes}", "-Dexcludes=#{excludes}"])
+		antTool("-Dtarget_version=#{target_version}", "-Dsrc=#{src}", "-Ddst=#{dst}", "-Dincludes=#{includes}", "-Dexcludes=#{excludes}")
 	end
 		
 	def check_options(options, *supported)
@@ -208,7 +208,6 @@ OUTPUT_BIN_DIR = 'bin'
 layout = Layout.new
 layout[:source, :main, :java] = SRC_JAVA_PATH
 layout[:target, :main, :classes] = OUTPUT_BIN_DIR
-#layout
 
 define 'JCOPE_VNC', :layout=>layout do
 	
@@ -259,10 +258,8 @@ define 'JCOPE_VNC', :layout=>layout do
 	printf "\n:CONFIG\n\n\n"
 	
 	# change modal files using minimalistic ant command
-	# TODO: figure out the proper way to run commands and escape command arguments
-	#   this seems to be absolute hell in ruby and remaining cross platform
 	mode_cache_ref_type = (mode == "client") ? "Soft" : "Weak"
-	antTool(["regexp_replace", "-Dfile=#{SRC_JAVA_PATH}/com/jcope/util/BufferPool.java", "-Dmatch=(?:Weak|Soft)Reference", "-Dreplace=#{mode_cache_ref_type}Reference"])
+	antTool("regexp_replace", "-Dfile=#{SRC_JAVA_PATH}/com/jcope/util/BufferPool.java", "-Dmatch=(?:Weak|Soft)Reference", "-Dreplace=#{mode_cache_ref_type}Reference")
 	
 	clean do
 		rm_r?(OUTPUT_BIN_DIR)
