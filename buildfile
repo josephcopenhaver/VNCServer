@@ -17,7 +17,7 @@ def antSyscall *args
 		args.map! do |v|
 			# this at least works on jruby windows and Apache Ant(TM) version 1.8.4
 			# not sure about real-ruby
-			if /[\*\s\t\v"\|\<\>\&\^%]/ =~ v
+			if /[,\*\s\t\v"\|\<\>\&\^%]/ =~ v
 				#
 				# %STR% tokens will not be expanded
 				#
