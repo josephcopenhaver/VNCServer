@@ -8,12 +8,21 @@ repositories.remote << 'http://repo1.maven.org/maven2'
 ENV['JAVA_OPTS'] ||= '-Xlint:unchecked'
 
 
-IS_WINDOWS = [nil]
+# assert support
+class AssertionError < RuntimeError
+end
+
+def assert *msg
+	raise (msg.length == 0 ? AssertionError : (AssertionError.new *msg)) unless yield
+end
+
+
+# const globs
+IS_WINDOWS = (ENV['OS'] == 'Windows_NT')
+
+
 def antSyscall *args
-	if IS_WINDOWS[0] == nil
-		IS_WINDOWS[0] = (ENV['OS'] == 'Windows_NT')
-	end
-	if IS_WINDOWS[0] then
+	if IS_WINDOWS then
 		args.map! do |v|
 			# this at least works on jruby windows and Apache Ant(TM) version 1.8.4
 			# not sure about real-ruby
@@ -30,13 +39,6 @@ def antSyscall *args
 		assert("Why use jruby when you are not on windows?") {!(defined? JRUBY_VERSION)} # you can try commenting this out, but I never tested that
 	end
 	system(*args)
-end
-
-class AssertionError < RuntimeError
-end
-
-def assert *msg
-	raise (msg.length == 0 ? AssertionError : (AssertionError.new *msg)) unless yield
 end
 
 def antTool *cmdArgs
