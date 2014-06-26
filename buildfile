@@ -58,7 +58,7 @@ def rm_r? dir
 end
 
 def mkdir? dir
-	if !Dir.exists?(dir)
+	if !File.exists?(dir) && !File.directory?(dir)
 		return FileUtils.mkdir(dir)
 	end
 	false
