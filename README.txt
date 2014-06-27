@@ -34,14 +34,24 @@ BUILDING SOURCE:
 
 
 
-CONFIGURE SERVER:
-================
+CONFIGURE SERVER SECURITY PROFILE:
+=================================
 **************************************
 * The default run mode is fully open *
 *  you should really set a password  *
 **************************************
 (windows): service setup
   (other): sh service.sh setup
+
+
+  
+CONFIGURE SERVER I/O:
+====================
+SERVER_SECURITY_POLICY=<File generated in security setup step>
+SERVER_BIND_ADDRESS=<HOST_IP_OR_NAME>
+SERVER_PORT=<PORT_#>
+SERVER_LISTEN_BACKLOG=0
+SUPPORT_CLIPBOARD_SYNCHRONIZATION=0
 
 
 
@@ -64,6 +74,9 @@ STOP VNC SERVER:
 
 RUN VNC CLIENT:
 ==============
+*******************************************
+* Note configurables in client.properties *
+*******************************************
 (windows): client
   (other): sh client.sh
 
