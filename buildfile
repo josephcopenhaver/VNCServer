@@ -1,5 +1,6 @@
 # runtime dependencies
 require 'FileUtils'
+require 'Open3'
 
 # Build dependencies
 repositories.remote << 'http://repo1.maven.org/maven2'
@@ -34,11 +35,17 @@ def antSyscall *args
 			end
 			v
 		end
-		#printf "cmd /c \"%s\"\n", args.join(" ")
+		v = system(*args)
 	else
 		assert("Why use jruby when you are not on windows?") {!(defined? JRUBY_VERSION)} # you can try commenting this out, but I never tested that
+		Open3.popen2e(*args) do |stdin, stdout_and_stderr, wait_thr|
+			while l = stdout_and_stderr.gets
+				puts l
+			end
+			v = wait_thr.value.success?
+		end
 	end
-	system(*args)
+	v
 end
 
 def antTool *cmdArgs
