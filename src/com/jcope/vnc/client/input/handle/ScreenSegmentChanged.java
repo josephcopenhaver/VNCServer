@@ -40,27 +40,30 @@ public class ScreenSegmentChanged extends Handle<StateMachine>
         
         final Semaphore f_iconifiedSema = iconifiedSema;
         
-        segmentFetcher.dispatch(segmentID, new Runnable() {
-            
-            @Override
-            public void run()
-            {
-                try
+        if (!segmentFetcher.queueContains(segmentID))
+        {
+            segmentFetcher.dispatch(segmentID, new Runnable() {
+                
+                @Override
+                public void run()
                 {
-                    f_iconifiedSema.acquire();
+                    try
+                    {
+                        f_iconifiedSema.acquire();
+                    }
+                    catch (InterruptedException e)
+                    {
+                        LLog.e(e);
+                    }
+                    try {
+                        stateMachine.sendEvent(CLIENT_EVENT.GET_SCREEN_SEGMENT, segmentID);
+                    }
+                    finally {
+                        f_iconifiedSema.release();
+                    }
                 }
-                catch (InterruptedException e)
-                {
-                    LLog.e(e);
-                }
-                try {
-                    stateMachine.sendEvent(CLIENT_EVENT.GET_SCREEN_SEGMENT, segmentID);
-                }
-                finally {
-                    f_iconifiedSema.release();
-                }
-            }
-        });
+            });
+        }
         
         stateMachine.sendEvent(CLIENT_EVENT.ACKNOWLEDGE_NON_SERIAL_EVENT, SERVER_EVENT.SCREEN_SEGMENT_CHANGED, segmentID);
     }
