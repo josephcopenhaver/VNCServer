@@ -3,7 +3,7 @@ package com.jcope.util;
 import static com.jcope.debug.Debug.assert_;
 
 import java.lang.ref.ReferenceQueue;
-import java.lang.ref.WeakReference;
+import java.lang.ref.SoftReference;
 import java.util.ArrayList;
 import java.util.concurrent.Semaphore;
 
@@ -81,7 +81,7 @@ public abstract class BufferPool<T>
         cleanupThread.start();
     }
     
-    public class PoolRef extends WeakReference<T>
+    public class PoolRef extends SoftReference<T>
     {
         //private volatile boolean isOwned;
         private volatile int refCount;

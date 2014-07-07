@@ -31,7 +31,7 @@ def antSyscall *args
 				#
 				# %STR% tokens will not be expanded
 				#
-				v = ('"' + v.gsub('"', '""') + '"').gsub(/([\|\<\>\&\^])/, "^\\1").gsub('%', '%%')
+				v = ('"' + v.gsub('"', '""') + '"').gsub(/([\<\>\&\^])/, "^\\1").gsub('%', '%%')
 			end
 			v
 		end
@@ -218,6 +218,13 @@ layout = Layout.new
 layout[:source, :main, :java] = SRC_JAVA_PATH
 layout[:target, :main, :classes] = OUTPUT_BIN_DIR
 
+def setupSrc(mode)
+	
+	# change modal files using minimalistic ant command
+	mode_cache_ref_type = (mode == "client") ? "Soft" : "Weak"
+	antTool("regexp_replace", "-Dfile=#{SRC_JAVA_PATH}/com/jcope/util/BufferPool.java", "-Dmatch=(?:Weak|Soft)Reference", "-Dreplace=#{mode_cache_ref_type}Reference")
+end
+
 define 'JCOPE_VNC', :layout=>layout do
 	
 	compile.options.source = '1.6'
@@ -266,15 +273,16 @@ define 'JCOPE_VNC', :layout=>layout do
 	#
 	printf "\n:CONFIG\n\n\n"
 	
-	# change modal files using minimalistic ant command
-	mode_cache_ref_type = (mode == "client") ? "Soft" : "Weak"
-	antTool("regexp_replace", "-Dfile=#{SRC_JAVA_PATH}/com/jcope/util/BufferPool.java", "-Dmatch=(?:Weak|Soft)Reference", "-Dreplace=#{mode_cache_ref_type}Reference")
-	
 	clean do
 		rm_r?(OUTPUT_BIN_DIR)
 	end
 	
+	resources do
+		setupSrc(mode)
+	end
+	
 	task :cleangit => :clean do
+		setupSrc('client')
 		mkdir?(OUTPUT_BIN_DIR)
 		FileUtils.touch("#{OUTPUT_BIN_DIR}/empty")
 		rm_r?('build.log')
