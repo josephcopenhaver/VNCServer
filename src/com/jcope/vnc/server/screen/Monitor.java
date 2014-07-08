@@ -162,6 +162,7 @@ public class Monitor extends Thread
 				
 				if (changed)
 				{
+				    FixedLengthBitSet tmp = changedSegments.clone();
 					for (ClientHandler client : clients)
 					{
 					    if (client.getIsNewFlag())
@@ -169,24 +170,19 @@ public class Monitor extends Thread
 					        continue;
 					    }
 						ScreenListener l = client.getScreenListener(dirbot);
-                        for (int i = changedSegments.nextSetBit(0); i >= 0; i = changedSegments.nextSetBit(i + 1))
-                        {
-                            l.onScreenChange(i);
-                        }
+						l.onScreenChange(tmp);
 					}
 					changedSegments.fill(Boolean.FALSE);
 				}
 				
 				if (newClients.size() > 0)
 				{
+				    FixedLengthBitSet tmp = new FixedLengthBitSet(changedSegments.length, Boolean.TRUE);
 				    for (ClientHandler client : newClients)
 				    {
 				        client.setIsNewFlag(Boolean.FALSE);
 				        ScreenListener l = client.getScreenListener(dirbot);
-				        for (int i=0; i<segInfo.numSegments; i++)
-				        {
-				            l.onScreenChange(i);
-				        }
+				        l.onScreenChange(tmp);
 				    }
 				    newClients.clear();
 				}

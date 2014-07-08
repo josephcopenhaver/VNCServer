@@ -16,7 +16,6 @@ public class AcknowledgeNonSerialEvent extends Handle
         assert_(args[0] instanceof SERVER_EVENT);
         
         SERVER_EVENT evt = (SERVER_EVENT) args[0];
-        Integer segmentID = null;
         
         assert_(!evt.isSerial());
         
@@ -43,12 +42,8 @@ public class AcknowledgeNonSerialEvent extends Handle
             case CLIPBOARD_CHANGED:
             case GET_CLIPBOARD:
             case SET_CLIPBOARD:
-                assert_(args.length == 1);
-                break;
             case SCREEN_SEGMENT_CHANGED:
-                assert_(args.length == 2);
-                assert_(args[1] instanceof Integer);
-                segmentID = (Integer) args[1];
+                assert_(args.length == 1);
                 break;
             case SCREEN_SEGMENT_UPDATE:
                 assert_(Boolean.FALSE);
@@ -56,6 +51,6 @@ public class AcknowledgeNonSerialEvent extends Handle
                 break;
         }
         
-        client.handleEventAck(evt, segmentID == null ? null : args, 1);
+        client.handleEventAck(evt, null, 1);
     }
 }

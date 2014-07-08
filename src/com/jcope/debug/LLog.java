@@ -90,7 +90,7 @@ public class LLog
 	public static void logEvent(final String source, final CLIENT_EVENT event, final Object[] args)
 	{
 	    if (!DEBUG){return;}
-	    if ((event == CLIENT_EVENT.GET_SCREEN_SEGMENT && ((Integer)args[0]) != -1)
+	    if ((event == CLIENT_EVENT.GET_SCREEN_SEGMENT && !(args[0] instanceof Integer))
 	            || event == CLIENT_EVENT.OFFER_INPUT
 	            || event == CLIENT_EVENT.ACKNOWLEDGE_NON_SERIAL_EVENT)
 	    {

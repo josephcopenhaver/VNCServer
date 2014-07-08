@@ -381,7 +381,7 @@ public class StateMachine implements Runnable
             }
         };
 	    
-        dispatcher.dispatch(event == CLIENT_EVENT.GET_SCREEN_SEGMENT ? -(((Integer)args[0]) + 2) : event.ordinal(), r);
+        dispatcher.dispatch(event.ordinal(), r);
 	}
 	
 	public void disconnect()

@@ -17,6 +17,7 @@ import java.util.concurrent.Semaphore;
 import javax.swing.SwingUtilities;
 
 import com.jcope.debug.LLog;
+import com.jcope.util.FixedLengthBitSet;
 import com.jcope.util.TaskDispatcher;
 import com.jcope.vnc.server.screen.Manager;
 import com.jcope.vnc.server.screen.ScreenListener;
@@ -27,6 +28,10 @@ import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
 public class ClientHandler extends Thread
 {
+    
+    static abstract class IOERunnable {
+        public abstract void run() throws IOException;
+    }
 	
 	private Socket socket;
 	private BufferedInputStream in = null;
@@ -53,6 +58,9 @@ public class ClientHandler extends Thread
     private HashMap<Integer, SERVER_EVENT> nonSerialEventOutboundQueue = new HashMap<Integer, SERVER_EVENT>();
     private HashMap<Integer, Object[]> nonSerialEventQueue = new HashMap<Integer, Object[]>();
     private LinkedList<Integer> nonSerialOrderedEventQueue = new LinkedList<Integer>();
+    
+    private Semaphore changedSegmentsSema = new Semaphore(1, true);
+    private volatile FixedLengthBitSet changedSegments = null;
 	
 	public ClientHandler(Socket socket) throws IOException
 	{
@@ -374,9 +382,9 @@ public class ClientHandler extends Thread
 			l = new ScreenListener() {
 			    
 				@Override
-				public void onScreenChange(int segmentID)
+				public void onScreenChange(FixedLengthBitSet changedSegments)
 				{
-					sendEvent(SERVER_EVENT.SCREEN_SEGMENT_CHANGED, Integer.valueOf(segmentID));
+					sendEvent(SERVER_EVENT.SCREEN_SEGMENT_CHANGED, changedSegments);
 				}
 			};
 			screenListenerRef[0] = l;
@@ -528,6 +536,71 @@ public class ClientHandler extends Thread
 		}
 		if (dispatch)
 		{
+		    final IOERunnable msgAction;
+		    if (event == SERVER_EVENT.SCREEN_SEGMENT_CHANGED)
+		    {
+		        assert_(jce == null);
+		        assert_(args.length == 1);
+		        assert_(args[0] instanceof FixedLengthBitSet);
+		        try
+                {
+                    changedSegmentsSema.acquire();
+                }
+                catch (InterruptedException e)
+                {
+                    LLog.e(e);
+                }
+		        try
+		        {
+		            FixedLengthBitSet flbs = changedSegments;
+		            if (flbs != null)
+		            {
+		                flbs.or(((FixedLengthBitSet) args[0]));
+		                return;
+		            }
+		            changedSegments = ((FixedLengthBitSet) args[0]).clone();
+		            msgAction = new IOERunnable() {
+    
+                        @Override
+                        public void run() throws IOException
+                        {
+                            try
+                            {
+                                changedSegmentsSema.acquire();
+                            }
+                            catch (InterruptedException e)
+                            {
+                                LLog.e(e);
+                            }
+                            try
+                            {
+                                FixedLengthBitSet flbs = ClientHandler.this.changedSegments;
+                                ClientHandler.this.changedSegments = null;
+                                Msg.send(out, null, event, new Object[]{flbs});
+                            }
+                            finally {
+                                changedSegmentsSema.release();
+                            }
+                        }
+                        
+                    };
+		        }
+		        finally {
+		            changedSegmentsSema.release();
+		        }
+		    }
+		    else
+		    {
+		        msgAction = new IOERunnable() {
+
+                    @Override
+                    public void run() throws IOException
+                    {
+                        Msg.send(out, jce, event, args);
+                    }
+		            
+		        };
+		    }
 		    Runnable r = new Runnable() {
 	            
 	            @Override
@@ -547,7 +620,7 @@ public class ClientHandler extends Thread
 	                    }
 	                    try
 	                    {
-	                        Msg.send(out, jce, event, args);
+	                        msgAction.run();
 	                        if (serializedDispatcher.isEmpty() && unserializedDispatcher.isEmpty())
 	                        {
 	                            flushed = true;
@@ -636,17 +709,10 @@ public class ClientHandler extends Thread
 	private int getNonSerialTID(SERVER_EVENT event, Object[] refStack, int idxSegmentID)
     {
 	    int rval;
-	    if (event == SERVER_EVENT.SCREEN_SEGMENT_CHANGED || event == SERVER_EVENT.SCREEN_SEGMENT_UPDATE)
+	    if (event == SERVER_EVENT.SCREEN_SEGMENT_UPDATE)
         {
 	        rval = ((Integer)refStack[idxSegmentID]) + 2;
-            if (event == SERVER_EVENT.SCREEN_SEGMENT_UPDATE)
-            {
-                rval += SERVER_EVENT.getMaxOrdinal();
-            }
-            else
-            {
-                rval = -rval;
-            }
+            rval += SERVER_EVENT.getMaxOrdinal();
         }
         else
         {

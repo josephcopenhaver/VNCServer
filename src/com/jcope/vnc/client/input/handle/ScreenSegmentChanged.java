@@ -5,6 +5,7 @@ import static com.jcope.debug.Debug.assert_;
 import java.util.concurrent.Semaphore;
 
 import com.jcope.debug.LLog;
+import com.jcope.util.FixedLengthBitSet;
 import com.jcope.util.TaskDispatcher;
 import com.jcope.vnc.client.StateMachine;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
@@ -13,8 +14,11 @@ import com.jcope.vnc.shared.input.Handle;
 
 public class ScreenSegmentChanged extends Handle<StateMachine>
 {
+    private static volatile FixedLengthBitSet changedSegments = null;
+    private static Semaphore changedSegmentsSema = new Semaphore(1, true);
     public static final TaskDispatcher<Integer> segmentFetcher = new TaskDispatcher<Integer>("ScreenSegmentChanged.segmentFetcher");
-    volatile Semaphore iconifiedSema = null;
+    private volatile Semaphore iconifiedSema = null;
+    
     
     public ScreenSegmentChanged()
     {
@@ -26,9 +30,31 @@ public class ScreenSegmentChanged extends Handle<StateMachine>
     {
         assert_(args != null);
         assert_(args.length == 1);
-        assert_(args[0] instanceof Integer);
-        final int segmentID = (Integer) args[0];
-        assert_(segmentID >= -1);
+        assert_(args[0] instanceof FixedLengthBitSet);
+        
+        FixedLengthBitSet newFlbs = (FixedLengthBitSet) args[0];
+        
+        try
+        {
+            changedSegmentsSema.acquire();
+        }
+        catch (InterruptedException e)
+        {
+            LLog.e(e);
+        }
+        try
+        {
+            FixedLengthBitSet flbs = changedSegments;
+            if (flbs != null)
+            {
+                flbs.or(newFlbs);
+                return;
+            }
+            changedSegments = newFlbs;
+        }
+        finally {
+            changedSegmentsSema.release();
+        }
         
         Semaphore iconifiedSema = this.iconifiedSema;
         
@@ -40,31 +66,44 @@ public class ScreenSegmentChanged extends Handle<StateMachine>
         
         final Semaphore f_iconifiedSema = iconifiedSema;
         
-        if (!segmentFetcher.queueContains(segmentID))
-        {
-            segmentFetcher.dispatch(segmentID, new Runnable() {
-                
-                @Override
-                public void run()
+        segmentFetcher.dispatch(1, new Runnable() {
+            
+            @Override
+            public void run()
+            {
+                try
                 {
+                    f_iconifiedSema.acquire();
+                }
+                catch (InterruptedException e)
+                {
+                    LLog.e(e);
+                }
+                try {
                     try
                     {
-                        f_iconifiedSema.acquire();
+                        changedSegmentsSema.acquire();
                     }
                     catch (InterruptedException e)
                     {
                         LLog.e(e);
                     }
-                    try {
-                        stateMachine.sendEvent(CLIENT_EVENT.GET_SCREEN_SEGMENT, segmentID);
+                    try
+                    {
+                        FixedLengthBitSet flbs = changedSegments;
+                        changedSegments = null;
+                        stateMachine.sendEvent(CLIENT_EVENT.GET_SCREEN_SEGMENT, flbs);
                     }
                     finally {
-                        f_iconifiedSema.release();
+                        changedSegmentsSema.release();
                     }
                 }
-            });
-        }
+                finally {
+                    f_iconifiedSema.release();
+                }
+            }
+        });
         
-        stateMachine.sendEvent(CLIENT_EVENT.ACKNOWLEDGE_NON_SERIAL_EVENT, SERVER_EVENT.SCREEN_SEGMENT_CHANGED, segmentID);
+        stateMachine.sendEvent(CLIENT_EVENT.ACKNOWLEDGE_NON_SERIAL_EVENT, SERVER_EVENT.SCREEN_SEGMENT_CHANGED);
     }
 }

@@ -1,11 +1,32 @@
 package com.jcope.util;
 
+import static com.jcope.debug.Debug.assert_;
+
+import java.io.Serializable;
 import java.util.BitSet;
 
-public class FixedLengthBitSet
+public class FixedLengthBitSet implements Serializable
 {
+    /**
+     * Generated serialVersionUID
+     */
+    private static final long serialVersionUID = -2000986485513344737L;
+    
+    
+    
     public final int length;
     private BitSet bset;
+    
+    public FixedLengthBitSet clone()
+    {
+        return new FixedLengthBitSet(this);
+    }
+    
+    private FixedLengthBitSet(FixedLengthBitSet origin)
+    {
+        this.length = origin.length;
+        this.bset = (BitSet) origin.bset.clone();
+    }
     
     public FixedLengthBitSet(int length)
     {
@@ -51,6 +72,12 @@ public class FixedLengthBitSet
     public int nextSetBit(int fromIndex)
     {
         return bset.nextSetBit(fromIndex);
+    }
+
+    public void or(FixedLengthBitSet flbs)
+    {
+        assert_(length == flbs.length);
+        bset.or(flbs.bset);
     }
     
 }
