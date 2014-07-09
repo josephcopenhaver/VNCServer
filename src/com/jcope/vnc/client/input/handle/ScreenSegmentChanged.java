@@ -71,6 +71,7 @@ public class ScreenSegmentChanged extends Handle<StateMachine>
             @Override
             public void run()
             {
+                FixedLengthBitSet flbs;
                 try
                 {
                     f_iconifiedSema.acquire();
@@ -90,9 +91,8 @@ public class ScreenSegmentChanged extends Handle<StateMachine>
                     }
                     try
                     {
-                        FixedLengthBitSet flbs = changedSegments;
+                        flbs = changedSegments;
                         changedSegments = null;
-                        stateMachine.sendEvent(CLIENT_EVENT.GET_SCREEN_SEGMENT, flbs);
                     }
                     finally {
                         changedSegmentsSema.release();
@@ -101,6 +101,7 @@ public class ScreenSegmentChanged extends Handle<StateMachine>
                 finally {
                     f_iconifiedSema.release();
                 }
+                stateMachine.sendEvent(CLIENT_EVENT.GET_SCREEN_SEGMENT, flbs);
             }
         });
         

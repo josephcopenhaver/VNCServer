@@ -564,6 +564,7 @@ public class ClientHandler extends Thread
                         @Override
                         public void run() throws IOException
                         {
+                            FixedLengthBitSet flbs;
                             try
                             {
                                 changedSegmentsSema.acquire();
@@ -574,13 +575,13 @@ public class ClientHandler extends Thread
                             }
                             try
                             {
-                                FixedLengthBitSet flbs = ClientHandler.this.changedSegments;
+                                flbs = ClientHandler.this.changedSegments;
                                 ClientHandler.this.changedSegments = null;
-                                Msg.send(out, null, event, new Object[]{flbs});
                             }
                             finally {
                                 changedSegmentsSema.release();
                             }
+                            Msg.send(out, null, event, new Object[]{flbs});
                         }
                         
                     };
