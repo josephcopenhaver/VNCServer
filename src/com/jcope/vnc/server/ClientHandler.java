@@ -559,35 +559,36 @@ public class ClientHandler extends Thread
 		                return;
 		            }
 		            changedSegments = ((FixedLengthBitSet) args[0]).clone();
-		            msgAction = new IOERunnable() {
-    
-                        @Override
-                        public void run() throws IOException
-                        {
-                            try
-                            {
-                                changedSegmentsSema.acquire();
-                            }
-                            catch (InterruptedException e)
-                            {
-                                LLog.e(e);
-                            }
-                            try
-                            {
-                                FixedLengthBitSet flbs = ClientHandler.this.changedSegments;
-                                ClientHandler.this.changedSegments = null;
-                                Msg.send(out, null, event, new Object[]{flbs});
-                            }
-                            finally {
-                                changedSegmentsSema.release();
-                            }
-                        }
-                        
-                    };
 		        }
 		        finally {
 		            changedSegmentsSema.release();
 		        }
+		        msgAction = new IOERunnable() {
+		            
+                    @Override
+                    public void run() throws IOException
+                    {
+                        FixedLengthBitSet flbs;
+                        try
+                        {
+                            changedSegmentsSema.acquire();
+                        }
+                        catch (InterruptedException e)
+                        {
+                            LLog.e(e);
+                        }
+                        try
+                        {
+                            flbs = ClientHandler.this.changedSegments;
+                            ClientHandler.this.changedSegments = null;
+                        }
+                        finally {
+                            changedSegmentsSema.release();
+                        }
+                        Msg.send(out, null, event, new Object[]{flbs});
+                    }
+                    
+                };
 		    }
 		    else
 		    {
