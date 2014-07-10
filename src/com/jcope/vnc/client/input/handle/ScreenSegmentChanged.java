@@ -15,7 +15,7 @@ import com.jcope.vnc.shared.input.Handle;
 public class ScreenSegmentChanged extends Handle<StateMachine>
 {
     private static volatile FixedLengthBitSet changedSegments = null;
-    private static Semaphore changedSegmentsSema = new Semaphore(1, true);
+    private static final Semaphore changedSegmentsSema = new Semaphore(1, true);
     public static final TaskDispatcher<Integer> segmentFetcher = new TaskDispatcher<Integer>("ScreenSegmentChanged.segmentFetcher");
     private volatile Semaphore iconifiedSema = null;
     
