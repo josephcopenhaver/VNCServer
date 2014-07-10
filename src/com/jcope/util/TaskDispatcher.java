@@ -3,6 +3,8 @@ package com.jcope.util;
 import java.util.HashMap;
 import java.util.concurrent.Semaphore;
 
+import com.jcope.debug.LLog;
+
 public class TaskDispatcher<T> extends Thread
 {
 
@@ -735,7 +737,9 @@ public class TaskDispatcher<T> extends Thread
 			    {
 			        if (onDestroy != null)
 			        {
-			            onDestroy.run();
+			            Runnable tmp = onDestroy;
+			            onDestroy = null;
+			            tmp.run();
 			        }
 			    }
 			    else
@@ -749,8 +753,11 @@ public class TaskDispatcher<T> extends Thread
 		}
 		catch(InterruptedException e)
 		{
-			e.printStackTrace();
-			System.exit(1);
+			if (onDestroy != null)
+			{
+			    onDestroy.run();
+			}
+			LLog.e(e);
 		}
 	}
 	
