@@ -104,7 +104,5 @@ public class ScreenSegmentChanged extends Handle<StateMachine>
                 stateMachine.sendEvent(CLIENT_EVENT.GET_SCREEN_SEGMENT, flbs);
             }
         });
-        
-        stateMachine.sendEvent(CLIENT_EVENT.ACKNOWLEDGE_NON_SERIAL_EVENT, SERVER_EVENT.SCREEN_SEGMENT_CHANGED);
     }
 }

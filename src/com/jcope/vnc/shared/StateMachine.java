@@ -82,7 +82,6 @@ public class StateMachine
             {
                 // clients should only be notified of the
                 // latest version of these events
-                case SCREEN_SEGMENT_CHANGED:
                 case SCREEN_SEGMENT_UPDATE:
                 case CURSOR_GONE:
                 case CURSOR_MOVE:
@@ -101,6 +100,7 @@ public class StateMachine
                 
                 // clients need to get each of these events in turn
                 // no collapsing or dropping
+                case SCREEN_SEGMENT_CHANGED:
                 case ALIAS_DISCONNECTED:
                 case ALIAS_REGISTERED:
                 case ALIAS_UNREGISTERED:
@@ -144,6 +144,7 @@ public class StateMachine
                 case CLIENT_ALIAS_UPDATE:
                 case READ_INPUT_EVENTS:
                 case SET_CLIPBOARD:
+                case SCREEN_SEGMENT_CHANGED:
                     rval = Boolean.TRUE;
                     break;
                 
@@ -152,7 +153,6 @@ public class StateMachine
                 // in such a way that they never shift
                 case CURSOR_GONE:
                 case SCREEN_GONE:
-                case SCREEN_SEGMENT_CHANGED:
                 case CLIPBOARD_CHANGED:
                 case GET_CLIPBOARD:
                     rval = Boolean.FALSE;
