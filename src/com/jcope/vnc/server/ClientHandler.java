@@ -410,6 +410,34 @@ public class ClientHandler extends Thread
 
 	public void _sendEvent(final SERVER_EVENT event, final JitCompressedEvent jce, final Object... args)
 	{
+	    if (event == SERVER_EVENT.SCREEN_SEGMENT_CHANGED)
+        {
+            assert_(jce == null);
+            assert_(args.length == 1);
+            assert_(args[0] instanceof FixedLengthBitSet);
+            try
+            {
+                changedSegmentsSema.acquire();
+            }
+            catch (InterruptedException e)
+            {
+                LLog.e(e);
+            }
+            try
+            {
+                FixedLengthBitSet flbs = changedSegments;
+                if (flbs != null)
+                {
+                    flbs.or(((FixedLengthBitSet) args[0]));
+                    return;
+                }
+                changedSegments = ((FixedLengthBitSet) args[0]).clone();
+                args[0] = changedSegments;
+            }
+            finally {
+                changedSegmentsSema.release();
+            }
+        }
 	    try
         {
             handleIOSema.acquire();
@@ -539,36 +567,11 @@ public class ClientHandler extends Thread
 		    final IOERunnable msgAction;
 		    if (event == SERVER_EVENT.SCREEN_SEGMENT_CHANGED)
 		    {
-		        assert_(jce == null);
-		        assert_(args.length == 1);
-		        assert_(args[0] instanceof FixedLengthBitSet);
-		        try
-                {
-                    changedSegmentsSema.acquire();
-                }
-                catch (InterruptedException e)
-                {
-                    LLog.e(e);
-                }
-		        try
-		        {
-		            FixedLengthBitSet flbs = changedSegments;
-		            if (flbs != null)
-		            {
-		                flbs.or(((FixedLengthBitSet) args[0]));
-		                return;
-		            }
-		            changedSegments = ((FixedLengthBitSet) args[0]).clone();
-		        }
-		        finally {
-		            changedSegmentsSema.release();
-		        }
 		        msgAction = new IOERunnable() {
 		            
                     @Override
                     public void run() throws IOException
                     {
-                        FixedLengthBitSet flbs;
                         try
                         {
                             changedSegmentsSema.acquire();
@@ -579,13 +582,12 @@ public class ClientHandler extends Thread
                         }
                         try
                         {
-                            flbs = ClientHandler.this.changedSegments;
                             ClientHandler.this.changedSegments = null;
                         }
                         finally {
                             changedSegmentsSema.release();
                         }
-                        Msg.send(out, null, event, new Object[]{flbs});
+                        Msg.send(out, jce, event, args);
                     }
                     
                 };

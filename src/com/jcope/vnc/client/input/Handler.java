@@ -190,6 +190,7 @@ public class Handler extends com.jcope.vnc.shared.input.Handler<StateMachine, SE
         Handle<StateMachine> handle = eventHandles.get(event);
         if (!event.isSerial()
             && event != SERVER_EVENT.SCREEN_SEGMENT_UPDATE
+            && event != SERVER_EVENT.SCREEN_SEGMENT_CHANGED // handle for this event performs send of NS response
             )
         {
             stateMachine.sendEvent(CLIENT_EVENT.ACKNOWLEDGE_NON_SERIAL_EVENT, event);

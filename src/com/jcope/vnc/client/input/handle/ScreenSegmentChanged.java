@@ -34,75 +34,81 @@ public class ScreenSegmentChanged extends Handle<StateMachine>
         
         FixedLengthBitSet newFlbs = (FixedLengthBitSet) args[0];
         
-        try
+        HANDLED:
+        do
         {
-            changedSegmentsSema.acquire();
-        }
-        catch (InterruptedException e)
-        {
-            LLog.e(e);
-        }
-        try
-        {
-            FixedLengthBitSet flbs = changedSegments;
-            if (flbs != null)
+            try
             {
-                flbs.or(newFlbs);
-                return;
+                changedSegmentsSema.acquire();
             }
-            changedSegments = newFlbs;
-        }
-        finally {
-            changedSegmentsSema.release();
-        }
-        
-        Semaphore iconifiedSema = this.iconifiedSema;
-        
-        if (iconifiedSema == null)
-        {
-            iconifiedSema = stateMachine.getIconifiedSemaphore();
-            this.iconifiedSema = iconifiedSema;
-        }
-        
-        final Semaphore f_iconifiedSema = iconifiedSema;
-        
-        segmentFetcher.dispatch(1, new Runnable() {
-            
-            @Override
-            public void run()
+            catch (InterruptedException e)
             {
-                FixedLengthBitSet flbs;
-                try
+                LLog.e(e);
+            }
+            try
+            {
+                FixedLengthBitSet flbs = changedSegments;
+                if (flbs != null)
                 {
-                    f_iconifiedSema.acquire();
+                    flbs.or(newFlbs);
+                    break HANDLED;
                 }
-                catch (InterruptedException e)
+                changedSegments = newFlbs;
+            }
+            finally {
+                changedSegmentsSema.release();
+            }
+            
+            Semaphore iconifiedSema = this.iconifiedSema;
+            
+            if (iconifiedSema == null)
+            {
+                iconifiedSema = stateMachine.getIconifiedSemaphore();
+                this.iconifiedSema = iconifiedSema;
+            }
+            
+            final Semaphore f_iconifiedSema = iconifiedSema;
+            
+            segmentFetcher.dispatch(1, new Runnable() {
+                
+                @Override
+                public void run()
                 {
-                    LLog.e(e);
-                }
-                try {
+                    FixedLengthBitSet flbs;
                     try
                     {
-                        changedSegmentsSema.acquire();
+                        f_iconifiedSema.acquire();
                     }
                     catch (InterruptedException e)
                     {
                         LLog.e(e);
                     }
-                    try
-                    {
-                        flbs = changedSegments;
-                        changedSegments = null;
+                    try {
+                        try
+                        {
+                            changedSegmentsSema.acquire();
+                        }
+                        catch (InterruptedException e)
+                        {
+                            LLog.e(e);
+                        }
+                        try
+                        {
+                            flbs = changedSegments;
+                            changedSegments = null;
+                        }
+                        finally {
+                            changedSegmentsSema.release();
+                        }
                     }
                     finally {
-                        changedSegmentsSema.release();
+                        f_iconifiedSema.release();
                     }
+                    stateMachine.sendEvent(CLIENT_EVENT.GET_SCREEN_SEGMENT, flbs);
                 }
-                finally {
-                    f_iconifiedSema.release();
-                }
-                stateMachine.sendEvent(CLIENT_EVENT.GET_SCREEN_SEGMENT, flbs);
-            }
-        });
+            });
+        } while (false);
+        
+        stateMachine.sendEvent(CLIENT_EVENT.ACKNOWLEDGE_NON_SERIAL_EVENT, SERVER_EVENT.SCREEN_SEGMENT_CHANGED);
     }
 }
