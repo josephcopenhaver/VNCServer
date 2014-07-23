@@ -431,8 +431,9 @@ public class ClientHandler extends Thread
                     flbs.or(((FixedLengthBitSet) args[0]));
                     return;
                 }
-                changedSegments = ((FixedLengthBitSet) args[0]).clone();
-                args[0] = changedSegments;
+                flbs = ((FixedLengthBitSet) args[0]).clone();
+                args[0] = flbs;
+                changedSegments = flbs;
             }
             finally {
                 changedSegmentsSema.release();
