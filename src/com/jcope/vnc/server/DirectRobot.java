@@ -288,15 +288,19 @@ public final class DirectRobot
 		if (mouseInfoPeer == null)
 		{
 		    PointerInfo info = MouseInfo.getPointerInfo();
+		    // on windows info could be null if the lock screen activates
 		    
-            if (point != null)
-            {
-                Point tmpPoint = info.getLocation();
-                point.x = tmpPoint.x;
-                point.y = tmpPoint.y;
-            }
-            
-            rval = info.getDevice();
+		    if (info != null)
+		    {
+                if (point != null)
+                {
+                    Point tmpPoint = info.getLocation();
+                    point.x = tmpPoint.x;
+                    point.y = tmpPoint.y;
+                }
+                
+                rval = info.getDevice();
+		    }
 		}
 		else
 		{
