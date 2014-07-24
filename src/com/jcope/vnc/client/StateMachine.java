@@ -1,5 +1,6 @@
 package com.jcope.vnc.client;
 
+import static com.jcope.debug.Debug.assert_;
 import static com.jcope.vnc.shared.InputEventInfo.MAX_QUEUE_SIZE;
 
 import java.io.BufferedInputStream;
@@ -17,12 +18,14 @@ import javax.swing.SwingUtilities;
 import com.jcope.debug.LLog;
 import com.jcope.ui.JCOptionPane;
 import com.jcope.ui.PasswordInputDialog;
+import com.jcope.util.FixedLengthBitSet;
 import com.jcope.util.TaskDispatcher;
 import com.jcope.vnc.Client.CLIENT_PROPERTIES;
 import com.jcope.vnc.client.input.Handler;
 import com.jcope.vnc.client.input.handle.ScreenSegmentChanged;
 import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
 import com.jcope.vnc.shared.HashFactory;
+import com.jcope.vnc.shared.IOERunnable;
 import com.jcope.vnc.shared.InputEvent;
 import com.jcope.vnc.shared.Msg;
 import com.jcope.vnc.shared.Msg.CompressedObjectReader;
@@ -52,6 +55,9 @@ public class StateMachine implements Runnable
     private ACCESS_MODE accessMode = null;
     
     private Semaphore iconifiedSema = new Semaphore(1, true);
+    
+    private volatile FixedLengthBitSet changedSegments = null;
+    public final Semaphore changedSegmentsSema = new Semaphore(1, true);
     
     public StateMachine(String serverAddress, int serverPort, Integer selectedScreenNum, String password) throws UnknownHostException, IOException
 	{
@@ -335,9 +341,50 @@ public class StateMachine implements Runnable
 	    sendEvent(event, (Object[]) null);
 	}
 	
-	public void sendEvent(final CLIENT_EVENT event, final Object... args)
+	public void sendEvent(final CLIENT_EVENT event, Object... args)
 	{
-	    Runnable r = new Runnable() {
+    	final IOERunnable msgAction;
+    	final Object[] f_args;
+		if (event == CLIENT_EVENT.GET_SCREEN_SEGMENT)
+		{
+			assert_(args == null);
+			args = new Object[]{ changedSegments };
+			f_args = args;
+            msgAction = new IOERunnable() {
+				
+				@Override
+				public void run() throws IOException {
+					try
+		            {
+		                changedSegmentsSema.acquire();
+		            }
+		            catch (InterruptedException e)
+		            {
+		                LLog.e(e);
+		            }
+		            try
+		            {
+		                changedSegments = null;
+		            }
+		            finally {
+		                changedSegmentsSema.release();
+		            }
+					Msg.send(out, event, f_args);
+				}
+			};
+		}
+		else
+		{
+			f_args = args;
+			msgAction = new IOERunnable() {
+				
+				@Override
+				public void run() throws IOException {
+					Msg.send(out, event, f_args);
+				}
+			};
+		}
+		Runnable r = new Runnable() {
             
             @Override
             public void run()
@@ -359,7 +406,7 @@ public class StateMachine implements Runnable
                 {
                     try
                     {
-                        Msg.send(out, event, args);
+                    	msgAction.run();
                         if (dispatcher.isEmpty())
                         {
                             out.flush();
@@ -549,5 +596,15 @@ public class StateMachine implements Runnable
     public Semaphore getIconifiedSemaphore()
     {
         return iconifiedSema;
+    }
+    
+    public FixedLengthBitSet getChangedSegments()
+    {
+    	return changedSegments;
+    }
+    
+    public void setChangedSegments(FixedLengthBitSet changedSegments)
+    {
+    	this.changedSegments = changedSegments;
     }
 }

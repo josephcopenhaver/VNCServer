@@ -14,8 +14,6 @@ import com.jcope.vnc.shared.input.Handle;
 
 public class ScreenSegmentChanged extends Handle<StateMachine>
 {
-    private static volatile FixedLengthBitSet changedSegments = null;
-    private static final Semaphore changedSegmentsSema = new Semaphore(1, true);
     public static final TaskDispatcher<Integer> segmentFetcher = new TaskDispatcher<Integer>("ScreenSegmentChanged.segmentFetcher");
     private volatile Semaphore iconifiedSema = null;
     
@@ -37,9 +35,9 @@ public class ScreenSegmentChanged extends Handle<StateMachine>
         HANDLED:
         do
         {
-            try
+        	try
             {
-                changedSegmentsSema.acquire();
+        		stateMachine.changedSegmentsSema.acquire();
             }
             catch (InterruptedException e)
             {
@@ -47,16 +45,16 @@ public class ScreenSegmentChanged extends Handle<StateMachine>
             }
             try
             {
-                FixedLengthBitSet flbs = changedSegments;
+                FixedLengthBitSet flbs = stateMachine.getChangedSegments();
                 if (flbs != null)
                 {
                     flbs.or(newFlbs);
                     break HANDLED;
                 }
-                changedSegments = newFlbs;
+                stateMachine.setChangedSegments(newFlbs);
             }
             finally {
-                changedSegmentsSema.release();
+            	stateMachine.changedSegmentsSema.release();
             }
             
             Semaphore iconifiedSema = this.iconifiedSema;
@@ -74,7 +72,6 @@ public class ScreenSegmentChanged extends Handle<StateMachine>
                 @Override
                 public void run()
                 {
-                    FixedLengthBitSet flbs;
                     try
                     {
                         f_iconifiedSema.acquire();
@@ -83,28 +80,8 @@ public class ScreenSegmentChanged extends Handle<StateMachine>
                     {
                         LLog.e(e);
                     }
-                    try {
-                        try
-                        {
-                            changedSegmentsSema.acquire();
-                        }
-                        catch (InterruptedException e)
-                        {
-                            LLog.e(e);
-                        }
-                        try
-                        {
-                            flbs = changedSegments;
-                            changedSegments = null;
-                        }
-                        finally {
-                            changedSegmentsSema.release();
-                        }
-                    }
-                    finally {
-                        f_iconifiedSema.release();
-                    }
-                    stateMachine.sendEvent(CLIENT_EVENT.GET_SCREEN_SEGMENT, flbs);
+                    f_iconifiedSema.release();
+                    stateMachine.sendEvent(CLIENT_EVENT.GET_SCREEN_SEGMENT);
                 }
             });
         } while (false);

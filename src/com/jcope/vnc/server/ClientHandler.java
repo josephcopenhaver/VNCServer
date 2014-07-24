@@ -22,18 +22,14 @@ import com.jcope.util.TaskDispatcher;
 import com.jcope.vnc.server.screen.Manager;
 import com.jcope.vnc.server.screen.ScreenListener;
 import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
+import com.jcope.vnc.shared.IOERunnable;
 import com.jcope.vnc.shared.Msg;
 import com.jcope.vnc.shared.Msg.CompressedObjectReader;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
 public class ClientHandler extends Thread
 {
-    
-    static abstract class IOERunnable {
-        public abstract void run() throws IOException;
-    }
-	
-	private Socket socket;
+    private Socket socket;
 	private BufferedInputStream in = null;
 	private BufferedOutputStream out = null;
 	private ArrayList<Runnable> onDestroyActions = new ArrayList<Runnable>(1);
@@ -410,7 +406,7 @@ public class ClientHandler extends Thread
 
 	public void _sendEvent(final SERVER_EVENT event, final JitCompressedEvent jce, final Object... args)
 	{
-	    if (event == SERVER_EVENT.SCREEN_SEGMENT_CHANGED)
+		if (event == SERVER_EVENT.SCREEN_SEGMENT_CHANGED)
         {
             assert_(jce == null);
             assert_(args.length == 1);
