@@ -455,6 +455,7 @@ public class StateMachine implements Runnable
                 }
                 finally {
                     socket = null;
+                    changedSegments = null;
                 }
             }
 	    }
