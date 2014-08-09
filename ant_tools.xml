@@ -9,7 +9,7 @@
     <attribute name="classpath" default="" />
     <sequential>
       <record name="${logdir}/@{name}.txt" action="start" append="false" />
-      <javac target="@{target}" srcdir="@{srcdir}" destdir="@{destdir}" includes="@{includes}" excludes="@{excludes}" classpath="@{classpath}" >
+      <javac debug="true" debuglevel="lines,vars,source" target="@{target}" srcdir="@{srcdir}" destdir="@{destdir}" includes="@{includes}" excludes="@{excludes}" classpath="@{classpath}" >
         <compilerarg value="-Xlint:unchecked"/>
       </javac>
   	  <record name="${logdir}/@{name}.txt" action="stop"/>
