@@ -533,6 +533,7 @@ public class ClientHandler extends Thread
                                     if (sargs == null)
                                     {
                                         sargs = new Object[]{ jce, args };
+                                        nonSerialEventQueue.put(tidTmp, sargs);
                                     }
                                     else
                                     {
@@ -771,14 +772,20 @@ public class ClientHandler extends Thread
     	    try
             {
                 synchronized(nonSerialEventQueue) {synchronized(nonSerialEventOutboundQueue) {synchronized(nonSerialOrderedEventQueue) {
+                    if (nonSerialEventOutboundQueue.get(tTid) == null)
+                    {
+                        return;
+                    }
                     do
                     {
                         tid = nonSerialOrderedEventQueue.removeFirst();
                         hiddenAckEvt = nonSerialEventOutboundQueue.remove(tid);
                         sargs = nonSerialEventQueue.remove(tid);
-                        assert_(sargs != null); // why the heck would that be valid?
-                        evtlist.add(hiddenAckEvt);
-                        plist.add(sargs);
+                        if (sargs != null)
+                        {
+                            evtlist.add(hiddenAckEvt);
+                            plist.add(sargs);
+                        }
                     } while (tid != tTid);
                 }}}
             }
