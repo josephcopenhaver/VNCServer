@@ -800,7 +800,7 @@ public class ClientHandler extends Thread
                 {
 	                try
 	                {
-	                	LLog.i(String.format("Sending pending event %s with %d # of args", hiddenAckEvt.name(), targs[1] == null ? 0 : ((Object[]) targs[1]).length));//Temporary
+	                	//LLog.i(String.format("Sending pending event %s with %d # of args", hiddenAckEvt.name(), targs[1] == null ? 0 : ((Object[]) targs[1]).length));
 	                    nts_sendEvent(Boolean.TRUE, hiddenAckEvt, jce, (Object[]) targs[1]);
 	                }
 	                catch (Exception e)
