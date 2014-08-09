@@ -529,45 +529,47 @@ public class StateMachine implements Runnable
     public void nts_addInput(InputEvent event)
     {
         ArrayList<InputEvent> list = outQueue;
-        if (list == null)
-        {
-            list = new ArrayList<InputEvent>(MAX_QUEUE_SIZE);
-            list.add(event);
-            outQueue = list;
-            sendEvent(CLIENT_EVENT.OFFER_INPUT, Boolean.TRUE, 1);
-        }
-        else
+        if (list != null)
         {
             int size = list.size();
-            if (size >= MAX_QUEUE_SIZE)
+            do
             {
-                // Do Nothing
-                LLog.w(String.format("Dropped input event: %s", event.getType().name()));
-            }
-            else if (size > 0)
-            {
-                InputEvent prev = list.get(size - 1);
-                
-                if (!prev.merge(event, true))
+                if (size > 0)
                 {
-                    // Could not merge
+                    InputEvent prev = list.get(size - 1);
+                    
+                    if (prev.merge(event, true))
+                    {
+                        // new event is now merged with the tail event of the
+                        // event queue a.k.a. 'prev'
+                        if (size > 1 && list.get(size - 2).merge(prev, false))
+                        {
+                            // A merge occurred, the event 'prev' may have become something else
+                            // e.g. a pressed event...
+                            // turns out the 'new' event was merge'able with it's previous event
+                            // so the tail end can now be removed
+                            list.remove(size - 1);
+                        }
+                        break;
+                    }
+                }
+                if (size >= MAX_QUEUE_SIZE)
+                {
+                    // Do Nothing
+                    LLog.w(String.format("Dropped input event: %s", event.getType().name()));
+                }
+                else
+                {
                     list.add(event);
                     sendEvent(CLIENT_EVENT.OFFER_INPUT, Boolean.TRUE, size + 1);
                 }
-                else if (size > 1 && list.get(size - 2).merge(prev, false))
-                {
-                    // A merge occurred, the event 'prev' may have become something else
-                    // e.g. a pressed event...
-                    // turns out the 'new' event was merge'able with it's previous event
-                    list.remove(size - 1);
-                }
-            }
-            else
-            {
-                list.add(event);
-                sendEvent(CLIENT_EVENT.OFFER_INPUT, Boolean.TRUE, 1);
-            }
+            } while (false);
+            return;
         }
+        list = new ArrayList<InputEvent>(MAX_QUEUE_SIZE);
+        list.add(event);
+        outQueue = list;
+        sendEvent(CLIENT_EVENT.OFFER_INPUT, Boolean.TRUE, 1);
     }
 
     public void addInput(InputEvent event)
