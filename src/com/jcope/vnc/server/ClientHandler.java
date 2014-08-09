@@ -159,7 +159,6 @@ public class ClientHandler extends Thread
         @Override
         public void run()
         {
-            JitCompressedEvent jce;
             try
             {
                 queueSema.acquire();
@@ -173,15 +172,11 @@ public class ClientHandler extends Thread
                 synchronized(nonSerialEventQueue) {
                     for (Object[] sargs : nonSerialEventQueue.values())
                     {
-                        if (sargs == null)
+                        if (sargs == null || sargs[0] == null)
                         {
                             continue;
                         }
-                        jce = (JitCompressedEvent)sargs[0];
-                        if (jce != null)
-                        {
-                            jce.release();
-                        }
+                        ((JitCompressedEvent)sargs[0]).release();
                     }
                 }
             }
@@ -445,14 +440,14 @@ public class ClientHandler extends Thread
         }
 	    try
         {
-	        nts_sendEvent(Boolean.FALSE, event, jce, args);
+	        nts_sendEvent(event, jce, args);
         }
         finally {
             handleIOSema.release();
         }
 	}
 	
-	private void nts_sendEvent(boolean forceSendOfNonSerial, final SERVER_EVENT event, final JitCompressedEvent jce, final Object... args)
+	private void nts_sendEvent(final SERVER_EVENT event, final JitCompressedEvent jce, final Object... args)
 	{
 	    int tidTmp;
 	    TaskDispatcher<Integer> dispatcher;
@@ -490,11 +485,7 @@ public class ClientHandler extends Thread
 		    tidTmp = getNonSerialTID(event, args, 0);
 		    dispatcher = unserializedDispatcher;
 		    // TODO: only dispatch if we know for sure that the arguments have changed
-		    if (forceSendOfNonSerial)
-		    {
-		    	dispatch = Boolean.TRUE;
-		    }
-		    else if ((isMutable = event.hasMutableArgs()) || !unserializedDispatcher.queueContains(tidTmp))
+		    if ((isMutable = event.hasMutableArgs()) || !unserializedDispatcher.queueContains(tidTmp))
 		    {
 		        if (event == SERVER_EVENT.SCREEN_SEGMENT_UPDATE)
                 {
@@ -772,10 +763,6 @@ public class ClientHandler extends Thread
     	    try
             {
                 synchronized(nonSerialEventQueue) {synchronized(nonSerialEventOutboundQueue) {synchronized(nonSerialOrderedEventQueue) {
-                    if (nonSerialEventOutboundQueue.get(tTid) == null)
-                    {
-                        return;
-                    }
                     do
                     {
                         tid = nonSerialOrderedEventQueue.removeFirst();
@@ -796,12 +783,19 @@ public class ClientHandler extends Thread
             {
                 hiddenAckEvt = evtlist.get(idx++);
                 jce = (JitCompressedEvent) targs[0];
+                Object[] args = (Object[]) targs[1];
+                
+                // erase targs to unbind objects
+                targs[0] = null;
+                targs[1] = null;
+                
+                // flush deferred queue contents
                 if (firstE == null)
                 {
 	                try
 	                {
-	                	//LLog.i(String.format("Sending pending event %s with %d # of args", hiddenAckEvt.name(), targs[1] == null ? 0 : ((Object[]) targs[1]).length));
-	                    nts_sendEvent(Boolean.TRUE, hiddenAckEvt, jce, (Object[]) targs[1]);
+	                	//LLog.i(String.format("Sending pending event %s with %d # of args", hiddenAckEvt.name(), args == null ? 0 : args.length));
+	                    nts_sendEvent(hiddenAckEvt, jce, args);
 	                }
 	                catch (Exception e)
 	                {
