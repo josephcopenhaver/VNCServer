@@ -445,14 +445,14 @@ public class ClientHandler extends Thread
         }
 	    try
         {
-	        nts_sendEvent(event, jce, args);
+	        nts_sendEvent(Boolean.FALSE, event, jce, args);
         }
         finally {
             handleIOSema.release();
         }
 	}
 	
-	private void nts_sendEvent(final SERVER_EVENT event, final JitCompressedEvent jce, final Object... args)
+	private void nts_sendEvent(boolean forceSendOfNonSerial, final SERVER_EVENT event, final JitCompressedEvent jce, final Object... args)
 	{
 	    int tidTmp;
 	    TaskDispatcher<Integer> dispatcher;
@@ -490,7 +490,11 @@ public class ClientHandler extends Thread
 		    tidTmp = getNonSerialTID(event, args, 0);
 		    dispatcher = unserializedDispatcher;
 		    // TODO: only dispatch if we know for sure that the arguments have changed
-		    if ((isMutable = event.hasMutableArgs()) || !unserializedDispatcher.queueContains(tidTmp))
+		    if (forceSendOfNonSerial)
+		    {
+		    	dispatch = Boolean.TRUE;
+		    }
+		    else if ((isMutable = event.hasMutableArgs()) || !unserializedDispatcher.queueContains(tidTmp))
 		    {
 		        if (event == SERVER_EVENT.SCREEN_SEGMENT_UPDATE)
                 {
@@ -772,11 +776,9 @@ public class ClientHandler extends Thread
                         tid = nonSerialOrderedEventQueue.removeFirst();
                         hiddenAckEvt = nonSerialEventOutboundQueue.remove(tid);
                         sargs = nonSerialEventQueue.remove(tid);
-                        if (sargs != null)
-                        {
-                            evtlist.add(hiddenAckEvt);
-                            plist.add(sargs);
-                        }
+                        assert_(sargs != null); // why the heck would that be valid?
+                        evtlist.add(hiddenAckEvt);
+                        plist.add(sargs);
                     } while (tid != tTid);
                 }}}
             }
@@ -787,29 +789,27 @@ public class ClientHandler extends Thread
             {
                 hiddenAckEvt = evtlist.get(idx++);
                 jce = (JitCompressedEvent) targs[0];
-                try
+                if (firstE == null)
                 {
-                    if (firstE == null)
-                    {
-                        nts_sendEvent(hiddenAckEvt, jce, (Object[]) targs[1]);
-                    }
+	                try
+	                {
+	                	LLog.i(String.format("Sending pending event %s with %d # of args", hiddenAckEvt.name(), targs[1] == null ? 0 : ((Object[]) targs[1]).length));//Temporary
+	                    nts_sendEvent(Boolean.TRUE, hiddenAckEvt, jce, (Object[]) targs[1]);
+	                }
+	                catch (Exception e)
+	                {
+	                    firstE = e;
+	                }
+	                finally {
+	                    if (jce != null)
+	                    {
+	                        jce.release();
+	                    }
+	                }
                 }
-                catch (Exception e)
+                else if (jce != null)
                 {
-                    if (firstE == null)
-                    {
-                        firstE = e;
-                    }
-                    else
-                    {
-                        throw new RuntimeException(e);
-                    }
-                }
-                finally {
-                    if (jce != null)
-                    {
-                        jce.release();
-                    }
+                	jce.release();
                 }
             }
             

@@ -345,13 +345,9 @@ public class StateMachine implements Runnable
 	{
     	final IOERunnable msgAction;
     	final Object[] f_args;
-		if (event == CLIENT_EVENT.GET_SCREEN_SEGMENT)
+		if (event == CLIENT_EVENT.GET_SCREEN_SEGMENT && args == null)
 		{
-			assert_(args == null || (args.length == 1 && args[0] instanceof Integer && ((Integer)args[0]) == -1));
-			if (args == null)
-			{
-			    args = new Object[]{ changedSegments };
-			}
+			args = new Object[]{ changedSegments };
 			f_args = args;
             msgAction = new IOERunnable() {
 				
@@ -378,6 +374,7 @@ public class StateMachine implements Runnable
 		}
 		else
 		{
+			assert_(event != CLIENT_EVENT.GET_SCREEN_SEGMENT || (args != null && args.length == 1 && args[0] instanceof Integer && ((Integer)args[0]) == -1));
 			f_args = args;
 			msgAction = new IOERunnable() {
 				
