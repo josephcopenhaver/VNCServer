@@ -347,8 +347,11 @@ public class StateMachine implements Runnable
     	final Object[] f_args;
 		if (event == CLIENT_EVENT.GET_SCREEN_SEGMENT)
 		{
-			assert_(args == null);
-			args = new Object[]{ changedSegments };
+			assert_(args == null || (args.length == 1 && args[0] instanceof Integer && ((Integer)args[0]) == -1));
+			if (args == null)
+			{
+			    args = new Object[]{ changedSegments };
+			}
 			f_args = args;
             msgAction = new IOERunnable() {
 				
