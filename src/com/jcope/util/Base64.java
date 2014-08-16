@@ -146,6 +146,10 @@ public class Base64
 	
 	private static final class Decoder
 	{
+	    private static abstract class Adder {
+	        public abstract void add(byte b);
+	    };
+	    
 		private ArrayList<Byte> bList;
 		private int bArrayIdx = 0;
 		private byte[] bArray;
@@ -153,6 +157,7 @@ public class Base64
 		private byte padCount = 0;
 		private byte state = 0;
 		private boolean isFinalized = Boolean.FALSE;
+		private Adder adder;
 		
 		public Decoder(int size, boolean exact)
 		{
@@ -160,23 +165,29 @@ public class Base64
 			{
 				bArray = new byte[size];
 				bList = null;
+				adder = new Adder() {
+
+                    @Override
+                    public void add(byte b)
+                    {
+                        bArray[bArrayIdx++] = b;
+                    }
+				    
+				};
 			}
 			else
 			{
 				bArray = null;
 				bList = new ArrayList<Byte>(size);
-			}
-		}
-		
-		private void add(byte b)
-		{
-			if (bArray == null)
-			{
-				bList.add(b);
-			}
-			else
-			{
-				bArray[bArrayIdx++] = b;
+                adder = new Adder() {
+
+                    @Override
+                    public void add(byte b)
+                    {
+                        bList.add(b);
+                    }
+                    
+                };
 			}
 		}
 		
@@ -221,17 +232,17 @@ public class Base64
 					break;
 				case 1:
 					// top 2, store bot 4
-					add((byte) (remainder | ((b >> 4) & 0x03)));
+					adder.add((byte) (remainder | ((b >> 4) & 0x03)));
 					remainder = (byte) ((b << 4) & 0xF0);
 					break;
 				case 2:
 					// top 4, store bot 2
-					add((byte) (remainder | ((b >> 2) & 0x0F)));
+				    adder.add((byte) (remainder | ((b >> 2) & 0x0F)));
 					remainder = (byte) ((b << 6) & 0xC0);
 					break;
 				case 3:
 					// top 6, store nothing
-					add((byte) (remainder | (b & 0x3F)));
+				    adder.add((byte) (remainder | (b & 0x3F)));
 					break;
 				default:
 					assert_(false);
