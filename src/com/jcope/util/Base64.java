@@ -148,43 +148,71 @@ public class Base64
 	{
 	    private static abstract class Adder {
 	        public abstract void add(byte b);
+            public abstract byte[] get();
 	    };
 	    
-		private ArrayList<Byte> bList;
-		private int bArrayIdx = 0;
-		private byte[] bArray;
 		private byte remainder = 0x00;
 		private byte padCount = 0;
 		private byte state = 0;
-		private boolean isFinalized = Boolean.FALSE;
 		private Adder adder;
+		private byte[] bArray = null;
 		
 		public Decoder(int size, boolean exact)
 		{
 			if (exact)
 			{
-				bArray = new byte[size];
-				bList = null;
 				adder = new Adder() {
+				    private int bArrayIdx = 0;
+			        private byte[] array;
+			        
 
                     @Override
                     public void add(byte b)
                     {
-                        bArray[bArrayIdx++] = b;
+                        array[bArrayIdx++] = b;
+                    }
+
+
+                    @Override
+                    public byte[] get()
+                    {
+                        byte[] rval = array;
+                        
+                        array = null;
+                        
+                        return rval;
                     }
 				    
 				};
 			}
 			else
 			{
-				bArray = null;
-				bList = new ArrayList<Byte>(size);
-                adder = new Adder() {
+				adder = new Adder() {
+                    private ArrayList<Byte> bList;
+                    
 
                     @Override
                     public void add(byte b)
                     {
                         bList.add(b);
+                    }
+
+
+                    @Override
+                    public byte[] get()
+                    {
+                        int idx = 0;
+                        int size = bList.size();
+                        byte[] rval = new byte[size];
+                        
+                        for (; idx < size; idx++)
+                        {
+                            rval[idx] = bList.get(idx);
+                        }
+                        
+                        bList = null;
+                        
+                        return rval;
                     }
                     
                 };
@@ -193,7 +221,7 @@ public class Base64
 		
 		public void update(byte b)
 		{
-			assert_(!isFinalized);
+			assert_(adder != null); // not finalized
 			switch (state)
 			{
 				case 0:
@@ -254,9 +282,10 @@ public class Base64
 		
 		private byte[] _getFinalized()
 		{
-			if (!isFinalized)
+			if (adder != null)
 			{
-				isFinalized = Boolean.TRUE;
+			    Adder adder = this.adder;
+			    this.adder = null;
 				switch (state)
 				{
 					case 0:
@@ -282,17 +311,7 @@ public class Base64
 					default:
 						assert_(false);
 				}
-				if (bArray == null)
-				{
-					bArray = new byte[bList.size()];
-					
-					for (Byte b : bList)
-					{
-						bArray[bArrayIdx++] = b;
-					}
-					bList = null;
-				}
-				assert_(bArray.length == bArrayIdx);
+				bArray = adder.get();
 			}
 			
 			return bArray;
