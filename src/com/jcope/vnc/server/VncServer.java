@@ -15,6 +15,8 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.xml.sax.SAXException;
 
+import sun.net.spi.nameservice.dns.DNSNameService;
+
 import com.jcope.debug.LLog;
 import com.jcope.util.ClipboardMonitor;
 import com.jcope.util.ClipboardMonitor.ClipboardListener;
@@ -23,9 +25,12 @@ import com.jcope.vnc.Server.SERVER_PROPERTIES;
 import com.jcope.vnc.server.screen.Manager;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
+import static com.jcope.debug.Debug.assert_;
+
 public class VncServer implements Runnable
 {
-	
+    public static final long DNS_QUERY_FAIL_DELAY_MS = 3000L;
+	public static final String IPV_4_6_REGEX = "^(?:1?\\d\\d?|2[0-4]\\d|25[0-5])\\.(?:1?\\d\\d?|2[0-4]\\d|25[0-5])\\.(?:1?\\d\\d?|2[0-4]\\d|25[0-5])\\.(?:1?\\d\\d?|2[0-4]\\d|25[0-5])(?:\\.(?:1?\\d\\d?|2[0-4]\\d|25[0-5])\\.(?:1?\\d\\d?|2[0-4]\\d|25[0-5]))?$";
 	private static final boolean _DEBUG = Boolean.TRUE || DEBUG;
 	
 	public static final SecurityPolicy securityPolicy = new SecurityPolicy();
@@ -47,8 +52,120 @@ public class VncServer implements Runnable
 		}
 		else
 		{
-			this.serverBindAddress = InetAddress.getByName(serverBindAddress);
+		    this.serverBindAddress = null;
+		    if (serverBindAddress.matches("^\\s+") || serverBindAddress.matches("\\s+$"))
+		    {
+		        serverBindAddress = serverBindAddress.trim();
+		    }
+			
+			if (serverBindAddress.matches(IPV_4_6_REGEX))
+			{
+			    this.serverBindAddress = InetAddress.getByName(serverBindAddress);
+			}
+			else
+			{
+			    if (serverBindAddress.equalsIgnoreCase("localhost"))
+			    {
+			        serverBindAddress = "127.0.0.1";
+			    }
+			    else
+			    {
+			        boolean isLoopbackPossible = false;
+			        String oldServerBindAddress = serverBindAddress;
+			        serverBindAddress = null;
+			        do
+			        {
+    			        for (InetAddress addr : InetAddress.getAllByName(oldServerBindAddress))
+    			        {
+    			            String saddr = addr.getHostAddress();
+    			            if (saddr == null)
+    			            {
+    			                continue;
+    			            }
+    			            if (saddr.equals("localhost") || saddr.equals("127.0.0.1"))
+    			            {
+    			                isLoopbackPossible = true;
+    			            }
+    			            else if (saddr.matches(IPV_4_6_REGEX))
+    			            {
+    			                serverBindAddress = saddr;
+    			                break;
+    			            }
+    			            else
+    			            {
+    			                LLog.w(String.format("Interface name format \"%s\" for address \"%s\" was not recognized as a usable IP", saddr, oldServerBindAddress));
+    			            }
+    			        }
+    			        if (serverBindAddress != null) {
+                            break;
+                        }
+                        DNSNameService dns;
+                        try
+                        {
+                            dns = new DNSNameService();
+                        }
+                        catch (Exception e)
+                        {
+                            LLog.w("Failed to contact DNS server!");
+                            LLog.w(e);
+                            break;
+                        }
+                        InetAddress[] addrs = dns.lookupAllHostAddr(oldServerBindAddress);
+                        if (addrs.length == 0)
+                        {
+                            LLog.w(String.format("Host \"%s\" is unknown by the DNS server!\nTrying DNS server again in 3 seconds...", oldServerBindAddress));
+                            try
+                            {
+                                Thread.sleep(DNS_QUERY_FAIL_DELAY_MS);
+                            }
+                            catch (InterruptedException e)
+                            {
+                                LLog.e(e);
+                            }
+                            addrs = dns.lookupAllHostAddr(oldServerBindAddress);
+                            if (addrs.length == 0)
+                            {
+                                LLog.w(String.format("Host \"%s\" is unknown by the DNS server!\nGiving up!", oldServerBindAddress));
+                            }
+                        }
+                        
+                        for (InetAddress addr : addrs)
+                        {
+                            String saddr = addr.getHostAddress();
+                            if (saddr.equals("localhost") || saddr.equals("127.0.0.1"))
+                            {
+                                assert_(false); // how does this even happen?
+                            }
+                            else if (saddr.matches(IPV_4_6_REGEX))
+                            {
+                                serverBindAddress = saddr;
+                                break;
+                            }
+                            else
+                            {
+                                LLog.w(String.format("Interface name format \"%s\" for address \"%s\" from DNS was not recognized as a usable IP", saddr, oldServerBindAddress));
+                            }
+                        }
+			        } while (false);
+			        
+			        if (serverBindAddress == null)
+			        {
+			            
+    			            if (isLoopbackPossible)
+    			            {
+    			                serverBindAddress = "127.0.0.1";
+    			                LLog.w(String.format("Using loopback for bind address :\"%s\"", oldServerBindAddress));
+    			            }
+    			            else
+    			            {
+    			                LLog.e(new RuntimeException(String.format("Failed to get IP for :\"%s\"", oldServerBindAddress)), true, true);
+    			            }
+			        }
+			    }
+			    this.serverBindAddress = InetAddress.getByName(serverBindAddress);
+			}
 		}
+		LLog.i(String.format("Listening to interface: %s", serverBindAddress));
 		this.listenBacklog = listenBacklog;
 		this.serverPort = serverPort;
 		securityPolicy.clear();
