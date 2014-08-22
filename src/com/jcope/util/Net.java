@@ -38,7 +38,7 @@ public class Net
             byte[] tmp = getIPBytes(addr);
             for (int i = 0; i < tmp.length; i++)
             {
-                if (((0xff & tmp[i]) & (0xff & ipMask[i])) != (0xff & ipSpec[i]))
+                if (((byte)(tmp[i] & ipMask[i])) != ipSpec[i])
                 {
                     rval = null;
                     break;
