@@ -33,14 +33,9 @@ public class Net
     {
         String rval = addr;
         
-        byte[] tmp = getIPBytes(addr);
-        
-        if (ipSpec == null || ipMask == null)
+        if (ipSpec != null && ipMask != null)
         {
-            rval = null;
-        }
-        else
-        {
+            byte[] tmp = getIPBytes(addr);
             for (int i = 0; i < tmp.length; i++)
             {
                 if (((0xff & tmp[i]) & (0xff & ipMask[i])) != (0xff & ipSpec[i]))
