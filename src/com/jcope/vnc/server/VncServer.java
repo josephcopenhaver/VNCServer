@@ -1,6 +1,9 @@
 package com.jcope.vnc.server;
 
 import static com.jcope.debug.Debug.DEBUG;
+import static com.jcope.debug.Debug.assert_;
+import static com.jcope.util.Net.IPV_4_6_REGEX_STR;
+import static com.jcope.util.Net.filterAddress;
 
 import java.awt.datatransfer.Clipboard;
 import java.io.File;
@@ -25,12 +28,9 @@ import com.jcope.vnc.Server.SERVER_PROPERTIES;
 import com.jcope.vnc.server.screen.Manager;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
-import static com.jcope.debug.Debug.assert_;
-
 public class VncServer implements Runnable
 {
     public static final long DNS_QUERY_FAIL_DELAY_MS = 3000L;
-	public static final String IPV_4_6_REGEX = "^(?:1?\\d\\d?|2[0-4]\\d|25[0-5])\\.(?:1?\\d\\d?|2[0-4]\\d|25[0-5])\\.(?:1?\\d\\d?|2[0-4]\\d|25[0-5])\\.(?:1?\\d\\d?|2[0-4]\\d|25[0-5])(?:\\.(?:1?\\d\\d?|2[0-4]\\d|25[0-5])\\.(?:1?\\d\\d?|2[0-4]\\d|25[0-5]))?$";
 	private static final boolean _DEBUG = Boolean.TRUE || DEBUG;
 	
 	public static final SecurityPolicy securityPolicy = new SecurityPolicy();
@@ -44,7 +44,7 @@ public class VncServer implements Runnable
 	private Semaphore stageLock = new Semaphore(1, true);
     private volatile Object[] stagedArgs;
     
-    public VncServer(int serverPort, int listenBacklog, String serverBindAddress) throws ParserConfigurationException, SAXException, IOException
+    public VncServer(int serverPort, int listenBacklog, String serverBindAddress, byte[] ipSpec, byte[] ipMask) throws ParserConfigurationException, SAXException, IOException
 	{
 		if (serverBindAddress == null)
 		{
@@ -58,7 +58,7 @@ public class VncServer implements Runnable
 		        serverBindAddress = serverBindAddress.trim();
 		    }
 			
-			if (serverBindAddress.matches(IPV_4_6_REGEX))
+			if (serverBindAddress.matches(IPV_4_6_REGEX_STR))
 			{
 			    this.serverBindAddress = InetAddress.getByName(serverBindAddress);
 			}
@@ -86,10 +86,13 @@ public class VncServer implements Runnable
     			            {
     			                isLoopbackPossible = true;
     			            }
-    			            else if (saddr.matches(IPV_4_6_REGEX))
+    			            else if (saddr.matches(IPV_4_6_REGEX_STR))
     			            {
-    			                serverBindAddress = saddr;
-    			                break;
+    			                serverBindAddress = filterAddress(saddr, ipSpec, ipMask);
+    			                if (serverBindAddress != null)
+    			                {
+    			                    break;
+    			                }
     			            }
     			            else
     			            {
@@ -136,10 +139,13 @@ public class VncServer implements Runnable
                             {
                                 assert_(false); // how does this even happen?
                             }
-                            else if (saddr.matches(IPV_4_6_REGEX))
+                            else if (saddr.matches(IPV_4_6_REGEX_STR))
                             {
-                                serverBindAddress = saddr;
-                                break;
+                                serverBindAddress = filterAddress(saddr, ipSpec, ipMask);
+                                if (serverBindAddress != null)
+                                {
+                                    break;
+                                }
                             }
                             else
                             {

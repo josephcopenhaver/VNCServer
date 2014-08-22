@@ -1,6 +1,8 @@
 package com.jcope.vnc;
 
 import static com.jcope.debug.Debug.assert_;
+import static com.jcope.util.Net.IPV_4_6_REGEX_STR;
+import static com.jcope.util.Net.getIPBytes;
 import static com.jcope.util.Platform.PLATFORM_IS_WINDOWS;
 
 import java.awt.AWTException;
@@ -40,7 +42,9 @@ public class Server
         SERVER_PORT(1987),
         SERVER_LISTEN_BACKLOG(0),
         SERVER_SECURITY_POLICY("VncSecurityPolicy.xml"),
-        SUPPORT_CLIPBOARD_SYNCHRONIZATION(Boolean.FALSE)
+        SUPPORT_CLIPBOARD_SYNCHRONIZATION(Boolean.FALSE),
+        SERVER_BIND_ADDRESS_SPEC(null),
+        SERVER_BIND_ADDRESS_MASK(null)
         
         ;
         
@@ -56,6 +60,10 @@ public class Server
             assert_(obj != null);
             switch (this)
             {
+                case SERVER_BIND_ADDRESS_SPEC:
+                case SERVER_BIND_ADDRESS_MASK:
+                    assert_(obj == null || obj instanceof byte[]);
+                    break;
                 case SERVER_BIND_ADDRESS:
                 case SERVER_SECURITY_POLICY:
                     assert_(obj instanceof String);
@@ -79,6 +87,18 @@ public class Server
         {
             switch (this)
             {
+                case SERVER_BIND_ADDRESS_SPEC:
+                case SERVER_BIND_ADDRESS_MASK:
+                    String str;
+                    if (value != null && value instanceof String && (str = ((String)value)).matches(IPV_4_6_REGEX_STR))
+                    {
+                        value = getIPBytes(str);
+                    }
+                    else
+                    {
+                        value = null;
+                    }
+                    break;
                 case SERVER_BIND_ADDRESS:
                 case SERVER_SECURITY_POLICY:
                     break;
@@ -190,7 +210,19 @@ public class Server
 			listenBacklog = (Integer) SERVER_PROPERTIES.SERVER_LISTEN_BACKLOG.getValue();
 			serverBindAddress = (String) SERVER_PROPERTIES.SERVER_BIND_ADDRESS.getValue();
 			
-			VncServer vncServer = new VncServer(serverPort, listenBacklog, serverBindAddress);
+			byte[] bNSpec = (byte[]) SERVER_PROPERTIES.SERVER_BIND_ADDRESS_SPEC.getValue();
+			byte[] bNMask = (byte[]) SERVER_PROPERTIES.SERVER_BIND_ADDRESS_MASK.getValue();
+			
+			if (bNSpec == null || bNMask == null)
+			{
+			    bNSpec = null;
+			}
+			else if (bNSpec.length != bNMask.length)
+			{
+			    LLog.w("SERVER_BIND_ADDRESS_SPEC property and SERVER_BIND_ADDRESS_MASK property are not configured for the same network");
+			}
+			
+			VncServer vncServer = new VncServer(serverPort, listenBacklog, serverBindAddress, bNSpec, bNMask);
 			
 			System.out.println("VNCServer is running!");
 			vncServer.run();
