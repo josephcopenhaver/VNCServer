@@ -90,13 +90,13 @@ public class Server
                 case SERVER_BIND_ADDRESS_SPEC:
                 case SERVER_BIND_ADDRESS_MASK:
                     String str;
-                    if (value != null && value instanceof String && (str = ((String)value)).matches(IPV_4_6_REGEX_STR))
+                    if (value != null && value instanceof String)
                     {
-                        value = getIPBytes(str);
-                    }
-                    else
-                    {
-                        value = null;
+                        str = (String) value;
+                        if (str.matches(IPV_4_6_REGEX_STR))
+                        {
+                            value = getIPBytes(str);
+                        }
                     }
                     break;
                 case SERVER_BIND_ADDRESS:
@@ -213,13 +213,9 @@ public class Server
 			byte[] bNSpec = (byte[]) SERVER_PROPERTIES.SERVER_BIND_ADDRESS_SPEC.getValue();
 			byte[] bNMask = (byte[]) SERVER_PROPERTIES.SERVER_BIND_ADDRESS_MASK.getValue();
 			
-			if (bNSpec == null || bNMask == null)
+			if (((bNSpec == null) != (bNMask == null)) || ((bNSpec != null) && (bNSpec.length != bNMask.length)))
 			{
-			    bNSpec = null;
-			}
-			else if (bNSpec.length != bNMask.length)
-			{
-			    LLog.w("SERVER_BIND_ADDRESS_SPEC property and SERVER_BIND_ADDRESS_MASK property are not configured for the same network");
+			    LLog.e(new RuntimeException("SERVER_BIND_ADDRESS_SPEC property and SERVER_BIND_ADDRESS_MASK property are not configured for the same network"));
 			}
 			
 			VncServer vncServer = new VncServer(serverPort, listenBacklog, serverBindAddress, bNSpec, bNMask);
