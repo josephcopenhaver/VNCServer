@@ -15,7 +15,7 @@ public class PasswordInputDialog
 {
     private static int passwordPixelWidth = 200;
     
-    public static String show(JFrame parent, String title, String prompt, boolean confirm, Integer capacity)
+    public static char[] show(JFrame parent, String title, String prompt, boolean confirm, Integer capacity)
     {
         char[] tmp = null;
         char[] confirmTmp = null;
@@ -83,7 +83,7 @@ public class PasswordInputDialog
                     tmp = pass.getPassword();
                     if (!confirm || ((confirmTmp = confirmPass.getPassword()).length > 0 && tmp.length == confirmTmp.length && Arrays.equals(tmp, confirmTmp)))
                     {
-                        return new String(tmp);
+                        return tmp;
                     }
                     if (confirm)
                     {

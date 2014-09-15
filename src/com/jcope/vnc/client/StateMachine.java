@@ -17,14 +17,14 @@ import javax.swing.SwingUtilities;
 
 import com.jcope.debug.LLog;
 import com.jcope.ui.JCOptionPane;
-import com.jcope.ui.PasswordInputDialog;
 import com.jcope.util.FixedLengthBitSet;
 import com.jcope.util.TaskDispatcher;
 import com.jcope.vnc.Client.CLIENT_PROPERTIES;
+import com.jcope.vnc.client.dialogs.ConnectionDialog;
+import com.jcope.vnc.client.dialogs.ConnectionDialog.InvalidConnectionConfigurationException;
 import com.jcope.vnc.client.input.Handler;
 import com.jcope.vnc.client.input.handle.ScreenSegmentChanged;
 import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
-import com.jcope.vnc.shared.HashFactory;
 import com.jcope.vnc.shared.IOERunnable;
 import com.jcope.vnc.shared.InputEvent;
 import com.jcope.vnc.shared.Msg;
@@ -35,9 +35,8 @@ import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 public class StateMachine implements Runnable
 {
 	private MainFrame frame;
-	private String serverAddress, password;
-	private int serverPort;
-	private Integer selectedScreenNum;
+	
+	private ACCESS_MODE accessMode = null;
 	
 	private Socket socket;
 	private volatile BufferedOutputStream out;
@@ -52,65 +51,16 @@ public class StateMachine implements Runnable
     
     private Semaphore queueAccessSema = new Semaphore(1, true);
     private volatile ArrayList<InputEvent> outQueue = null;
-    private ACCESS_MODE accessMode = null;
     
     private Semaphore iconifiedSema = new Semaphore(1, true);
     
     private volatile FixedLengthBitSet changedSegments = null;
     public final Semaphore changedSegmentsSema = new Semaphore(1, true);
     
-    public StateMachine(String serverAddress, int serverPort, Integer selectedScreenNum, String password) throws UnknownHostException, IOException
+    public StateMachine() throws UnknownHostException, IOException
 	{
-		this.serverAddress = serverAddress;
-		this.serverPort = serverPort;
-		this.selectedScreenNum = selectedScreenNum;
-		this.password = password;
-		
-		frame = new MainFrame(this);
+        frame = new MainFrame(this);
 		frame.setVisible(true);
-	}
-	
-	public Integer getSelectedScreen()
-	{
-	    Integer rval = selectedScreenNum;
-	    
-	    selectedScreenNum = null;
-	    
-	    if (rval == null)
-	    {
-	        String tmp = (String) JCOptionPane.showInputDialog(frame, "Select screen", "0");
-	        if (tmp != null)
-	        {
-	            try
-	            {
-	                rval = Integer.parseInt(tmp);
-	            }
-	            catch (NumberFormatException e)
-	            {
-	                // Do Nothing
-	            }
-	        }
-	    }
-	    
-	    return rval;
-	}
-	
-	public String getPasswordHash()
-	{
-	    String rval = password;
-	    
-	    password = null;
-	    
-	    if (rval == null)
-	    {
-	        rval = PasswordInputDialog.show(frame, "Password?", "Password:", false, null);
-	        if (rval != null && !rval.equals(""))
-	        {
-	            rval = HashFactory.hash(rval);
-	        }
-	    }
-	    
-	    return rval;
 	}
 	
 	private void setWhyFailed(Exception exception)
@@ -174,82 +124,34 @@ public class StateMachine implements Runnable
 			{
     			try
     			{
-    			    ACCESS_MODE defaultAccessMode = ACCESS_MODE.VIEW_ONLY;
-    			    ACCESS_MODE tmpAccessMode;
-    			    Integer tmpSelectedScreen;
-    			    String tmp;
-    			    
-    			    tmp = (String) JCOptionPane.showInputDialog(frame, "Enter server address", "Server Address", JCOptionPane.QUESTION_MESSAGE, null, null, serverAddress);
-    			    if (tmp == null)
+    			    accessMode = null;
+    			    ConnectionDialog connectionDialog = new ConnectionDialog(frame);
+    			    if (JCOptionPane.OK_OPTION != connectionDialog.showInputDialog())
     			    {
-    			        whyFailed = usrCancel;
-                        break;
-    			    }
-    			    if (!tmp.equals(""))
-    			    {
-    			        serverAddress = tmp;
-    			    }
-    			    tmp = (String) JCOptionPane.showInputDialog(frame, "Enter server port", "Server Port", JCOptionPane.QUESTION_MESSAGE, null, null, (new Integer(serverPort)).toString());
-    			    if (tmp == null)
-    			    {
-    			        whyFailed = usrCancel;
-    			        break;
-    			    }
-    			    if (!tmp.equals(""))
-                    {
-    			        try
-    			        {
-    			            serverPort = Integer.parseInt(tmp);
-    			        }
-    			        catch (NumberFormatException e)
-    			        {
-    			            // Do Nothing
-    			        }
-                    }
-                    tmpAccessMode = (ACCESS_MODE) JCOptionPane.showInputDialog(frame, "Select access mode", "Select Access Mode", JCOptionPane.QUESTION_MESSAGE, null, ACCESS_MODE.selectable(), defaultAccessMode);
-    			    if (tmpAccessMode == null)
-    			    {
-    			        whyFailed = usrCancel;
-                        break;
-    			    }
-    			    tmpSelectedScreen = getSelectedScreen();
-    			    if (tmpSelectedScreen == null)
-    			    {
-    			        whyFailed = usrCancel;
-                        break;
+    			        throw usrCancel;
     			    }
     			    
-    			    String tmpPassword = getPasswordHash();
-    			    if (tmpPassword == null)
-    			    {
-    			        whyFailed = usrCancel;
-                        break;
-    			    }
-    			    if (tmpPassword.equals(""))
-    			    {
-    			        tmpPassword = null;
-    			    }
-    			    
-    			    final int selectedScreen = tmpSelectedScreen;
-    			    final String password = tmpPassword;
-    			    final ACCESS_MODE accessMode = tmpAccessMode;
-    			    tmpPassword = null;
-    			    
-    				socket = new Socket(serverAddress, serverPort);
+    				socket = new Socket(   
+    				    (String) CLIENT_PROPERTIES.REMOTE_ADDRESS.getValue(),
+    				    (Integer) CLIENT_PROPERTIES.REMOTE_PORT.getValue()
+    				);
     				wasConnected = Boolean.TRUE;
     				os = socket.getOutputStream();
     				out = new BufferedOutputStream(os);
     				is = socket.getInputStream();
     				in = new BufferedInputStream(is);
     				
-    				this.accessMode = accessMode;
+    				accessMode = connectionDialog.getAccessMode();
+    				final String hashedPassword = connectionDialog.removePassword();
+    				connectionDialog = null;
     				
     				SwingUtilities.invokeLater(new Runnable() {
     
                         @Override
                         public void run()
                         {
-                            sendEvent(CLIENT_EVENT.SELECT_SCREEN, selectedScreen, accessMode, password);
+                            int selectedScreen = (Integer) CLIENT_PROPERTIES.REMOTE_DISPLAY_NUM.getValue();
+                            sendEvent(CLIENT_EVENT.SELECT_SCREEN, selectedScreen, accessMode, hashedPassword);
                         }
     				    
     				});
@@ -283,6 +185,10 @@ public class StateMachine implements Runnable
     			    setWhyFailed(e);
     			}
     			catch (IOException e)
+                {
+                    setWhyFailed(e);
+                }
+                catch (InvalidConnectionConfigurationException e)
                 {
                     setWhyFailed(e);
                 }

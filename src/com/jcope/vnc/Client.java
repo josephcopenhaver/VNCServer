@@ -127,20 +127,12 @@ public class Client
 	public static void main(String[] args) throws UnknownHostException, IOException, InterruptedException
 	{
 		boolean forceStop = !DEBUG;
-		String remoteAddress;
-		int remotePort;
-		Integer remoteDisplayNum;
-		String password;
 		
 		CLIENT_PROPERTIES.loadConfig(args.length > 0 ? args[0] : null);
-		remoteAddress = (String) CLIENT_PROPERTIES.REMOTE_ADDRESS.getValue();
-		remotePort = (Integer) CLIENT_PROPERTIES.REMOTE_PORT.getValue();
-		remoteDisplayNum = (Integer) CLIENT_PROPERTIES.REMOTE_DISPLAY_NUM.getValue();
-		password = null;
 		
 		try
 		{
-			StateMachine myClient = new StateMachine(remoteAddress, remotePort, remoteDisplayNum, password);
+			StateMachine myClient = new StateMachine();
 			System.out.println("Client is running!");
 			myClient.run();
 			forceStop = Boolean.TRUE;

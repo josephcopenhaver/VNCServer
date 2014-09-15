@@ -54,6 +54,8 @@ public class MainFrame extends JFrame
 	// Generated: serialVersionUID
 	private static final long serialVersionUID = -6735839955506471961L;
 	
+	private static final MainFrame[] selfRef = new MainFrame[]{null};
+	
 	private final StateMachine client;
 	private final JScrollPane scrollPane = new JScrollPane();
 	
@@ -76,9 +78,39 @@ public class MainFrame extends JFrame
 	private GraphicsDevice currentFullScreenDevice = null;
 	
 	private final Semaphore iconifiedSema;
+	
+	/**
+	 * To be called once and only once
+	 * @param self
+	 */
+	private static final void cacheSelf(MainFrame self)
+	{
+	    synchronized (selfRef) {
+	        MainFrame oldSelf = selfRef[0];
+            assert_(oldSelf == null);
+            selfRef[0] = self;
+        }
+	}
+	
+	public static final MainFrame getCachedInstance()
+	{
+	    MainFrame rval = selfRef[0];
+	    
+	    if (rval == null)
+	    {
+    	    synchronized (selfRef) {
+    	        rval = selfRef[0];
+    	        assert_(rval != null);
+    	    }
+	    }
+	    
+	    return rval;
+	}
 
 	public MainFrame(final StateMachine stateMachine)
 	{
+	    
+	    cacheSelf(this);
 	    
 	    iconifiedSema = stateMachine.getIconifiedSemaphore();
 	    

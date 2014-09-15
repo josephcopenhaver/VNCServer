@@ -7,6 +7,7 @@ import static com.jcope.vnc.shared.Tokens.ALL_TOKEN;
 import java.awt.GraphicsDevice;
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 
 import javax.swing.JFrame;
@@ -239,17 +240,20 @@ public class ServerSetup
                 {
                     defaultPasswordHash = "";
                 }
-                String passwordHash = PasswordInputDialog.show(parent, "Password", String.format("Device: \"%s\"\nMode: \"%s\"\nConfigure password:", deviceID, accessMode.name()), true, null);
+                char[] rawPassword = PasswordInputDialog.show(parent, "Password", String.format("Device: \"%s\"\nMode: \"%s\"\nConfigure password:", deviceID, accessMode.name()), true, null);
                 
-                if (null == passwordHash || passwordHash.equals(""))
+                if (null == rawPassword || rawPassword.length == 0)
                 {
                     break;
                 }
                 
-                if (!passwordHash.equals(defaultPasswordHash) && !defaultPasswordHash.equals(ALL_TOKEN))
+                String passwordHash = defaultPasswordHash;
+                
+                if (!Arrays.equals(defaultPasswordHash.toCharArray(), rawPassword) && !defaultPasswordHash.equals(ALL_TOKEN))
                 {
-                    passwordHash = HashFactory.hash(passwordHash);
+                    passwordHash = HashFactory.hash(rawPassword);
                 }
+                rawPassword = null;
                 
                 securityPolicy.whitelist(deviceID, accessMode, passwordHash);
                 rval = true;
