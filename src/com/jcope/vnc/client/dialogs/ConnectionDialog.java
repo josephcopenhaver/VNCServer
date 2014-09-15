@@ -4,19 +4,23 @@ import static com.jcope.debug.Debug.assert_;
 
 import java.awt.Component;
 import java.awt.Container;
+import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Arrays;
 
-import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
+import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
+import javax.swing.border.EmptyBorder;
 
 import com.jcope.ui.JCOptionPane;
 import com.jcope.vnc.Client.CLIENT_PROPERTIES;
@@ -28,6 +32,8 @@ public class ConnectionDialog
 {
     
     public static final int MAX_DISPLAY_IDX = 0xff;
+    public static final int GAP_SIZE_PIXELS = 10;
+    public static final int BORDER_SIZE_PIXELS = 10;
     
     public static class InvalidConnectionConfigurationException extends Exception
     {
@@ -58,22 +64,24 @@ public class ConnectionDialog
         
         private JTextField serverName = new JTextField();
         private JTextField serverPort = new JTextField();
-        private JList<ACCESS_MODE> singleAccessModeSelectionList = new JList<ACCESS_MODE>(ACCESS_MODE.selectable());
+        private JList<ACCESS_MODE> single_accessModeSelectionList = new JList<ACCESS_MODE>(ACCESS_MODE.selectable());
         private JTextField displayNum = new JTextField();
         private JPasswordField password = new JPasswordField();
         private int result;
-        private JButton okayButton = new JButton("OK");
+        private JButton okButton = new JButton("OK");
         private JButton cancelButton = new JButton("Cancel");
+        private JCheckBox askToSynchronizeClipboard = new JCheckBox();
         
         private String passwordHash = null;
+        Container contentPane;
         
-        ActionListener okayCancel = new ActionListener() {
+        ActionListener ok_or_cancel = new ActionListener() {
 
             @Override
             public void actionPerformed(ActionEvent evt)
             {
                 Object src = evt.getSource();
-                if (src == okayButton)
+                if (src == okButton)
                 {
                     result = JCOptionPane.OK_OPTION;
                 }
@@ -90,65 +98,76 @@ public class ConnectionDialog
             
         };
         
-        private JPanel getLabeledComponent(String labelText, Component rhs)
+        @Override
+        public Component add(Component component)
         {
-            JPanel rval = new JPanel();
-            
-            rval.setLayout(new BoxLayout(rval, BoxLayout.X_AXIS));
-            
-            rval.add(new JLabel(labelText + ":"));
-            rval.add(rhs);
-            
-            return rval;
+            return contentPane.add(component);
+        }
+        
+        private void addLabeledComponent(String labelText, Component rhs)
+        {
+            add(new JLabel(labelText + ":"));
+            add(rhs);
         }
         
         private CustomDialog(JFrame frame)
         {
+            contentPane = getContentPane();
+            ((JPanel)contentPane).setBorder(new EmptyBorder(BORDER_SIZE_PIXELS, BORDER_SIZE_PIXELS, BORDER_SIZE_PIXELS, BORDER_SIZE_PIXELS));
+            contentPane.setLayout(new GridLayout(0, 2, GAP_SIZE_PIXELS, GAP_SIZE_PIXELS));
+            
             Object tmp = CLIENT_PROPERTIES.REMOTE_ADDRESS.getValue();
             serverName.setText(tmp == null ? "" : ((String)tmp));
             
             tmp = CLIENT_PROPERTIES.REMOTE_PORT.getValue();
             serverPort.setText(tmp == null ? "" : ((Integer)tmp).toString());
             
-            singleAccessModeSelectionList.setVisibleRowCount(1);
-            singleAccessModeSelectionList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-            singleAccessModeSelectionList.setSelectedValue(ACCESS_MODE.VIEW_ONLY, Boolean.TRUE);
+            single_accessModeSelectionList.setLayoutOrientation(JList.VERTICAL);
+            single_accessModeSelectionList.setVisibleRowCount(1);
+            single_accessModeSelectionList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+            JScrollPane jsp_single_accessModeSelectionList = new JScrollPane(single_accessModeSelectionList);
+            jsp_single_accessModeSelectionList.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+            jsp_single_accessModeSelectionList.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+            single_accessModeSelectionList.setSelectedValue(ACCESS_MODE.VIEW_ONLY, Boolean.TRUE);
             
             tmp = CLIENT_PROPERTIES.REMOTE_DISPLAY_NUM.getValue();
             displayNum.setText(tmp == null ? "0" : ((Integer)tmp).toString());
             
+            tmp = CLIENT_PROPERTIES.SYNCHRONIZE_CLIPBOARD.getValue();
+            askToSynchronizeClipboard.setSelected(tmp == null ? Boolean.FALSE : ((Boolean)tmp));
+            
             password.setText("");
             
-            okayButton.addActionListener(okayCancel);
-            cancelButton.addActionListener(okayCancel);
-            
-            JPanel submitPanel = new JPanel();
-            submitPanel.setLayout(new BoxLayout(submitPanel, BoxLayout.X_AXIS));
+            okButton.addActionListener(ok_or_cancel);
+            cancelButton.addActionListener(ok_or_cancel);
             
             setModalityType(JDialog.ModalityType.APPLICATION_MODAL);
-            Container contentPane = getContentPane();
             
-            submitPanel.add(okayButton);
-            submitPanel.add(cancelButton);
+            addLabeledComponent("Server Name", serverName);
+            addLabeledComponent("Server Port", serverPort);
+            addLabeledComponent("Access Mode", jsp_single_accessModeSelectionList);
+            addLabeledComponent("Select Screen", displayNum);
+            addLabeledComponent("Password", password);
+            addLabeledComponent("SYNC Clipboard", askToSynchronizeClipboard);
             
-            contentPane.setLayout(new BoxLayout(contentPane, BoxLayout.Y_AXIS));
-            
-            contentPane.add(getLabeledComponent("Server Name", serverName));
-            contentPane.add(getLabeledComponent("Server Port", serverPort));
-            contentPane.add(getLabeledComponent("Access Mode", singleAccessModeSelectionList));
-            contentPane.add(getLabeledComponent("Selected Screen", displayNum));
-            contentPane.add(getLabeledComponent("Password ", password));
-            contentPane.add(submitPanel);
+            add(okButton);
+            add(cancelButton);
             
             
             tmp = null;
+            contentPane = null;
         }
         
         private void stagePasswordHash()
         {
             if (dialog.result != JCOptionPane.OK_OPTION)
             {
-                password.setText("");
+                char[] chars = password.getPassword();
+                if (chars != null && chars.length > 0)
+                {
+                    Arrays.fill(chars, (char)0); 
+                    password.setText("");
+                }
                 return;
             }
             char[] rawText = password.getPassword();
@@ -158,7 +177,7 @@ public class ConnectionDialog
             rawText = null;
         }
         
-        private String getPasswordHash()
+        private String popPasswordHash()
         {
             String rval = passwordHash;
             
@@ -170,14 +189,14 @@ public class ConnectionDialog
         @Override
         public void dispose()
         {
-            ActionListener okayCancel = this.okayCancel;
-            this.okayCancel = null;
-            if (okayCancel == null)
+            ActionListener ok_or_cancel = this.ok_or_cancel;
+            this.ok_or_cancel = null;
+            if (ok_or_cancel == null)
             {
                 return;
             }
-            okayButton.removeActionListener(okayCancel);
-            cancelButton.removeActionListener(okayCancel);
+            okButton.removeActionListener(ok_or_cancel);
+            cancelButton.removeActionListener(ok_or_cancel);
         }
     }
 
@@ -190,6 +209,8 @@ public class ConnectionDialog
     {
         dialog.result = JCOptionPane.CLOSED_OPTION;
         
+        dialog.pack();
+        dialog.setSize(dialog.getPreferredSize());
         dialog.setVisible(Boolean.TRUE);
         dialog.stagePasswordHash();
         
@@ -198,6 +219,7 @@ public class ConnectionDialog
             String remoteAddress;
             int remotePort,
                 remoteDisplayNum;
+            Boolean synchronizeClipboard;
             
             
             String tmp = dialog.serverName.getText();
@@ -257,12 +279,15 @@ public class ConnectionDialog
                 throw configurationException;
             }
             
+            synchronizeClipboard = dialog.askToSynchronizeClipboard.isSelected();
+            
             tmp = null;
             configurationException.setMessage(null);
             
             CLIENT_PROPERTIES.REMOTE_ADDRESS.setValue(remoteAddress);
             CLIENT_PROPERTIES.REMOTE_PORT.setValue(remotePort);
             CLIENT_PROPERTIES.REMOTE_DISPLAY_NUM.setValue(remoteDisplayNum);
+            CLIENT_PROPERTIES.SYNCHRONIZE_CLIPBOARD.setValue(synchronizeClipboard);
         }
         
         return dialog.result;
@@ -270,12 +295,12 @@ public class ConnectionDialog
 
     public ACCESS_MODE getAccessMode()
     {
-        return dialog.singleAccessModeSelectionList.getSelectedValue();
+        return dialog.single_accessModeSelectionList.getSelectedValue();
     }
 
     public String removePassword()
     {
-        return dialog.getPasswordHash();
+        return dialog.popPasswordHash();
     }
     
     public void dispose()

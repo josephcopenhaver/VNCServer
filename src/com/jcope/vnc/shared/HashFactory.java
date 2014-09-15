@@ -15,27 +15,24 @@ public class HashFactory
     
     public static final byte[] charsToBytes(char[] chars, boolean destroyOriginal)
     {
-        int size = 0;
+        byte[] rval = new byte[chars.length * 2];
         
-        for (char c : chars)
+        int idxIn = 0,
+            idxOut = 0;
+        char c;
+        
+        while (idxIn < chars.length)
         {
-            size += ((c & 0xff00) != 0) ? 2 : 1;
-        }
-        size = 0;
-        byte[] rval = new byte[size];
-        int i = 0;
-        for (char c : chars)
-        {
-            if ((c & 0xff00) != 0)
-            {
-                rval[size++] = (byte) ((c & 0xff00) >> 8);
-            }
-            rval[size++] = (byte) (c & 0xff);
+            c = chars[idxIn];
+            rval[idxOut++] = (byte) (c & 0xff);
+            rval[idxOut++] = (byte) ((c & 0xff00) >> 8);
             if (destroyOriginal)
             {
-                chars[i++] = 0;
+                chars[idxIn] = 0;
             }
+            idxIn++;
         }
+        c = (char) 0;
         
         return rval;
     }
