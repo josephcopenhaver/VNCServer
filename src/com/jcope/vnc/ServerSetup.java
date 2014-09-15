@@ -1,6 +1,7 @@
 package com.jcope.vnc;
 
 import static com.jcope.debug.Debug.assert_;
+import static com.jcope.ui.util.Style.positionThenShow;
 import static com.jcope.vnc.shared.ScreenSelector.getScreenDevices;
 import static com.jcope.vnc.shared.Tokens.ALL_TOKEN;
 
@@ -43,8 +44,7 @@ public class ServerSetup
         // using a JFrame so that window managers on all platforms show the application as running
         JFrame frame = new JFrame();
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.pack();
-        frame.setVisible(true);
+        positionThenShow(frame);
         
         SecurityPolicy securityPolicy = new SecurityPolicy();
         File file = new File(securityPolicyPath);

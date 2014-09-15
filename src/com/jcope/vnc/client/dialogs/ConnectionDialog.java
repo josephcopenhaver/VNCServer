@@ -23,6 +23,7 @@ import javax.swing.ListSelectionModel;
 import javax.swing.border.EmptyBorder;
 
 import com.jcope.ui.JCOptionPane;
+import static com.jcope.ui.util.Style.positionRelativeToParentWhenShown;
 import com.jcope.vnc.Client.CLIENT_PROPERTIES;
 import com.jcope.vnc.client.MainFrame;
 import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
@@ -112,6 +113,9 @@ public class ConnectionDialog
         
         private CustomDialog(JFrame frame)
         {
+            super(frame);
+            
+            
             contentPane = getContentPane();
             ((JPanel)contentPane).setBorder(new EmptyBorder(BORDER_SIZE_PIXELS, BORDER_SIZE_PIXELS, BORDER_SIZE_PIXELS, BORDER_SIZE_PIXELS));
             contentPane.setLayout(new GridLayout(0, 2, GAP_SIZE_PIXELS, GAP_SIZE_PIXELS));
@@ -211,6 +215,7 @@ public class ConnectionDialog
         
         dialog.pack();
         dialog.setSize(dialog.getPreferredSize());
+        positionRelativeToParentWhenShown(dialog);
         dialog.setVisible(Boolean.TRUE);
         dialog.stagePasswordHash();
         

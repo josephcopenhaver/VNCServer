@@ -1,6 +1,7 @@
 package com.jcope.vnc.client;
 
 import static com.jcope.debug.Debug.assert_;
+import static com.jcope.ui.util.Style.positionThenShow;
 import static com.jcope.vnc.shared.InputEventInfo.MAX_QUEUE_SIZE;
 
 import java.io.BufferedInputStream;
@@ -60,7 +61,7 @@ public class StateMachine implements Runnable
     public StateMachine() throws UnknownHostException, IOException
 	{
         frame = new MainFrame(this);
-		frame.setVisible(true);
+		positionThenShow(frame);
 	}
 	
 	private void setWhyFailed(Exception exception)
