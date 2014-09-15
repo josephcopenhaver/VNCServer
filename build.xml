@@ -1,0 +1,223 @@
+<project name="VNCServer build file" default="all" basedir=".">
+  <macrodef name="delete_iff_exists">
+    <attribute name="file" />
+    <attribute name="basedir" default="." />
+    <sequential>
+      <delete failonerror="false">
+        <fileset dir="@{basedir}" includes="@{file}" />
+      </delete>
+      <fail message="A file matching '@{basedir}'/'@{file}' still exists">
+        <condition>
+          <not><resourcecount count="0">
+            <fileset dir="@{basedir}" includes="@{file}" />
+          </resourcecount></not>
+        </condition>
+      </fail>
+    </sequential>
+  </macrodef>
+  <macrodef name="compilesrc">
+    <attribute name="name" />
+    <attribute name="target" />
+    <attribute name="srcdir" />
+    <attribute name="destdir" />
+    <attribute name="includes" />
+    <attribute name="excludes" default="" />
+    <attribute name="classpath" default="" />
+    <sequential>
+      <record name="${logdir}/@{name}.txt" action="start" append="false" />
+      <javac debug="true" debuglevel="lines,vars,source" target="@{target}" srcdir="@{srcdir}" destdir="@{destdir}" includes="@{includes}" excludes="@{excludes}" classpath="@{classpath}">
+        <compilerarg value="-Xlint:unchecked" />
+      </javac>
+  	  <record name="${logdir}/@{name}.txt" action="stop" />
+    </sequential>
+  </macrodef>
+  <macrodef name="singlefilereplaceregexp">
+  <attribute name="file" />
+	<attribute name="match" />
+	<attribute name="replace" />
+	<attribute name="byline" default="true" />
+    <sequential>
+      <fail message="File does not exist: @{file}">
+        <condition><not>
+          <resourcecount count="1">
+            <fileset file="@{file}" />
+          </resourcecount>
+        </not></condition>
+      </fail>
+	  <replaceregexp file="@{file}" match="@{match}" replace="@{replace}" byline="@{byline}" />
+    </sequential>
+  </macrodef>
+
+  
+
+  <!-- BEGIN: GLOBALS-->
+  <property name="logdir" location="build.log" />
+  <property name="bin-dir" value="bin" />
+  <property name="src-dir" value="src" />
+  <property name="target-java-version" value="1.6" />
+  <property name="nativeSupportFiles" value=",com/jcope/vnc/client/NativeDecorator.java" />
+  <property name="refSuffix" value="Reference" />
+  <property name="regex-refType" value="(?:Weak|Soft)${refSuffix}" />
+  <property name="bufferPoolFP" value="${src-dir}/com/jcope/util/BufferPool.java" />
+  <!-- END: GLOBALS -->
+  
+  
+
+  <target name="initLog">
+    <mkdir dir="${logdir}" />
+  </target>
+
+  <target name="compile" depends="initLog">
+    <record name="${logdir}/compile.txt" action="start" append="false" />
+
+    <fail message="Compiling in client mode, but compiled server objects exist: please run clean task">
+      <condition>
+        <and>
+          <isset property="mode" />
+          <equals arg1="${mode}" arg2="client" />
+          <not><resourcecount count="0">
+            <fileset dir="${bin-dir}" includes="com/jcope/vnc/server/**/*,com/jcope/vnc/Server.*,com/jcope/vnc/ServerSetup.*" />
+          </resourcecount></not>
+        </and>
+      </condition>
+    </fail>
+    <fail message="Compiling in server mode, but compiled client objects exist: please run clean task">
+      <condition>
+        <and>
+          <isset property="mode" />
+          <equals arg1="${mode}" arg2="server" />
+          <not><resourcecount count="0">
+            <fileset dir="${bin-dir}" includes="com/jcope/vnc/client/**/*,com/jcope/vnc/Client.*" />
+          </resourcecount></not>
+        </and>
+      </condition>
+    </fail>
+
+    <!-- setup course compilation set -->
+
+    <local name="_L.mode" />
+    <local name="_L.includes" />
+    <local name="_L.excludes" />
+    <local name="_L.refType" />
+    <local name="_L.include-nativeSupportFiles" />
+    <local name="_L.exclude-nativeSupportFiles" />
+
+
+
+    <condition property="_L.include-nativeSupportFiles" value="${nativeSupportFiles}">
+      <isset property="native_support" />
+    </condition>
+    <condition property="_L.exclude-nativeSupportFiles" value="${nativeSupportFiles}">
+      <not><isset property="native_support" /></not>
+    </condition>
+    <condition property="_L.include-nativeSupportFiles" value="">
+      <not><isset property="_L.include-nativeSupportFiles" /></not>
+    </condition>
+    <condition property="_L.exclude-nativeSupportFiles" value="">
+      <not><isset property="_L.exclude-nativeSupportFiles" /></not>
+    </condition>
+    
+
+
+    <condition property="_L.includes" value="**/*">
+      <not><isset property="mode" /></not>
+    </condition>
+    <condition property="_L.excludes" value="">
+      <not><isset property="mode" /></not>
+    </condition>
+
+
+
+    <condition property="_L.mode" value="client">
+      <isset property="_L.excludes" />
+    </condition>
+    <condition property="_L.mode" value="${mode}">
+      <and>
+        <not><isset property="_L.excludes" /></not>
+        <isset property="mode" />
+        <equals arg1="${mode}" arg2="server" />
+      </and>
+    </condition>
+    <condition property="_L.mode" value="client">
+      <not><isset property="_L.mode" /></not>
+    </condition>
+
+
+
+    <condition property="_L.includes" value="com/jcope/vnc/Server.java,com/jcope/vnc/ServerSetup.java">
+      <and>
+        <not><isset property="_L.excludes" /></not>
+        <isset property="mode" />
+        <equals arg1="${mode}" arg2="server" />
+      </and>
+    </condition>
+    <condition property="_L.excludes" value="com/jcope/vnc/client/**/*.java,com/jcope/vnc/Client.java">
+      <and>
+        <not><isset property="_L.excludes" /></not>
+        <isset property="mode" />
+        <equals arg1="${mode}" arg2="server" />
+      </and>
+    </condition>
+
+    <condition property="_L.includes" value="com/jcope/vnc/Client.java">
+      <not><isset property="_L.excludes" /></not>
+    </condition>
+    <condition property="_L.excludes" value="com/jcope/vnc/server/**/*.java,com/jcope/vnc/Server.java,com/jcope/vnc/ServerSetup.java">
+      <not><isset property="_L.excludes" /></not>
+    </condition>
+
+    <condition property="_L.refType" value="Soft">
+      <equals arg1="${_L.mode}" arg2="client" />
+    </condition>
+    <condition property="_L.refType" value="Weak">
+      <not><isset property="_L.refType" /></not>
+    </condition>
+
+    <!-- end compilation source definitions -->
+
+<echo>
+Compiling with config:
+
+    mode=${mode}
+    native_support=${native_support}
+    _L.mode=${_L.mode}
+    _L.includes=${_L.includes}
+    _L.excludes=${_L.excludes}
+    _L.refType=${_L.refType}
+</echo>
+
+    <singlefilereplaceregexp file="${bufferPoolFP}" match="${regex-refType}" replace="${_L.refType}${refSuffix}" />
+
+    <compilesrc name="compile" target="${target-java-version}" srcdir="${src-dir}" destdir="${bin-dir}" includes="${_L.includes}${_L.include-nativeSupportFiles}" excludes="${_L.excludes}${_L.exclude-nativeSupportFiles}" />
+
+    <record name="${logdir}/compile.txt" action="stop" />
+  </target>
+
+
+  <target name="clean" depends="initLog">
+    <record name="${logdir}/clean.txt" action="start" append="false" />
+
+    <delete includeemptydirs="true">
+      <fileset dir="${bin-dir}" includes="**/*" />
+    </delete>
+
+    <record name="${logdir}/clean.txt" action="stop" />
+  </target>
+
+  <target name="cleangit" depends="clean">
+    <record name="${logdir}/cleangit.txt" action="start" append="false" />
+
+    <delete_iff_exists file="setup.log,client.log,server.log,server.lock,server.pid" />
+    <touch file="${bin-dir}/empty" />
+    <singlefilereplaceregexp file="${bufferPoolFP}" match="${regex-refType}" replace="Soft${refSuffix}" />
+
+    <record name="${logdir}/cleangit.txt" action="stop" />
+
+    <delete dir="${logdir}" />
+  </target>
+
+
+  <target name="all" depends="clean,compile">
+    <!-- -->
+  </target>
+</project>
