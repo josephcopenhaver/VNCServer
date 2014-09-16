@@ -1,4 +1,5 @@
 #!/bin/bash
+ARG_1="$1"
 OPT_RESTART=n
 OPT_RUNNING=n
 OPT_RESUME_AFTER_SETUP=n
@@ -53,7 +54,7 @@ restart() {
     stop
 }
 unknown() {
-    echo Unknown command "\"$1\""
+    echo Unknown command "\"$ARG_1\""
 }
 setup() {
 	detect_if_running
@@ -67,13 +68,13 @@ setup() {
 	fi
 }
 
-if [ "$1" == "start" ]; then
+if [ "$ARG_1" == "start" ]; then
     start
-elif [ "$1" == "stop" ]; then
+elif [ "$ARG_1" == "stop" ]; then
     stop
-elif [ "$1" == "restart" ]; then
+elif [ "$ARG_1" == "restart" ]; then
     restart
-elif [ "$1" == "setup" ]; then
+elif [ "$ARG_1" == "setup" ]; then
     setup
 else
     unknown

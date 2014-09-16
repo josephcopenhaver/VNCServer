@@ -30,7 +30,7 @@ CONFIGURE SERVER SECURITY PROFILE:
 *  you should really set a password  *
 **************************************
 (windows): service setup
-  (other): sh service.sh setup
+  (other): bash service.sh setup
 
 
   
@@ -50,14 +50,14 @@ RUN VNC SERVER:
 * note there is a "restart" command *
 *************************************
 (windows): service start
-  (other): sh service.sh start
+  (other): bash service.sh start
 
 
 
 STOP VNC SERVER:
 ===============
 (windows): service stop
-  (other): sh service.sh stop
+  (other): bash service.sh stop
 
 
 
@@ -67,7 +67,7 @@ RUN VNC CLIENT:
 * Note configurables in client.properties *
 *******************************************
 (windows): client
-  (other): sh client.sh
+  (other): bash client.sh
 
 
 

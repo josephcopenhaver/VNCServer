@@ -191,16 +191,35 @@ public class ConnectionDialog
         @Override
         public void dispose()
         {
-            result = JCOptionPane.CANCEL_OPTION;
-            stagePasswordHash();
             ActionListener ok_or_cancel = this.ok_or_cancel;
             this.ok_or_cancel = null;
             if (ok_or_cancel == null)
             {
                 return;
             }
+            result = JCOptionPane.CANCEL_OPTION;
+            stagePasswordHash();
             okButton.removeActionListener(ok_or_cancel);
             cancelButton.removeActionListener(ok_or_cancel);
+
+            // unbind everything
+
+            getContentPane().removeAll();
+
+            // Null everything out!
+
+            serverName = null;
+            serverPort = null;
+            single_accessModeSelectionList = null;
+            displayNum = null;
+            password = null;
+            okButton = null;
+            cancelButton = null;
+            askToSynchronizeClipboard = null;
+            passwordHash = null;
+            contentPane = null;
+
+            super.dispose();
         }
     }
 
