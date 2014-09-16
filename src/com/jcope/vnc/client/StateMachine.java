@@ -127,23 +127,32 @@ public class StateMachine implements Runnable
     			{
     			    accessMode = null;
     			    ConnectionDialog connectionDialog = new ConnectionDialog(frame);
-    			    if (JCOptionPane.OK_OPTION != connectionDialog.showInputDialog())
-    			    {
-    			        throw usrCancel;
-    			    }
+    			    final String hashedPassword;
     			    
-    				socket = new Socket(   
-    				    (String) CLIENT_PROPERTIES.REMOTE_ADDRESS.getValue(),
-    				    (Integer) CLIENT_PROPERTIES.REMOTE_PORT.getValue()
-    				);
-    				wasConnected = Boolean.TRUE;
-    				os = socket.getOutputStream();
-    				out = new BufferedOutputStream(os);
-    				is = socket.getInputStream();
-    				in = new BufferedInputStream(is);
-    				
-    				accessMode = connectionDialog.getAccessMode();
-    				final String hashedPassword = connectionDialog.removePassword();
+    			    try
+    			    {
+        			    if (JCOptionPane.OK_OPTION != connectionDialog.showInputDialog())
+        			    {
+        			        throw usrCancel;
+        			    }
+        			    
+        				socket = new Socket(   
+        				    (String) CLIENT_PROPERTIES.REMOTE_ADDRESS.getValue(),
+        				    (Integer) CLIENT_PROPERTIES.REMOTE_PORT.getValue()
+        				);
+        				wasConnected = Boolean.TRUE;
+        				os = socket.getOutputStream();
+        				out = new BufferedOutputStream(os);
+        				is = socket.getInputStream();
+        				in = new BufferedInputStream(is);
+        				
+        				accessMode = connectionDialog.getAccessMode();
+        				hashedPassword = connectionDialog.removePassword();
+    			    }
+                    finally {
+                        connectionDialog.dispose();
+                    }
+    			    
     				connectionDialog = null;
     				
     				SwingUtilities.invokeLater(new Runnable() {

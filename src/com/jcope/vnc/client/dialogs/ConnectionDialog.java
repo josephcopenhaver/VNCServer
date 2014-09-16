@@ -162,7 +162,7 @@ public class ConnectionDialog
         
         private void stagePasswordHash()
         {
-            if (dialog.result != JCOptionPane.OK_OPTION)
+            if (result != JCOptionPane.OK_OPTION)
             {
                 char[] chars = password.getPassword();
                 if (chars != null && chars.length > 0)
@@ -191,6 +191,8 @@ public class ConnectionDialog
         @Override
         public void dispose()
         {
+            result = JCOptionPane.CANCEL_OPTION;
+            stagePasswordHash();
             ActionListener ok_or_cancel = this.ok_or_cancel;
             this.ok_or_cancel = null;
             if (ok_or_cancel == null)
@@ -307,10 +309,11 @@ public class ConnectionDialog
     
     public void dispose()
     {
-        if (dialog != null)
-        {
-            dialog.dispose();
-        }
+        CustomDialog tmp = dialog;
         dialog = null;
+        if (tmp != null)
+        {
+            tmp.dispose();
+        }
     }
 }
