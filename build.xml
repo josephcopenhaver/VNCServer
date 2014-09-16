@@ -188,7 +188,7 @@ Compiling with config:
 
     <singlefilereplaceregexp file="${bufferPoolFP}" match="${regex-refType}" replace="${_L.refType}${refSuffix}" />
 
-    <compilesrc name="compile" target="${target-java-version}" srcdir="${src-dir}" destdir="${bin-dir}" includes="${_L.includes}${_L.include-nativeSupportFiles}" excludes="${_L.excludes}${_L.exclude-nativeSupportFiles}" />
+    <compilesrc name="compile-src" target="${target-java-version}" srcdir="${src-dir}" destdir="${bin-dir}" includes="${_L.includes}${_L.include-nativeSupportFiles}" excludes="${_L.excludes}${_L.exclude-nativeSupportFiles}" />
 
     <record name="${logdir}/compile.txt" action="stop" />
   </target>
