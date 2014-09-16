@@ -23,7 +23,7 @@ import javax.swing.ListSelectionModel;
 import javax.swing.border.EmptyBorder;
 
 import com.jcope.ui.JCOptionPane;
-import static com.jcope.ui.util.Style.positionRelativeToParentWhenShown;
+import static com.jcope.ui.util.Style.showModalDialogWithStyle;
 import com.jcope.vnc.Client.CLIENT_PROPERTIES;
 import com.jcope.vnc.client.MainFrame;
 import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
@@ -145,8 +145,6 @@ public class ConnectionDialog
             okButton.addActionListener(ok_or_cancel);
             cancelButton.addActionListener(ok_or_cancel);
             
-            setModalityType(JDialog.ModalityType.APPLICATION_MODAL);
-            
             addLabeledComponent("Server Name", serverName);
             addLabeledComponent("Server Port", serverPort);
             addLabeledComponent("Access Mode", jsp_single_accessModeSelectionList);
@@ -215,8 +213,7 @@ public class ConnectionDialog
         
         dialog.pack();
         dialog.setSize(dialog.getPreferredSize());
-        positionRelativeToParentWhenShown(dialog);
-        dialog.setVisible(Boolean.TRUE);
+        showModalDialogWithStyle(dialog, dialog.okButton, dialog.cancelButton);
         dialog.stagePasswordHash();
         
         if (dialog.result == JCOptionPane.OK_OPTION)

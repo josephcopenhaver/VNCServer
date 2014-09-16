@@ -6,12 +6,18 @@ import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Insets;
+import java.awt.KeyEventDispatcher;
+import java.awt.KeyboardFocusManager;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.KeyEvent;
 
+import javax.swing.AbstractButton;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 
@@ -24,8 +30,6 @@ public class Style
     
     public static void positionThenShow(JFrame frame, boolean packBeforeShow)
     {
-        //GraphicsDevice graphicsDevice;
-        //GraphicsConfiguration graphicsConfiguration;
         Rectangle gcBounds = null;
         Insets insets = null;
         Point point;
@@ -44,8 +48,6 @@ public class Style
                 {
                     gcBounds = bounds;
                     insets = Toolkit.getDefaultToolkit().getScreenInsets(gConfig);
-                    //graphicsConfiguration = gConfig;
-                    //graphicsDevice = gDevice;
                     break;
                 }
             }
@@ -72,8 +74,9 @@ public class Style
         frame.setVisible(Boolean.TRUE);
     }
 
-    public static void positionRelativeToParentWhenShown(JDialog dialog)
+    public static void showModalDialogWithStyle(JDialog dialog, final AbstractButton confirmBtn, final AbstractButton cancelBtn)
     {
+        dialog.setModalityType(JDialog.ModalityType.APPLICATION_MODAL);
         dialog.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentShown(ComponentEvent evt)
@@ -89,5 +92,65 @@ public class Style
                 }
             }
         });
+        KeyEventDispatcher confirmOrCancel = (confirmBtn != null || cancelBtn != null) ? new KeyEventDispatcher() {  
+            public boolean dispatchKeyEvent(KeyEvent evt) {  
+                boolean keyHandled = false;
+                do
+                {
+                    if ((evt.getID() != KeyEvent.KEY_PRESSED)
+                            || evt.isConsumed())
+                    {
+                        break;
+                    }
+                    
+                    int keyCode = evt.getKeyCode();
+                    
+                    if (KeyEvent.VK_ENTER == keyCode)
+                    {
+                        if (confirmBtn != null)
+                        {
+                            evt.consume();
+                            ActionEvent virtualEvent = new ActionEvent(confirmBtn, ActionEvent.ACTION_PERFORMED, confirmBtn.getActionCommand());
+                            for(ActionListener listener : confirmBtn.getActionListeners())
+                            {
+                                listener.actionPerformed(virtualEvent);
+                            }
+                            keyHandled = true;
+                        }
+                    }
+                    else if (KeyEvent.VK_ESCAPE == keyCode)
+                    {
+                        if (cancelBtn != null)
+                        {
+                            evt.consume();
+                            ActionEvent virtualEvent = new ActionEvent(cancelBtn, ActionEvent.ACTION_PERFORMED, cancelBtn.getActionCommand());
+                            for(ActionListener listener : cancelBtn.getActionListeners())
+                            {
+                                listener.actionPerformed(virtualEvent);
+                            }
+                            keyHandled = true;
+                        }
+                    }
+                } while (false);
+                return keyHandled;
+            }
+        } : null;
+        
+        KeyboardFocusManager keyboardFocusManager = (confirmOrCancel == null) ? null : KeyboardFocusManager.getCurrentKeyboardFocusManager();
+        
+        try
+        {
+            if (keyboardFocusManager != null)
+            {
+                keyboardFocusManager.addKeyEventDispatcher(confirmOrCancel);
+            }
+            dialog.setVisible(Boolean.TRUE);
+        }
+        finally {
+            if (keyboardFocusManager != null)
+            {
+                keyboardFocusManager.removeKeyEventDispatcher(confirmOrCancel);
+            }
+        }
     }
 }
