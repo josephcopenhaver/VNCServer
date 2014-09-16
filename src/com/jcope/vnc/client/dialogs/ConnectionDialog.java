@@ -74,7 +74,6 @@ public class ConnectionDialog
         private JCheckBox askToSynchronizeClipboard = new JCheckBox();
         
         private String passwordHash = null;
-        Container contentPane;
         
         ActionListener ok_or_cancel = new ActionListener() {
 
@@ -99,12 +98,6 @@ public class ConnectionDialog
             
         };
         
-        @Override
-        public Component add(Component component)
-        {
-            return contentPane.add(component);
-        }
-        
         private void addLabeledComponent(String labelText, Component rhs)
         {
             add(new JLabel(labelText + ":"));
@@ -116,8 +109,8 @@ public class ConnectionDialog
             super(frame);
             
             
-            contentPane = getContentPane();
-            ((JPanel)contentPane).setBorder(new EmptyBorder(BORDER_SIZE_PIXELS, BORDER_SIZE_PIXELS, BORDER_SIZE_PIXELS, BORDER_SIZE_PIXELS));
+            Container contentPane = getContentPane();
+            ((JPanel) contentPane).setBorder(new EmptyBorder(BORDER_SIZE_PIXELS, BORDER_SIZE_PIXELS, BORDER_SIZE_PIXELS, BORDER_SIZE_PIXELS));
             contentPane.setLayout(new GridLayout(0, 2, GAP_SIZE_PIXELS, GAP_SIZE_PIXELS));
             
             Object tmp = CLIENT_PROPERTIES.REMOTE_ADDRESS.getValue();
@@ -162,24 +155,23 @@ public class ConnectionDialog
         
         private void stagePasswordHash()
         {
+            char[] rawText = password.getPassword();
             if (result != JCOptionPane.OK_OPTION)
             {
-                char[] chars = password.getPassword();
-                if (chars != null && chars.length > 0)
+                if (rawText != null && rawText.length > 0)
                 {
-                    Arrays.fill(chars, (char)0); 
+                    Arrays.fill(rawText, (char)0); 
                     password.setText("");
                 }
                 return;
             }
-            char[] rawText = password.getPassword();
             
             password.setText("");
-            passwordHash = HashFactory.hash(rawText);
+            passwordHash = (rawText != null && rawText.length > 0) ? HashFactory.hash(rawText) : null;
             rawText = null;
         }
         
-        private String popPasswordHash()
+        private String removePasswordHash()
         {
             String rval = passwordHash;
             
@@ -197,8 +189,6 @@ public class ConnectionDialog
             {
                 return;
             }
-            result = JCOptionPane.CANCEL_OPTION;
-            stagePasswordHash();
             okButton.removeActionListener(ok_or_cancel);
             cancelButton.removeActionListener(ok_or_cancel);
 
@@ -217,7 +207,6 @@ public class ConnectionDialog
             cancelButton = null;
             askToSynchronizeClipboard = null;
             passwordHash = null;
-            contentPane = null;
 
             super.dispose();
         }
@@ -230,12 +219,22 @@ public class ConnectionDialog
     
     public int showInputDialog() throws InvalidConnectionConfigurationException
     {
+        boolean somethingBadHappened = true;
         dialog.result = JCOptionPane.CLOSED_OPTION;
         
         dialog.pack();
         dialog.setSize(dialog.getPreferredSize());
-        showModalDialogWithStyle(dialog, dialog.okButton, dialog.cancelButton);
-        dialog.stagePasswordHash();
+        try {
+            showModalDialogWithStyle(dialog, dialog.okButton, dialog.cancelButton);
+            somethingBadHappened = false;
+        }
+        finally {
+            if (somethingBadHappened)
+            {
+                dialog.result = JCOptionPane.CLOSED_OPTION;
+            }
+            dialog.stagePasswordHash();
+        }
         
         if (dialog.result == JCOptionPane.OK_OPTION)
         {
@@ -321,9 +320,9 @@ public class ConnectionDialog
         return dialog.single_accessModeSelectionList.getSelectedValue();
     }
 
-    public String removePassword()
+    public String removePasswordHash()
     {
-        return dialog.popPasswordHash();
+        return dialog.removePasswordHash();
     }
     
     public void dispose()

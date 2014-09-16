@@ -147,7 +147,7 @@ public class StateMachine implements Runnable
         				in = new BufferedInputStream(is);
         				
         				accessMode = connectionDialog.getAccessMode();
-        				hashedPassword = connectionDialog.removePassword();
+        				hashedPassword = connectionDialog.removePasswordHash();
     			    }
                     finally {
                         connectionDialog.dispose();
