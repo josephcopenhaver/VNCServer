@@ -278,6 +278,7 @@ public class TaskDispatcher<T> extends Thread
 		}
 	}
 	
+	private Semaphore pauseAccess = new Semaphore(1, true);
 	private Semaphore listLock = new Semaphore(1, true);
 	private Semaphore curTaskLock = new Semaphore(1,true);
 	private Semaphore sleepLock = new Semaphore(0,true);
@@ -313,12 +314,26 @@ public class TaskDispatcher<T> extends Thread
 	{
 		paused = true;
 	}
-	
-	public void unpause()
-	{
-		paused = false;
-		pauseLock.release();
-	}
+    
+    public void unpause()
+    {
+        try
+        {
+            pauseAccess.acquire();
+        }
+        catch (InterruptedException e)
+        {
+            LLog.e(e);
+        }
+        try
+        {
+            paused = false;
+            pauseLock.release();
+        }
+        finally {
+            pauseAccess.release();
+        }
+    }
 	
 	public boolean queueContains(T k)
 	{
@@ -466,19 +481,40 @@ public class TaskDispatcher<T> extends Thread
 		boolean needsRelease;
 		do
 		{
-			if (paused)
-			{
-				pauseLock.drainPermits();
-				try
-				{
-					pauseLock.acquire();
-				}
-				catch (InterruptedException e)
-				{
-					paused = false;
-					dispose(e);
-				}
-			}
+		    needsRelease = true;
+		    try
+            {
+                pauseAccess.acquire();
+            }
+            catch (InterruptedException e)
+            {
+                dispose(e);
+                break;
+            }
+		    try
+		    {
+    			if (paused)
+    			{
+    				pauseLock.drainPermits();
+    				try
+    				{
+    				    needsRelease = false;
+    				    pauseAccess.release();
+    					pauseLock.acquire();
+    				}
+    				catch (InterruptedException e)
+    				{
+    					paused = false;
+    					dispose(e);
+    				}
+    			}
+		    }
+		    finally {
+		        if (needsRelease)
+		        {
+		            pauseAccess.release();
+		        }
+		    }
 			if (disposed)
 			{
 				break;
@@ -570,11 +606,11 @@ public class TaskDispatcher<T> extends Thread
 					}
 					catch (Exception e)
 					{
-						e.printStackTrace();
+						LLog.e(e, false);
 					}
 					catch (Throwable t)
 					{
-						t.printStackTrace();
+						LLog.e(t, false);
 					}
 				}
 			}
@@ -601,11 +637,11 @@ public class TaskDispatcher<T> extends Thread
     		}
     		catch (Exception e)
             {
-                e.printStackTrace();
+                LLog.e(e, false);
             }
             catch (Throwable t)
             {
-                t.printStackTrace();
+                LLog.e(t, false);
             }
 		}
 		if (os != null)
@@ -775,7 +811,7 @@ public class TaskDispatcher<T> extends Thread
 	{
 		if (e != null)
 		{
-			e.printStackTrace();
+			LLog.e(e, false);
 		}
 		disposed = true;
 		try
@@ -783,11 +819,30 @@ public class TaskDispatcher<T> extends Thread
 		    clear(releaseLocks);
 		}
 		finally {
-    		if (paused)
-    		{
-    			unpause();
-    		}
-    		sleepLock.release();
+		    try
+		    {
+        		if (paused)
+        		{
+        		    try
+        		    {
+        		        unpause();
+        		    }
+        		    catch (Exception e2)
+        		    {
+        		        if (e2 instanceof InterruptedException)
+                        {
+                            LLog.e((InterruptedException) e2, false);
+                        }
+        		        else
+        		        {
+        		            LLog.e(e2);
+        		        }
+        		    }
+        		}
+		    }
+		    finally {
+		        sleepLock.release();
+		    }
 		}
 	}
 	
@@ -864,7 +919,21 @@ public class TaskDispatcher<T> extends Thread
 		
 		if (doUnpause)
 		{
-			unpause();
+			try
+            {
+                unpause(); // may throw hidden InterruptedException
+            }
+            catch (Exception e)
+            {
+                if (e instanceof InterruptedException)
+                {
+                    dispose((InterruptedException) e);
+                }
+                else
+                {
+                    LLog.e(e);
+                }
+            }
 		}
 	}
 
