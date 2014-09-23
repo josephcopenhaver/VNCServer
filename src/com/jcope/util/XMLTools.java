@@ -58,11 +58,11 @@ public class XMLTools
 
     public static int attrLen(Object obj)
     {
-        int rval = 0;
+        int rval;
         
         if (obj == null)
         {
-            // Do Nothing
+            rval = 0;
         }
         else if (obj instanceof String[])
         {
@@ -71,6 +71,8 @@ public class XMLTools
         else
         {
             assert_(false);
+            // unreachable, but makes compiler happy
+            rval = 0;
         }
         
         return rval;

@@ -336,31 +336,36 @@ public class Base64
 		
 		private static byte get(byte b)
 		{
-			byte rval = 0;
+			byte rval;
 			
-			if (b == '/')
+			switch (b)
 			{
-				rval = 4;
-			}
-			else if (b == '+')
-			{
-				rval = 3;
-			}
-			else if (b >= '0' && b <= '9')
-			{
-				rval = 2;
-			}
-			else if (b >= 'a' && b <= 'z')
-			{
-				rval = 1;
-			}
-			else if (b >= 'A' && b <= 'Z')
-			{
-				// Do Nothing
-			}
-			else
-			{
-				assert_(false);
+			    case '/':
+			        rval = 4;
+			    break;
+                case '+':
+                    rval = 3;
+                break;
+                default:
+                    if (b >= '0' && b <= '9')
+                    {
+                        rval = 2;
+                        break;
+                    }
+                    if (b >= 'a' && b <= 'z')
+                    {
+                        rval = 1;
+                        break;
+                    }
+                    if (b >= 'A' && b <= 'Z')
+                    {
+                        rval = 0;
+                        break;
+                    }
+                    assert_(false);
+                    // unreachable, but makes compiler happy
+                    rval = 0;
+                break;
 			}
 			
 			rval = Encoder.offsets[rval];
