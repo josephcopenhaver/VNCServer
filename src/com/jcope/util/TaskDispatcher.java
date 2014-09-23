@@ -315,20 +315,33 @@ public class TaskDispatcher<T> extends Thread
 		paused = true;
 	}
     
+    /**
+     * may throw runtime exception wrapper of InterruptedException
+     */
     public void unpause()
     {
         try
         {
-            pauseAccess.acquire();
+            _unpause();
         }
         catch (InterruptedException e)
         {
             LLog.e(e);
         }
+    }
+    
+    private void nts_unpause()
+    {
+        paused = false;
+        pauseLock.release();
+    }
+    
+    private void _unpause() throws InterruptedException
+    {
+        pauseAccess.acquire();
         try
         {
-            paused = false;
-            pauseLock.release();
+            nts_unpause();
         }
         finally {
             pauseAccess.release();
@@ -823,21 +836,7 @@ public class TaskDispatcher<T> extends Thread
 		    {
         		if (paused)
         		{
-        		    try
-        		    {
-        		        unpause();
-        		    }
-        		    catch (Exception e2)
-        		    {
-        		        if (e2 instanceof InterruptedException)
-                        {
-                            LLog.e((InterruptedException) e2, false);
-                        }
-        		        else
-        		        {
-        		            LLog.e(e2);
-        		        }
-        		    }
+        		    nts_unpause();
         		}
 		    }
 		    finally {
@@ -921,17 +920,17 @@ public class TaskDispatcher<T> extends Thread
 		{
 			try
             {
-                unpause(); // may throw hidden InterruptedException
+                _unpause();
             }
-            catch (Exception e)
+            catch (InterruptedException e)
             {
-                if (e instanceof InterruptedException)
+                paused = false;
+                try
                 {
-                    dispose((InterruptedException) e);
+                    dispose(e);
                 }
-                else
-                {
-                    LLog.e(e);
+                finally {
+                    nts_unpause();
                 }
             }
 		}
