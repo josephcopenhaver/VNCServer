@@ -95,6 +95,7 @@
 
     <!-- setup course compilation set -->
 
+    <delete_iff_exists file="empty" basedir="${bin-dir}" />
     <local name="_L.mode" />
     <local name="_L.includes" />
     <local name="_L.excludes" />
