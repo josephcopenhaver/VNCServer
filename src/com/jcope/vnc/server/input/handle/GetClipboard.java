@@ -22,14 +22,12 @@ public class GetClipboard extends Handle
         
         if (!((Boolean)Server.SERVER_PROPERTIES.SUPPORT_CLIPBOARD_SYNCHRONIZATION.getValue()))
         {
-            System.err.println("\nno clipboard sync for you!\n"); // TODO: remove
             return;
         }
         
         Object[] clipboardContents = null;
         
         ClipboardInterface.lock();
-        System.err.println("\nGot CIFace lock\n"); // TODO: remove
         try
         {
             clipboardContents = ClipboardInterface.get();
@@ -45,14 +43,11 @@ public class GetClipboard extends Handle
         finally {
             ClipboardInterface.unlock();
         }
-        System.err.println("\nCIFace lock removed\n"); // TODO: remove
         
         if (null != clipboardContents)
         {
-            System.err.println("\nSending Set clipboard reply...\n"); // TODO: remove
             client.sendEvent(SERVER_EVENT.SET_CLIPBOARD, clipboardContents);
         }
-        System.err.println("\nEnd of GetClipboard handle\n"); // TODO: remove
     }
     
 }

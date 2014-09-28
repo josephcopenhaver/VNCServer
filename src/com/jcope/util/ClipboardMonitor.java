@@ -1,5 +1,6 @@
 package com.jcope.util;
 
+import static com.jcope.debug.Debug.DEBUG;
 import static com.jcope.util.Platform.PLATFORM_IS_MAC;
 
 import java.awt.datatransfer.Clipboard;
@@ -472,7 +473,6 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
     @Override
     public void lostOwnership(Clipboard clipboard, Transferable transferable)
     {
-        System.err.println("\nlostOwnership()\n"); // TODO: remove
         try
         {
             ownershipSema.acquire();
@@ -493,7 +493,7 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
             {
                 // if platform not mac (windows)
                 // then the observer needs to be unpaused!
-                LLog.i("App lost clipboard ownership, enabling observer scanner to detect changes");
+                if (DEBUG) {LLog.i("App lost clipboard ownership, enabling observer scanner to detect changes");}
                 observerPausedSema.release();
             }
             else
@@ -514,7 +514,6 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
      */
     public void notifyOwnershipGained()
     {
-        System.err.println("\nnotifyOwnershipGained()\n"); // TODO: remove
         try
         {
             ownershipSema.acquire();
@@ -525,13 +524,10 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
         }
         try
         {
-            System.err.println("\nGot ownership lock\n"); // TODO: remove
             boolean fire;
         	try {
-        	    System.err.println("\nBEFORE syncCacheAndDetectChange.run()\n"); // TODO: remove
         	    fire = syncCacheAndDetectChange.run();
-        	    System.err.println("\nAFTER syncCacheAndDetectChange.run()\n"); // TODO: remove
-    		} catch (UnsupportedFlavorException e) {
+        	} catch (UnsupportedFlavorException e) {
     		    fire = Boolean.FALSE;
     			LLog.e(e);
     		} catch (IOException e) {
@@ -540,20 +536,18 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
     		}
         	if (fire && !locked)
         	{
-        	    System.err.println("\nBEFORE fireChangeNotification()\n"); // TODO: remove
         		fireChangeNotification();
-        		System.err.println("\nAFTER fireChangeNotification()\n"); // TODO: remove
         	}
         	if (ownsClipboard)
         	{
-        	    LLog.i("App changed clipboard contents, but already owned the clipboard");
+        	    if (DEBUG) {LLog.i("App changed clipboard contents, but already owned the clipboard");}
         	    return;
         	}
-        	LLog.i("Clipboard now owned by app");
         	ownsClipboard = Boolean.TRUE;
+            if (DEBUG) {LLog.i("Clipboard now owned by app");}
         	if (!PLATFORM_IS_MAC)
         	{
-        	    LLog.i("App no longer scanning clipboard for changes, expecting future notification of ownership lost to re-enable clipboard scanner");
+        	    if (DEBUG) {LLog.i("App no longer scanning clipboard for changes, expecting future notification of ownership lost to re-enable clipboard scanner");}
         		// observer should not be paused on mac because of mac bug: MAC does not broadcast clipboard ownership changes
         	    try
                 {
@@ -567,7 +561,6 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
         }
         finally {
             ownershipSema.release();
-            System.err.println("\nownership lock released\n"); // TODO: remove
         }
     }
 }

@@ -25,7 +25,6 @@ public class SetClipboard extends Handle
         
         if (!((Boolean)Server.SERVER_PROPERTIES.SUPPORT_CLIPBOARD_SYNCHRONIZATION.getValue()))
         {
-            System.err.println("\nno synchronization for you!\n"); // TODO: remove
             return;
         }
         
@@ -33,16 +32,12 @@ public class SetClipboard extends Handle
         boolean forwardChangeNotice = Boolean.FALSE;
         
         ClipboardInterface.lock();
-        System.err.println("\nGot CIFace lock\n"); // TODO: remove
         try
         {
             clipboardMonitor.lockAndPause();
-            System.err.println("\nGot CM lock and paused\n"); // TODO: remove
             try
             {
-                System.err.println("\nBEFORE ClipboardInterface.set(args)\n"); // TODO: remove
                 ClipboardInterface.set(args);
-                System.err.println("\nAFTER ClipboardInterface.set(args)\n"); // TODO: remove
                 forwardChangeNotice = Boolean.TRUE;
             }
             catch (IOException e)
@@ -55,7 +50,6 @@ public class SetClipboard extends Handle
             }
             finally {
                 clipboardMonitor.unlockAndUnpause();
-                System.err.println("\nCM lock released and unpaused\n"); // TODO: remove
             }
         }
         finally {
@@ -63,13 +57,10 @@ public class SetClipboard extends Handle
         }
         
         // Notify all OTHER clients of the clipboard contents change
-        System.err.println("\nCIFace lock removed\n"); // TODO: remove
         if (forwardChangeNotice)
         {
-            System.err.println("\nForwarding...\n"); // TODO: remove
             Manager.getInstance().sendToAllExcept(client, SERVER_EVENT.CLIPBOARD_CHANGED, (Object[]) null);
         }
-        System.err.println("\nEnd of SetClipboard input handle\n"); // TODO: remove
     }
     
 }
