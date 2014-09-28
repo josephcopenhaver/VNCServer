@@ -46,8 +46,10 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
     private Semaphore observerPausedSema;
     private Semaphore idleSema;
     private Semaphore notificationSema;
+    private Semaphore ownershipSema;
     private volatile boolean changed;
     private volatile boolean locked;
+    private volatile boolean ownsClipboard;
     private Thread clipboardChangeObserver;
     private SyncRunnable syncCacheAndDetectChange;
     
@@ -64,6 +66,8 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
         locked = Boolean.FALSE;
         notificationSema = new Semaphore(0, Boolean.TRUE);
         changed = Boolean.FALSE;
+        ownershipSema = new Semaphore(1, Boolean.TRUE);
+        ownsClipboard = Boolean.FALSE;
         
         final SyncRunnable[] syncAndSignalChanged = new SyncRunnable[]{null};
         clipboardChangeObserver = new Thread() {
@@ -348,22 +352,6 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
     }
     
     @Override
-    public void lostOwnership(Clipboard clipboard, Transferable transferable)
-    {
-        if (!PLATFORM_IS_MAC)
-        {
-            // if platform not mac (windows)
-            // then the observer needs to be unpaused!
-            observerPausedSema.release();
-        }
-        else
-        {
-            LLog.w("As of 5/19/2014, MAC does not broadcast clipboard ownership changes, so why is this logged?");
-            return;
-        }
-    }
-    
-    @Override
     public void run()
     {
         Clipboard clipboard = null;
@@ -481,6 +469,43 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
         idleSema.release();
     }
     
+    @Override
+    public void lostOwnership(Clipboard clipboard, Transferable transferable)
+    {
+        try
+        {
+            ownershipSema.acquire();
+        }
+        catch (InterruptedException e)
+        {
+            LLog.e(e);
+        }
+        try
+        {
+            if (!ownsClipboard)
+            {
+                LLog.w("WTF: Got notification that clipboard ownership was lost when already in relinquished state");
+                return;
+            }
+            ownsClipboard = Boolean.FALSE;
+            if (!PLATFORM_IS_MAC)
+            {
+                // if platform not mac (windows)
+                // then the observer needs to be unpaused!
+                LLog.i("App lost clipboard ownership, enabling observer scanner to detect changes");
+                observerPausedSema.release();
+            }
+            else
+            {
+                LLog.w("As of 5/19/2014, MAC does not broadcast clipboard ownership changes, so why is this logged?");
+                return;
+            }
+        }
+        finally {
+            ownershipSema.release();
+        }
+    }
+    
     /**
      * Called by an external wrapper interface
      * to notify this module that the clipboard
@@ -488,31 +513,53 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
      */
     public void notifyOwnershipGained()
     {
-        boolean fire;
-    	try {
-    	    fire = syncCacheAndDetectChange.run();
-		} catch (UnsupportedFlavorException e) {
-		    fire = Boolean.FALSE;
-			LLog.e(e);
-		} catch (IOException e) {
-		    fire = Boolean.FALSE;
-			LLog.e(e);
-		}
-    	if (fire && !locked)
-    	{
-    		fireChangeNotification();
-    	}
-    	if (!PLATFORM_IS_MAC)
-    	{
-    		// observer should not be paused on mac because of mac bug: MAC does not broadcast clipboard ownership changes
-    	    try
-            {
-                observerPausedSema.acquire();
-            }
-            catch (InterruptedException e)
-            {
-                LLog.e(e);
-            }
-    	}
+        try
+        {
+            ownershipSema.acquire();
+        }
+        catch (InterruptedException e)
+        {
+            LLog.e(e);
+        }
+        try
+        {
+            boolean fire;
+        	try {
+        	    fire = syncCacheAndDetectChange.run();
+    		} catch (UnsupportedFlavorException e) {
+    		    fire = Boolean.FALSE;
+    			LLog.e(e);
+    		} catch (IOException e) {
+    		    fire = Boolean.FALSE;
+    			LLog.e(e);
+    		}
+        	if (fire && !locked)
+        	{
+        		fireChangeNotification();
+        	}
+        	if (ownsClipboard)
+        	{
+        	    LLog.i("App changed clipboard contents, but already owned the clipboard");
+        	    return;
+        	}
+        	LLog.i("Clipboard now owned by app");
+        	ownsClipboard = Boolean.TRUE;
+        	if (!PLATFORM_IS_MAC)
+        	{
+        	    LLog.i("App no longer scanning clipboard for changes, expecting future notification of ownership lost to re-enable clipboard scanner");
+        		// observer should not be paused on mac because of mac bug: MAC does not broadcast clipboard ownership changes
+        	    try
+                {
+                    observerPausedSema.acquire();
+                }
+                catch (InterruptedException e)
+                {
+                    LLog.e(e);
+                }
+        	}
+        }
+        finally {
+            ownershipSema.release();
+        }
     }
 }
