@@ -371,6 +371,14 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
         IS_DISPOSED:
         while (!disposed)
         {
+            try
+            {
+                notificationSema.acquire();
+            }
+            catch (InterruptedException e)
+            {
+                LLog.e(e);
+            }
         	try
             {
                 idleSema.acquire();
@@ -433,15 +441,6 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
                 clipboard = null;
                 idleSema.release();
             }
-            
-            try
-            {
-                notificationSema.acquire();
-            }
-            catch (InterruptedException e)
-            {
-                LLog.e(e);
-            }
         }
         
         listeners.clear();
@@ -489,14 +488,17 @@ public class ClipboardMonitor extends Thread implements ClipboardOwner
      */
     public void notifyOwnershipGained()
     {
+        boolean fire;
     	try {
-			changed = syncCacheAndDetectChange.run();
+    	    fire = syncCacheAndDetectChange.run();
 		} catch (UnsupportedFlavorException e) {
+		    fire = Boolean.FALSE;
 			LLog.e(e);
 		} catch (IOException e) {
+		    fire = Boolean.FALSE;
 			LLog.e(e);
 		}
-    	if (changed && !locked)
+    	if (fire && !locked)
     	{
     		fireChangeNotification();
     	}
