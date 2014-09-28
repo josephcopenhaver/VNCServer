@@ -37,9 +37,12 @@ public class SetClipboard extends Handle
         try
         {
             clipboardMonitor.lockAndPause();
+            System.err.println("\nGot CM lock and paused\n"); // TODO: remove
             try
             {
+                System.err.println("\nBEFORE ClipboardInterface.set(args)\n"); // TODO: remove
                 ClipboardInterface.set(args);
+                System.err.println("\nAFTER ClipboardInterface.set(args)\n"); // TODO: remove
                 forwardChangeNotice = Boolean.TRUE;
             }
             catch (IOException e)
@@ -52,6 +55,7 @@ public class SetClipboard extends Handle
             }
             finally {
                 clipboardMonitor.unlockAndUnpause();
+                System.err.println("\nCM lock released and unpaused\n"); // TODO: remove
             }
         }
         finally {
