@@ -22,12 +22,14 @@ public class SetClipboard extends Handle
         
         if (!stateMachine.isClipboardSyncEnabled())
         {
+            System.err.println("\nno clipboard sync for you!\n"); // TODO: remove
             return;
         }
         
         ClipboardMonitor clipboardMonitor = ClipboardMonitor.getInstance();
         
         clipboardMonitor.lockAndPause();
+        System.err.println("\nGot CM lock and paused\n"); // TODO: remove
         try
         {
             ClipboardInterface.set(args);
@@ -43,6 +45,7 @@ public class SetClipboard extends Handle
         finally {
             clipboardMonitor.unlockAndUnpause();
         }
+        System.err.println("\nCM lock removed and unpaused\n"); // TODO: remove
     }
     
 }

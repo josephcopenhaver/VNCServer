@@ -21,6 +21,7 @@ public class GetClipboard extends Handle
         
         if (!stateMachine.isClipboardSyncEnabled())
         {
+            System.err.println("\nno clipboard sync for you!\n"); // TODO: remove
             return;
         }
         
@@ -41,9 +42,11 @@ public class GetClipboard extends Handle
         
         if (clipboardContents == null)
         {
+            System.err.println("\nno clipboard contents!\n"); // TODO: remove
             return;
         }
         
+        System.err.println("\nforwarding clipboard contents...\n"); // TODO: remove
         stateMachine.sendEvent(CLIENT_EVENT.SET_CLIPBOARD, clipboardContents);
     }
     
