@@ -7,7 +7,6 @@ import java.awt.HeadlessException;
 import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
-import java.awt.datatransfer.ClipboardOwner;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
@@ -108,13 +107,13 @@ public class ClipboardInterface
             "    end tell\n" +
             "end tell\n";
     
-    public static void setContents(Clipboard clipboard, Transferable contents, ClipboardOwner owner) throws ClipboardBusyException
+    public static void setContents(Clipboard clipboard, Transferable contents, ClipboardMonitor clipboardMonitor) throws ClipboardBusyException
     {
         if (!PLATFORM_IS_MAC)
         {
             try
             {
-                clipboard.setContents(contents, owner);
+                clipboard.setContents(contents, clipboardMonitor);
             }
             catch(IllegalStateException e)
             {
@@ -215,6 +214,10 @@ public class ClipboardInterface
                 throw new RuntimeException("No supported dataflavor for mac");
             }
         }
+        if (clipboardMonitor != null)
+    	{
+        	clipboardMonitor.notifyOwnershipGained();
+    	}
     }
     
     private static final Semaphore lockSema = new Semaphore(1, Boolean.TRUE);
@@ -408,11 +411,6 @@ public class ClipboardInterface
             }
             
             setContents(clipboard, transferable, clipboardMonitor);
-            
-            if (null != clipboardMonitor)
-            {
-                clipboardMonitor.syncObserverCache();
-            }
         }
         finally {
             clipboard = null;
