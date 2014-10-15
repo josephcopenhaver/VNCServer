@@ -328,8 +328,9 @@ public class InputEvent implements Serializable
                 else if (type == INPUT_TYPE.MOUSE_MOVE
                         && (next.type == INPUT_TYPE.MOUSE_DOWN
                             || next.type == INPUT_TYPE.MOUSE_UP)
-                        && typeProps[0] == next.typeProps[0]
-                        && typeProps[1] == next.typeProps[1])
+                        //&& typeProps[0] == next.typeProps[0]
+                        //&& typeProps[1] == next.typeProps[1]
+					)
                 {
                     mult = next.mult;
                     type = next.type;
