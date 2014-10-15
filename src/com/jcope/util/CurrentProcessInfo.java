@@ -9,7 +9,7 @@ import java.lang.management.ManagementFactory; // Hack for windows
 public class CurrentProcessInfo
 {
     
-	public static Long getPID() throws IOException
+	public static Long getPID()
 	{
 	    Long rval = null;
 		String stringRep = getPIDStr();
@@ -36,19 +36,23 @@ public class CurrentProcessInfo
 		return rval;
 	}
 	
-	public static String getPIDStr() throws IOException
+	public static String getPIDStr()
 	{
 		String rval;
+		boolean isValid;
 		
 		try
 		{
 			rval = new File("/proc/self").getCanonicalFile().getName();
-			if (!isNumRPlus(rval))
-			{
-				throw new IOException("Could not identify PID");
-			}
+			isValid = isNumRPlus(rval);
 		}
 		catch (IOException e)
+		{
+			rval = null;
+			isValid = false;
+		}
+
+		if (!isValid)
 		{
 			rval = getWindowsPID();
 		}
