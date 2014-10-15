@@ -15,6 +15,8 @@ public class InputEvent implements Serializable
     // Generated: serialVersionUID
     private static final long serialVersionUID = 85047497862213637L;
     
+    public static final int MODEX_MASK = (java.awt.event.InputEvent.CTRL_DOWN_MASK | java.awt.event.InputEvent.SHIFT_DOWN_MASK | java.awt.event.InputEvent.ALT_DOWN_MASK | java.awt.event.InputEvent.META_DOWN_MASK);
+    
     
     private INPUT_TYPE type;
     private int mult, mod, modex;
@@ -44,7 +46,7 @@ public class InputEvent implements Serializable
                 
                 KeyEvent e = (KeyEvent) args[0];
                 mod = e.getModifiers();
-                modex = e.getModifiersEx();
+                modex = e.getModifiersEx() & MODEX_MASK;
                 typeProps = new int[]{e.getKeyCode(), e.getKeyLocation()};
                 
                 break;
@@ -76,8 +78,12 @@ public class InputEvent implements Serializable
                         break;
                 }
                 mult = e.getClickCount();
+                if (mult <= 0)
+                {
+                	mult = 1;
+                }
                 mod = e.getModifiers();
-                modex = e.getModifiersEx();
+                modex = e.getModifiersEx() & MODEX_MASK;
                 typeProps = new int[]{(Integer) args[1], (Integer) args[2], button};
                 
                 break;
@@ -92,7 +98,7 @@ public class InputEvent implements Serializable
                 
                 MouseEvent e = (MouseEvent) args[0];
                 mod = e.getModifiers();
-                modex = e.getModifiersEx();
+                modex = e.getModifiersEx() & MODEX_MASK;
                 typeProps = new int[]{(Integer) args[1], (Integer) args[2]};
                 
                 break;
@@ -105,7 +111,7 @@ public class InputEvent implements Serializable
                 
                 MouseWheelEvent e = (MouseWheelEvent) args[0];
                 mod = e.getModifiers();
-                modex = e.getModifiersEx();
+                modex = e.getModifiersEx() & MODEX_MASK;
                 //magnitude = e.getPreciseWheelRotation(); // TODO: use this function when on Java 1.7
                 magnitude = (double) e.getWheelRotation();
                 break;
@@ -327,9 +333,9 @@ public class InputEvent implements Serializable
                 }
                 else if (type == INPUT_TYPE.MOUSE_MOVE
                         && (next.type == INPUT_TYPE.MOUSE_DOWN
-                            || next.type == INPUT_TYPE.MOUSE_UP)
-                        //&& typeProps[0] == next.typeProps[0]
-                        //&& typeProps[1] == next.typeProps[1]
+                            || next.type == INPUT_TYPE.MOUSE_UP
+                            || next.type == INPUT_TYPE.MOUSE_PRESSED)
+                        && sameMousePropertiesExceptPosition(next)
 					)
                 {
                     mult = next.mult;
@@ -342,6 +348,25 @@ public class InputEvent implements Serializable
         }
         
         return rval;
+    }
+    
+    private boolean sameMousePropertiesExceptPosition(InputEvent next)
+    {
+    	int x, y;
+    	
+    	x = next.typeProps[0];
+    	y = next.typeProps[1];
+    	
+    	try
+    	{
+    		next.typeProps[0] = typeProps[0];
+        	next.typeProps[1] = typeProps[1];
+    		return Arrays.equals(typeProps, next.typeProps);
+    	}
+    	finally {
+    		next.typeProps[0] = x;
+        	next.typeProps[1] = y;
+    	}
     }
     
     public INPUT_TYPE getType()
