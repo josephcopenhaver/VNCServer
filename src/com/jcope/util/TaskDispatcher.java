@@ -826,10 +826,13 @@ public class TaskDispatcher<T> extends Thread
 		{
 			LLog.e(e, false);
 		}
-    if (disposed)
-    {
-        return;
-    }
+		synchronized (this)
+		{
+			if (disposed)
+			{
+				return;
+			}
+		}
 		disposed = true;
 		try
 		{
