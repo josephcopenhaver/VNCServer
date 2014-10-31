@@ -68,14 +68,7 @@ public class ClientHandler extends Thread
 		unserializedDispatcher = new TaskDispatcher<Integer>(String.format("Non-serial dispatcher: %s", strID));
         serializedDispatcher = new TaskDispatcher<Integer>(String.format("Serial dispatcher: %s", strID));
         
-        assert_(!SERVER_EVENT.SCREEN_SEGMENT_UPDATE.isImmediate());
-        for (SERVER_EVENT event : SERVER_EVENT.values())
-        {
-        	if (event != SERVER_EVENT.SCREEN_SEGMENT_UPDATE)
-        	{
-        		unserializedDispatcher.setImmediate(event.isImmediate(), getNonSerialTID(event, null, 0));
-        	}
-        }
+        unserializedDispatcher.setImmediate(true, getNonSerialTID(SERVER_EVENT.READ_INPUT_EVENTS, null, 0));
 	}
 	
 	public String toString()
@@ -516,13 +509,9 @@ public class ClientHandler extends Thread
     	                    if (nonSerialEventOutboundQueue.get(tidTmp) == null)
                             {
                                 dispatch = Boolean.TRUE;
-                                nonSerialEventOutboundQueue.put(tidTmp, event);
-                                if (event.isImmediate())
+                                if (event != SERVER_EVENT.READ_INPUT_EVENTS)
                                 {
-                                	nonSerialOrderedEventQueue.addFirst(tidTmp);
-                                }
-                                else
-                                {
+                                	nonSerialEventOutboundQueue.put(tidTmp, event);
                                 	nonSerialOrderedEventQueue.addLast(tidTmp);
                                 }
                             }
