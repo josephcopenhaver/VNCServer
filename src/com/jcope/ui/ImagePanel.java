@@ -424,20 +424,60 @@ public class ImagePanel extends JPanel
     
     public boolean worldToScale(Point p)
     {
-        boolean valid = false;
+    	return worldToScale(p, Boolean.TRUE);
+    }
+    
+    public boolean worldToScale(Point p, boolean clamp)
+    {
+        boolean valid;
         
         p.x -= offX;
         p.y -= offY;
         
-        if (p.x >= 0 && p.y >= 0)
+        if (clamp)
         {
-            p.x = Math.round(((float)p.x)/scaleFactors.width);
+        	if (p.x < 0)
+        	{
+        		p.x = 0;
+        	}
+        	if (p.y < 0)
+        	{
+        		p.y = 0;
+        	}
+        	
+        	p.x = Math.round(((float)p.x)/scaleFactors.width);
             p.y = Math.round(((float)p.y)/scaleFactors.height);
             
-            if (p.x < (image.getWidth()) && p.y < (image.getHeight()))
-            {
-                valid = true;
-            }
+        	if (p.x >= image.getWidth())
+			{
+        		p.x = image.getWidth() - 1;
+			}
+        	if (p.y >= image.getHeight())
+			{
+        		p.y = image.getHeight() - 1;
+			}
+        	
+        	if (p.x < 0)
+        	{
+        		p.x = 0;
+        	}
+        	if (p.y < 0)
+        	{
+        		p.y = 0;
+        	}
+        	
+        	valid = true;
+        }
+        else if (p.x >= 0 && p.y >= 0)
+        {
+        	p.x = Math.round(((float)p.x)/scaleFactors.width);
+            p.y = Math.round(((float)p.y)/scaleFactors.height);
+            
+            valid = (p.x < (image.getWidth()) && p.y < (image.getHeight()));
+        }
+        else
+        {
+        	valid = false;
         }
         
         return valid;

@@ -116,7 +116,7 @@ public class StateMachine
             
             return rval;
         }
-
+        
         public boolean hasMutableArgs()
         {
             Boolean rval = null;
