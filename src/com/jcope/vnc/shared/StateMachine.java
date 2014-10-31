@@ -116,6 +116,45 @@ public class StateMachine
             
             return rval;
         }
+        
+        public boolean isImmediate()
+        {
+            Boolean rval = null;
+            
+            switch (this)
+            {
+            	case READ_INPUT_EVENTS:
+            		rval = Boolean.TRUE;
+                    break;
+                
+                case ALIAS_DISCONNECTED:
+                case ALIAS_REGISTERED:
+                case ALIAS_UNREGISTERED:
+                case CHAT_MSG_TO_ALL:
+                case CHAT_MSG_TO_USER:
+                case CONNECTION_CLOSED:
+                case CONNECTION_ESTABLISHED:
+                case FAILED_AUTHORIZATION:
+                case ALIAS_CHANGED:
+                case SCREEN_SEGMENT_CHANGED:
+                case SCREEN_SEGMENT_UPDATE:
+                case CURSOR_GONE:
+                case CURSOR_MOVE:
+                case NUM_SCREENS_CHANGED:
+                case SCREEN_GONE:
+                case SCREEN_RESIZED:
+                case AUTHORIZATION_UPDATE:
+                case SCREEN_SEGMENT_SIZE_UPDATE:
+                case CLIENT_ALIAS_UPDATE:
+                case CLIPBOARD_CHANGED:
+                case GET_CLIPBOARD:
+                case SET_CLIPBOARD:
+                    rval = Boolean.FALSE;
+                    break;
+            }
+            
+            return rval;
+        }
 
         public boolean hasMutableArgs()
         {

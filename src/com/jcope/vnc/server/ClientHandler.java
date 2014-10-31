@@ -67,6 +67,15 @@ public class ClientHandler extends Thread
 		String strID = toString();
 		unserializedDispatcher = new TaskDispatcher<Integer>(String.format("Non-serial dispatcher: %s", strID));
         serializedDispatcher = new TaskDispatcher<Integer>(String.format("Serial dispatcher: %s", strID));
+        
+        assert_(!SERVER_EVENT.SCREEN_SEGMENT_UPDATE.isImmediate());
+        for (SERVER_EVENT event : SERVER_EVENT.values())
+        {
+        	if (event != SERVER_EVENT.SCREEN_SEGMENT_UPDATE)
+        	{
+        		unserializedDispatcher.setImmediate(event.isImmediate(), getNonSerialTID(event, null, 0));
+        	}
+        }
 	}
 	
 	public String toString()
@@ -508,7 +517,14 @@ public class ClientHandler extends Thread
                             {
                                 dispatch = Boolean.TRUE;
                                 nonSerialEventOutboundQueue.put(tidTmp, event);
-                                nonSerialOrderedEventQueue.addLast(tidTmp);
+                                if (event.isImmediate())
+                                {
+                                	nonSerialOrderedEventQueue.addFirst(tidTmp);
+                                }
+                                else
+                                {
+                                	nonSerialOrderedEventQueue.addLast(tidTmp);
+                                }
                             }
                             else
                             {
