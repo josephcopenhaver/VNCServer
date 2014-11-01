@@ -822,18 +822,29 @@ public class TaskDispatcher<T> extends Thread
 	
 	private void dispose(Boolean releaseLocks, Exception e)
 	{
+		boolean warnAsync = false;
 		if (e != null)
 		{
 			LLog.e(e, false);
 		}
-		synchronized (this)
+		try
 		{
-			if (disposed)
+			synchronized (this)
 			{
-				return;
+				if (disposed)
+				{
+					warnAsync = true;
+					return;
+				}
+				disposed = true;
 			}
 		}
-		disposed = true;
+		finally {
+			if (warnAsync)
+			{
+				LLog.w("already disposed");
+			}
+		}
 		try
 		{
 		    clear(releaseLocks);
