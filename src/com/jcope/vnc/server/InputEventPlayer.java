@@ -1,5 +1,7 @@
 package com.jcope.vnc.server;
 
+import static com.jcope.util.Platform.SUPPORT_META_KEY;
+
 import java.awt.Robot;
 import java.awt.event.KeyEvent;
 
@@ -148,11 +150,14 @@ public class InputEventPlayer
                 robot.keyPress(KeyEvent.VK_ALT);
             }
             
-            mask = java.awt.event.InputEvent.META_DOWN_MASK;
-            if ((mask & modex) != 0)
+            if (SUPPORT_META_KEY)
             {
-                rval |= mask;
-                robot.keyPress(KeyEvent.VK_META);
+                mask = java.awt.event.InputEvent.META_DOWN_MASK;
+                if ((mask & modex) != 0)
+                {
+                    rval |= mask;
+                    robot.keyPress(KeyEvent.VK_META);
+                }
             }
         }
         
@@ -186,10 +191,13 @@ public class InputEventPlayer
                 robot.keyRelease(KeyEvent.VK_ALT);
             }
             
-            mask = java.awt.event.InputEvent.META_DOWN_MASK;
-            if ((mask & modex) != 0)
+            if (SUPPORT_META_KEY)
             {
-                robot.keyRelease(KeyEvent.VK_META);
+                mask = java.awt.event.InputEvent.META_DOWN_MASK;
+                if ((mask & modex) != 0)
+                {
+                    robot.keyRelease(KeyEvent.VK_META);
+                }
             }
         }
     }
