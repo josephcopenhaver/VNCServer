@@ -16,8 +16,10 @@ import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
 public class OfferInput extends Handle
 {
+    private static Semaphore stageSema = new Semaphore(1, true);
     private static Semaphore critSema = new Semaphore(1, true);
     private static volatile TaskDispatcher<Integer> userInputRelay = null;
+    private static TaskDispatcher<Integer> dispatcher = null;
     private static volatile int TID = -1;
     private static volatile int queueSize = 0;
     
@@ -65,13 +67,12 @@ public class OfferInput extends Handle
     private boolean queueEvent(final DirectRobot dirbot, final InputEvent event)
     {
         boolean rval = false;
-        TaskDispatcher<Integer> dispatcher = userInputRelay;
         
         if (dispatcher == null)
         {
             try
             {
-                critSema.acquire();
+                stageSema.acquire();
             }
             catch (InterruptedException e)
             {
@@ -86,7 +87,7 @@ public class OfferInput extends Handle
                 }
             }
             finally {
-                critSema.release();
+                stageSema.release();
             }
             
             dispatcher = userInputRelay;
