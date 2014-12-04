@@ -161,7 +161,8 @@ public class StateMachine implements Runnable
                         public void run()
                         {
                             int selectedScreen = (Integer) CLIENT_PROPERTIES.REMOTE_DISPLAY_NUM.getValue();
-                            sendEvent(CLIENT_EVENT.SELECT_SCREEN, selectedScreen, accessMode, hashedPassword);
+                            // TODO: allow periodicity selection on new connection dialog pane
+                            sendEvent(CLIENT_EVENT.SELECT_SCREEN, selectedScreen, accessMode, CLIENT_PROPERTIES.MONITOR_SCANNING_PERIOD.getValue(), hashedPassword);
                         }
     				    
     				});
