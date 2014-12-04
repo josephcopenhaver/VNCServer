@@ -4,6 +4,7 @@ import static com.jcope.debug.Debug.assert_;
 import static com.jcope.util.Net.IPV_4_6_REGEX_STR;
 import static com.jcope.util.Net.getIPBytes;
 import static com.jcope.util.Platform.PLATFORM_IS_WINDOWS;
+import static com.jcope.util.Time.parseISO8601Duration;
 
 import java.awt.AWTException;
 import java.io.File;
@@ -15,8 +16,10 @@ import java.io.RandomAccessFile;
 import java.net.UnknownHostException;
 import java.nio.channels.FileLock;
 import java.util.ArrayList;
+import java.util.GregorianCalendar;
 import java.util.Properties;
 
+import javax.xml.datatype.DatatypeConfigurationException;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.xml.sax.SAXException;
@@ -36,6 +39,9 @@ import com.jcope.vnc.server.VncServer;
 
 public class Server
 {
+    
+    private static final GregorianCalendar startTime = new GregorianCalendar();
+    
     public static enum SERVER_PROPERTIES implements TypeSafeEnumPropertyPattern
     {
         SERVER_BIND_ADDRESS("localhost"),
@@ -44,7 +50,8 @@ public class Server
         SERVER_SECURITY_POLICY("VncSecurityPolicy.xml"),
         SUPPORT_CLIPBOARD_SYNCHRONIZATION(Boolean.FALSE),
         SERVER_BIND_ADDRESS_SPEC(null),
-        SERVER_BIND_ADDRESS_MASK(null)
+        SERVER_BIND_ADDRESS_MASK(null),
+        MONITOR_SCANNING_PERIOD(parseDuration("T1S"))
         
         ;
         
@@ -53,6 +60,17 @@ public class Server
         SERVER_PROPERTIES(final Object defaultValue)
         {
             this.value = defaultValue;
+        }
+        
+        public static final long parseDuration(String s)
+        {
+            try
+            {
+                return parseISO8601Duration(s, startTime);
+            } catch (DatatypeConfigurationException e) {
+                LLog.e(e);
+                return 0; // makes compiler happy, not reachable
+            }
         }
         
         public void assertType(Object obj)
@@ -74,6 +92,9 @@ public class Server
                     break;
                 case SUPPORT_CLIPBOARD_SYNCHRONIZATION:
                     assert_(obj instanceof Boolean);
+                    break;
+                case MONITOR_SCANNING_PERIOD:
+                    assert_(obj instanceof Long);
                     break;
             }
         }
@@ -119,6 +140,14 @@ public class Server
                         value = Boolean.valueOf(0 != ((Integer)value));
                     }
                     break;
+                case MONITOR_SCANNING_PERIOD:
+                    try
+                    {
+                        value = parseISO8601Duration((String) value, startTime);
+                    } catch (DatatypeConfigurationException e) {
+                        LLog.e(e);
+                    }
+                    break;
             }
             assertType(value);
             this.value = value;
@@ -155,96 +184,96 @@ public class Server
             }
         }
     }
-	
-	public static void main(String[] args) throws UnknownHostException, IOException, InterruptedException, AWTException, ParserConfigurationException, SAXException
-	{
-	    RandomAccessFile serverFileRAF = null;
-		FileLock serverFileLock = null;
-		RandomAccessFile pidFileRAF = null;
-		FileLock pidFileLock = null;
-		FileOutputStream pidFileFOS = null;
-		boolean forceStop = Boolean.FALSE;
-		ArrayList<File> lockFiles = new ArrayList<File>(2);
-		int serverPort, listenBacklog;
-		String serverBindAddress;
-		
-		SERVER_PROPERTIES.loadConfig(args.length > 0 ? args[0] : null);
-		
-		try
-		{
-			
-			
-			// begin single instance logic!
-			
-			
-			File serverLockFile = new File("server.lock");
-			serverFileRAF = new RandomAccessFile(serverLockFile, "rw");
-			serverFileLock = serverFileRAF.getChannel().tryLock();
-			if (serverFileLock == null)
-			{
-				throw new RuntimeException(String.format("Server already running:\n%s", serverLockFile.getAbsolutePath()));
-			}
-			File pidFile = new File("server.pid");
-			pidFileRAF = new RandomAccessFile(pidFile, "rw");
-			pidFileLock = pidFileRAF.getChannel().tryLock();
-			if (pidFileLock == null)
-			{
-				throw new RuntimeException(String.format("Server already running (cannot lock pid file):\n%s", pidFile.getAbsolutePath()));
-			}
-			lockFiles.add(pidFile);
-			lockFiles.add(serverLockFile);
-			if (PLATFORM_IS_WINDOWS)
-			{
-				pidFileLock.release();
-				pidFileLock = null;
-			}
-			pidFileFOS = new FileOutputStream(pidFile);
-			pidFileFOS.write(CurrentProcessInfo.getPIDStr().getBytes());
-			pidFileFOS.write('\n');
-			pidFileFOS.flush();
-			
-			
-			// end single instance logic
-			
-			serverPort = (Integer) SERVER_PROPERTIES.SERVER_PORT.getValue();
-			listenBacklog = (Integer) SERVER_PROPERTIES.SERVER_LISTEN_BACKLOG.getValue();
-			serverBindAddress = (String) SERVER_PROPERTIES.SERVER_BIND_ADDRESS.getValue();
-			
-			byte[] bNSpec = (byte[]) SERVER_PROPERTIES.SERVER_BIND_ADDRESS_SPEC.getValue();
-			byte[] bNMask = (byte[]) SERVER_PROPERTIES.SERVER_BIND_ADDRESS_MASK.getValue();
-			
-			if (((bNSpec == null) != (bNMask == null)) || ((bNSpec != null) && (bNSpec.length != bNMask.length)))
-			{
-			    LLog.e(new RuntimeException("SERVER_BIND_ADDRESS_SPEC property and SERVER_BIND_ADDRESS_MASK property are not configured for the same network"));
-			}
-			
-			VncServer vncServer = new VncServer(serverPort, listenBacklog, serverBindAddress, bNSpec, bNMask);
-			
-			System.out.println("VNCServer is running!");
-			vncServer.run();
-			forceStop = Boolean.TRUE;
-		}
-		finally {
-			try
-			{
-				if (pidFileFOS != null)     {try{pidFileFOS.close();      }catch(Exception e){}}
-				if (pidFileLock != null)    {try{pidFileLock.release();   }catch(Exception e){}}
-				if (pidFileRAF != null)     {try{pidFileRAF.close();      }catch(Exception e){}}
-				if (serverFileLock != null) {try{serverFileLock.release();}catch(Exception e){}}
-				if (serverFileRAF != null)  {try{serverFileRAF.close();   }catch(Exception e){}}
-				for (File f : lockFiles)
-				{
-					try{f.delete();}catch(Exception e){LLog.e(e, false);}
-				}
-			}
-			finally {
-				System.out.println("VNCServer has stopped!");
-				if (forceStop)
-				{
-					System.exit(0);
-				}
-			}
-		}
-	}
-	
+    
+    public static void main(String[] args) throws UnknownHostException, IOException, InterruptedException, AWTException, ParserConfigurationException, SAXException
+    {
+        RandomAccessFile serverFileRAF = null;
+        FileLock serverFileLock = null;
+        RandomAccessFile pidFileRAF = null;
+        FileLock pidFileLock = null;
+        FileOutputStream pidFileFOS = null;
+        boolean forceStop = Boolean.FALSE;
+        ArrayList<File> lockFiles = new ArrayList<File>(2);
+        int serverPort, listenBacklog;
+        String serverBindAddress;
+        
+        SERVER_PROPERTIES.loadConfig(args.length > 0 ? args[0] : null);
+        
+        try
+        {
+            
+            
+            // begin single instance logic!
+            
+            
+            File serverLockFile = new File("server.lock");
+            serverFileRAF = new RandomAccessFile(serverLockFile, "rw");
+            serverFileLock = serverFileRAF.getChannel().tryLock();
+            if (serverFileLock == null)
+            {
+                throw new RuntimeException(String.format("Server already running:\n%s", serverLockFile.getAbsolutePath()));
+            }
+            File pidFile = new File("server.pid");
+            pidFileRAF = new RandomAccessFile(pidFile, "rw");
+            pidFileLock = pidFileRAF.getChannel().tryLock();
+            if (pidFileLock == null)
+            {
+                throw new RuntimeException(String.format("Server already running (cannot lock pid file):\n%s", pidFile.getAbsolutePath()));
+            }
+            lockFiles.add(pidFile);
+            lockFiles.add(serverLockFile);
+            if (PLATFORM_IS_WINDOWS)
+            {
+                pidFileLock.release();
+                pidFileLock = null;
+            }
+            pidFileFOS = new FileOutputStream(pidFile);
+            pidFileFOS.write(CurrentProcessInfo.getPIDStr().getBytes());
+            pidFileFOS.write('\n');
+            pidFileFOS.flush();
+            
+            
+            // end single instance logic
+            
+            serverPort = (Integer) SERVER_PROPERTIES.SERVER_PORT.getValue();
+            listenBacklog = (Integer) SERVER_PROPERTIES.SERVER_LISTEN_BACKLOG.getValue();
+            serverBindAddress = (String) SERVER_PROPERTIES.SERVER_BIND_ADDRESS.getValue();
+            
+            byte[] bNSpec = (byte[]) SERVER_PROPERTIES.SERVER_BIND_ADDRESS_SPEC.getValue();
+            byte[] bNMask = (byte[]) SERVER_PROPERTIES.SERVER_BIND_ADDRESS_MASK.getValue();
+            
+            if (((bNSpec == null) != (bNMask == null)) || ((bNSpec != null) && (bNSpec.length != bNMask.length)))
+            {
+                LLog.e(new RuntimeException("SERVER_BIND_ADDRESS_SPEC property and SERVER_BIND_ADDRESS_MASK property are not configured for the same network"));
+            }
+            
+            VncServer vncServer = new VncServer(serverPort, listenBacklog, serverBindAddress, bNSpec, bNMask);
+            
+            System.out.println("VNCServer is running!");
+            vncServer.run();
+            forceStop = Boolean.TRUE;
+        }
+        finally {
+            try
+            {
+                if (pidFileFOS != null)     {try{pidFileFOS.close();      }catch(Exception e){}}
+                if (pidFileLock != null)    {try{pidFileLock.release();   }catch(Exception e){}}
+                if (pidFileRAF != null)     {try{pidFileRAF.close();      }catch(Exception e){}}
+                if (serverFileLock != null) {try{serverFileLock.release();}catch(Exception e){}}
+                if (serverFileRAF != null)  {try{serverFileRAF.close();   }catch(Exception e){}}
+                for (File f : lockFiles)
+                {
+                    try{f.delete();}catch(Exception e){LLog.e(e, false);}
+                }
+            }
+            finally {
+                System.out.println("VNCServer has stopped!");
+                if (forceStop)
+                {
+                    System.exit(0);
+                }
+            }
+        }
+    }
+    
 }
