@@ -1,5 +1,7 @@
 package com.jcope.util;
 
+import static com.jcope.debug.Debug.assert_;
+
 import java.util.GregorianCalendar;
 
 import javax.xml.datatype.DatatypeConfigurationException;
@@ -22,11 +24,19 @@ public class Time {
         return rval;
     }
     
-    
-    public static long mustParseISO8601Duration(String durationStr, GregorianCalendar startTime)
+    /**
+     * Return in the domain of R+
+     * 
+     * @param durationStr
+     * @param startTime
+     * @return
+     */
+    public static long mustParseISO8601DurationRP(String durationStr, GregorianCalendar startTime)
     {
     	try {
-			return parseISO8601Duration(durationStr, startTime);
+			long rval = parseISO8601Duration(durationStr, startTime);
+			assert_(rval > 0);
+			return rval;
 		} catch (DatatypeConfigurationException e) {
 			LLog.e(e);
 			return 0;// unreachable, makes compiler happy

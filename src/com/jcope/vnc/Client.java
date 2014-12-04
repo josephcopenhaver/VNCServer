@@ -2,7 +2,7 @@ package com.jcope.vnc;
 
 import static com.jcope.debug.Debug.DEBUG;
 import static com.jcope.debug.Debug.assert_;
-import static com.jcope.util.Time.mustParseISO8601Duration;
+import static com.jcope.util.Time.mustParseISO8601DurationRP;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -34,7 +34,7 @@ public class Client
         REMOTE_PORT(1987),
         REMOTE_DISPLAY_NUM(null),
         SYNCHRONIZE_CLIPBOARD(Boolean.FALSE),
-        MONITOR_SCANNING_PERIOD(Long.valueOf(mustParseISO8601Duration("T1S", startTime)))
+        MONITOR_SCANNING_PERIOD(Long.valueOf(mustParseISO8601DurationRP("T1S", startTime)))
         
         ;
         
@@ -97,7 +97,7 @@ public class Client
                     }
                     break;
                 case MONITOR_SCANNING_PERIOD:
-                	value = Long.valueOf(mustParseISO8601Duration((String) value, startTime));
+                	value = Long.valueOf(mustParseISO8601DurationRP((String) value, startTime));
                 	break;
             }
             assertType(value);

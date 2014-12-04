@@ -4,7 +4,7 @@ import static com.jcope.debug.Debug.assert_;
 import static com.jcope.util.Net.IPV_4_6_REGEX_STR;
 import static com.jcope.util.Net.getIPBytes;
 import static com.jcope.util.Platform.PLATFORM_IS_WINDOWS;
-import static com.jcope.util.Time.mustParseISO8601Duration;
+import static com.jcope.util.Time.mustParseISO8601DurationRP;
 
 import java.awt.AWTException;
 import java.io.File;
@@ -50,7 +50,7 @@ public class Server
         SUPPORT_CLIPBOARD_SYNCHRONIZATION(Boolean.FALSE),
         SERVER_BIND_ADDRESS_SPEC(null),
         SERVER_BIND_ADDRESS_MASK(null),
-        MIN_MONITOR_SCANNING_PERIOD(Long.valueOf(mustParseISO8601Duration("T1S", startTime))),
+        MIN_MONITOR_SCANNING_PERIOD(Long.valueOf(mustParseISO8601DurationRP("T1S", startTime))),
         OBEY_SPEED_LIMITS(Boolean.TRUE)
         
         ;
@@ -132,7 +132,7 @@ public class Server
                     }
                     break;
                 case MIN_MONITOR_SCANNING_PERIOD:
-                    value = Long.valueOf(mustParseISO8601Duration((String) value, startTime));
+                    value = Long.valueOf(mustParseISO8601DurationRP((String) value, startTime));
                     break;
             }
             assertType(value);
@@ -236,8 +236,9 @@ public class Server
             VncServer vncServer = new VncServer(serverPort, listenBacklog, serverBindAddress, bNSpec, bNMask);
             
             System.out.println("VNCServer is running!");
-            System.out.println(String.format("MIN_SCANNING_PERIOD_MS=%d", SERVER_PROPERTIES.MIN_MONITOR_SCANNING_PERIOD.getValue()));
-            System.out.println(String.format("OBEYING_SPEED_LIMITS=%s", ((Boolean)SERVER_PROPERTIES.OBEY_SPEED_LIMITS.getValue()) ? "Y" : "N"));
+            System.out.println(String.format("MIN_MONITOR_SCANNING_PERIOD=%d", SERVER_PROPERTIES.MIN_MONITOR_SCANNING_PERIOD.getValue()));
+            System.out.println(String.format("OBEYING_SPEED_LIMITS=%d", ((Boolean)SERVER_PROPERTIES.OBEY_SPEED_LIMITS.getValue()) ? 1 : 0));
+            System.out.println(String.format("SUPPORT_CLIPBOARD_SYNCHRONIZATION=%d", ((Boolean)SERVER_PROPERTIES.SUPPORT_CLIPBOARD_SYNCHRONIZATION.getValue()) ? 1 : 0));
             vncServer.run();
             forceStop = Boolean.TRUE;
         }

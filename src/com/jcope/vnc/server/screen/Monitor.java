@@ -45,6 +45,7 @@ import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
 public class Monitor extends Thread
 {
+	public static final long NO_LISTENER_MS = 5000; // dummy value to allow things to settle into nop state
 	private static final boolean OBEY_SPEED_LIMITS = (Boolean) SERVER_PROPERTIES.OBEY_SPEED_LIMITS.getValue();
     private static final long MIN_REFRESH_MS = (Long) SERVER_PROPERTIES.MIN_MONITOR_SCANNING_PERIOD.getValue();
     int screenX, screenY;
@@ -62,7 +63,7 @@ public class Monitor extends Thread
     
     private Semaphore limitLock = new Semaphore(1, true);
     private TreeSet<Long> limitTreeSet = new TreeSet<Long>();
-    private long refreshMS;
+    private volatile long refreshMS;
     
     public Monitor(int segmentWidth, int segmentHeight, DirectRobot dirbot, ArrayList<ClientHandler> clients)
     {
@@ -204,11 +205,13 @@ public class Monitor extends Thread
                 {
 	                timeConsumed = System.currentTimeMillis() - startAt;
 	                
-	                if (timeConsumed < refreshMS)
+	                long l_refreshMS = refreshMS;
+	                
+	                if (timeConsumed < l_refreshMS)
 	                {
 	                    try
 	                    {
-	                        sleep(refreshMS - timeConsumed);
+	                        sleep(l_refreshMS - timeConsumed);
 	                    }
 	                    catch (InterruptedException e)
 	                    {
@@ -438,10 +441,14 @@ public class Monitor extends Thread
 	public void throttle(boolean addPeriod, Long periodMS)
 	{
 		assert_(!addPeriod || periodMS != null);
-		if (periodMS == null || periodMS < MIN_REFRESH_MS)
+		if (periodMS == null)
 		{
 			// refresh rate NOT affected by this value/config
 			return;
+		}
+		if (periodMS < MIN_REFRESH_MS)
+		{
+			periodMS = MIN_REFRESH_MS;
 		}
 		try {
 			limitLock.acquire();
@@ -462,7 +469,7 @@ public class Monitor extends Thread
 				{
 					if (limitTreeSet.isEmpty())
 					{
-						refreshMS = MIN_REFRESH_MS;
+						refreshMS = NO_LISTENER_MS;
 						return;
 					}
 					refreshMS = limitTreeSet.ceiling(0L);
