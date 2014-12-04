@@ -63,7 +63,9 @@ public class Platform
         PLATFORM_IS_MAC = DETECTABLE_PLATFORM.MAC.isPlatform;
         PLATFORM_IS_UNKNOWN = DETECTABLE_PLATFORM.UNKNOWN.isPlatform;
         Boolean supportMetaKey = null;
-        switch ((DETECTABLE_PLATFORM) detectedPlatform)
+        Object thisPlatform = detectedPlatform;
+        detectedPlatform = null;
+        switch ((DETECTABLE_PLATFORM) thisPlatform)
         {
             case WINDOWS:
                 supportMetaKey = Boolean.FALSE;
