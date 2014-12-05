@@ -236,9 +236,20 @@ public class Server
             VncServer vncServer = new VncServer(serverPort, listenBacklog, serverBindAddress, bNSpec, bNMask);
             
             System.out.println("VNCServer is running!");
-            System.out.println(String.format("MIN_MONITOR_SCANNING_PERIOD=%d", SERVER_PROPERTIES.MIN_MONITOR_SCANNING_PERIOD.getValue()));
-            System.out.println(String.format("OBEYING_SPEED_LIMITS=%d", ((Boolean)SERVER_PROPERTIES.OBEY_SPEED_LIMITS.getValue()) ? 1 : 0));
-            System.out.println(String.format("SUPPORT_CLIPBOARD_SYNCHRONIZATION=%d", ((Boolean)SERVER_PROPERTIES.SUPPORT_CLIPBOARD_SYNCHRONIZATION.getValue()) ? 1 : 0));
+            
+            {
+	            SERVER_PROPERTIES prop;
+	            
+	            prop = SERVER_PROPERTIES.MIN_MONITOR_SCANNING_PERIOD;
+	            System.out.println(String.format("%s=%d (ms)", prop.name(), prop.getValue()));
+	            
+	            prop = SERVER_PROPERTIES.OBEY_SPEED_LIMITS;
+	            System.out.println(String.format("%s=%d", prop.name(), ((Boolean)prop.getValue()) ? 1 : 0));
+	            
+	            prop = SERVER_PROPERTIES.SUPPORT_CLIPBOARD_SYNCHRONIZATION;
+	            System.out.println(String.format("%s=%d", prop.name(), ((Boolean)prop.getValue()) ? 1 : 0));
+            }
+            
             vncServer.run();
             forceStop = Boolean.TRUE;
         }

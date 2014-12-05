@@ -26,7 +26,7 @@ import com.jcope.vnc.client.StateMachine;
 public class Client
 {
 	
-	private static final GregorianCalendar startTime = new GregorianCalendar();
+	public static final GregorianCalendar startTime = new GregorianCalendar();
 	
     public static enum CLIENT_PROPERTIES implements TypeSafeEnumPropertyPattern
     {
@@ -97,7 +97,10 @@ public class Client
                     }
                     break;
                 case MONITOR_SCANNING_PERIOD:
-                	value = Long.valueOf(mustParseISO8601DurationRP((String) value, startTime));
+                	if (value instanceof String)
+                	{
+                		value = Long.valueOf(mustParseISO8601DurationRP((String) value, startTime));
+                	}
                 	break;
             }
             assertType(value);

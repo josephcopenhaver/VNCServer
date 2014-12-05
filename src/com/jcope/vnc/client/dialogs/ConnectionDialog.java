@@ -1,6 +1,9 @@
 package com.jcope.vnc.client.dialogs;
 
 import static com.jcope.debug.Debug.assert_;
+import static com.jcope.ui.util.Style.showModalDialogWithStyle;
+import static com.jcope.util.Time.parseISO8601Duration;
+import static com.jcope.util.Time.toISO8601DurationStr;
 
 import java.awt.Component;
 import java.awt.Container;
@@ -23,7 +26,8 @@ import javax.swing.ListSelectionModel;
 import javax.swing.border.EmptyBorder;
 
 import com.jcope.ui.JCOptionPane;
-import static com.jcope.ui.util.Style.showModalDialogWithStyle;
+import com.jcope.util.Time.InvalidFormatException;
+import com.jcope.vnc.Client;
 import com.jcope.vnc.Client.CLIENT_PROPERTIES;
 import com.jcope.vnc.client.MainFrame;
 import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
@@ -68,6 +72,7 @@ public class ConnectionDialog
         private JList<ACCESS_MODE> single_accessModeSelectionList = new JList<ACCESS_MODE>(ACCESS_MODE.selectable());
         private JTextField displayNum = new JTextField();
         private JPasswordField password = new JPasswordField();
+        private JTextField monitorScanningPeriod = new JTextField();
         private int result;
         private JButton okButton = new JButton("OK");
         private JButton cancelButton = new JButton("Cancel");
@@ -135,6 +140,9 @@ public class ConnectionDialog
             
             password.setText("");
             
+            tmp = toISO8601DurationStr((Long) CLIENT_PROPERTIES.MONITOR_SCANNING_PERIOD.getValue());
+            monitorScanningPeriod.setText((String) tmp);
+            
             okButton.addActionListener(ok_or_cancel);
             cancelButton.addActionListener(ok_or_cancel);
             
@@ -143,6 +151,7 @@ public class ConnectionDialog
             addLabeledComponent("Access Mode", jsp_single_accessModeSelectionList);
             addLabeledComponent("Select Screen", displayNum);
             addLabeledComponent("Password", password);
+            addLabeledComponent("Refresh Period", monitorScanningPeriod);
             addLabeledComponent("SYNC Clipboard", askToSynchronizeClipboard);
             
             add(okButton);
@@ -241,6 +250,7 @@ public class ConnectionDialog
             String remoteAddress;
             int remotePort,
                 remoteDisplayNum;
+            long monitorScanningPeriod_ms;
             Boolean synchronizeClipboard;
             
             
@@ -301,6 +311,21 @@ public class ConnectionDialog
                 throw configurationException;
             }
             
+            tmp = dialog.monitorScanningPeriod.getText();
+        	try {
+				monitorScanningPeriod_ms = parseISO8601Duration(tmp, Client.startTime);
+			} catch (InvalidFormatException e) {
+				configurationException.setMessage("Not a valid refresh Period format (want ISO8601 without 'P' header)");
+                tmp = null;
+                throw configurationException;
+			}
+        	if (monitorScanningPeriod_ms <= 0)
+        	{
+        		configurationException.setMessage(String.format("Not a valid refresh Period (%d is <= 0)", monitorScanningPeriod_ms));
+                tmp = null;
+                throw configurationException;
+        	}
+            
             synchronizeClipboard = dialog.askToSynchronizeClipboard.isSelected();
             
             tmp = null;
@@ -309,6 +334,7 @@ public class ConnectionDialog
             CLIENT_PROPERTIES.REMOTE_ADDRESS.setValue(remoteAddress);
             CLIENT_PROPERTIES.REMOTE_PORT.setValue(remotePort);
             CLIENT_PROPERTIES.REMOTE_DISPLAY_NUM.setValue(remoteDisplayNum);
+            CLIENT_PROPERTIES.MONITOR_SCANNING_PERIOD.setValue(Long.valueOf(monitorScanningPeriod_ms));
             CLIENT_PROPERTIES.SYNCHRONIZE_CLIPBOARD.setValue(synchronizeClipboard);
         }
         
