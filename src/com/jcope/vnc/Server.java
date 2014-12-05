@@ -4,7 +4,7 @@ import static com.jcope.debug.Debug.assert_;
 import static com.jcope.util.Net.IPV_4_6_REGEX_STR;
 import static com.jcope.util.Net.getIPBytes;
 import static com.jcope.util.Platform.PLATFORM_IS_WINDOWS;
-import static com.jcope.util.Time.parseISO8601Duration;
+import static com.jcope.util.Time.mustParseISO8601DurationRP;
 
 import java.awt.AWTException;
 import java.io.File;
@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.GregorianCalendar;
 import java.util.Properties;
 
-import javax.xml.datatype.DatatypeConfigurationException;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.xml.sax.SAXException;
@@ -40,7 +39,7 @@ import com.jcope.vnc.server.VncServer;
 public class Server
 {
     
-    private static final GregorianCalendar startTime = new GregorianCalendar();
+	private static final GregorianCalendar startTime = new GregorianCalendar();
     
     public static enum SERVER_PROPERTIES implements TypeSafeEnumPropertyPattern
     {
@@ -51,7 +50,8 @@ public class Server
         SUPPORT_CLIPBOARD_SYNCHRONIZATION(Boolean.FALSE),
         SERVER_BIND_ADDRESS_SPEC(null),
         SERVER_BIND_ADDRESS_MASK(null),
-        MONITOR_SCANNING_PERIOD(parseDuration("T1S"))
+        MIN_MONITOR_SCANNING_PERIOD(Long.valueOf(mustParseISO8601DurationRP("T1S", startTime))),
+        OBEY_SPEED_LIMITS(Boolean.TRUE)
         
         ;
         
@@ -60,17 +60,6 @@ public class Server
         SERVER_PROPERTIES(final Object defaultValue)
         {
             this.value = defaultValue;
-        }
-        
-        public static final long parseDuration(String s)
-        {
-            try
-            {
-                return parseISO8601Duration(s, startTime);
-            } catch (DatatypeConfigurationException e) {
-                LLog.e(e);
-                return 0; // makes compiler happy, not reachable
-            }
         }
         
         public void assertType(Object obj)
@@ -90,10 +79,11 @@ public class Server
                 case SERVER_PORT:
                     assert_(obj instanceof Integer);
                     break;
+                case OBEY_SPEED_LIMITS:
                 case SUPPORT_CLIPBOARD_SYNCHRONIZATION:
                     assert_(obj instanceof Boolean);
                     break;
-                case MONITOR_SCANNING_PERIOD:
+                case MIN_MONITOR_SCANNING_PERIOD:
                     assert_(obj instanceof Long);
                     break;
             }
@@ -130,6 +120,7 @@ public class Server
                         value = Integer.parseInt((String) value);
                     }
                     break;
+                case OBEY_SPEED_LIMITS:
                 case SUPPORT_CLIPBOARD_SYNCHRONIZATION:
                     if (value instanceof String)
                     {
@@ -140,13 +131,8 @@ public class Server
                         value = Boolean.valueOf(0 != ((Integer)value));
                     }
                     break;
-                case MONITOR_SCANNING_PERIOD:
-                    try
-                    {
-                        value = parseISO8601Duration((String) value, startTime);
-                    } catch (DatatypeConfigurationException e) {
-                        LLog.e(e);
-                    }
+                case MIN_MONITOR_SCANNING_PERIOD:
+                    value = Long.valueOf(mustParseISO8601DurationRP((String) value, startTime));
                     break;
             }
             assertType(value);
@@ -250,6 +236,20 @@ public class Server
             VncServer vncServer = new VncServer(serverPort, listenBacklog, serverBindAddress, bNSpec, bNMask);
             
             System.out.println("VNCServer is running!");
+            
+            {
+	            SERVER_PROPERTIES prop;
+	            
+	            prop = SERVER_PROPERTIES.MIN_MONITOR_SCANNING_PERIOD;
+	            System.out.println(String.format("%s=%d (ms)", prop.name(), prop.getValue()));
+	            
+	            prop = SERVER_PROPERTIES.OBEY_SPEED_LIMITS;
+	            System.out.println(String.format("%s=%d", prop.name(), ((Boolean)prop.getValue()) ? 1 : 0));
+	            
+	            prop = SERVER_PROPERTIES.SUPPORT_CLIPBOARD_SYNCHRONIZATION;
+	            System.out.println(String.format("%s=%d", prop.name(), ((Boolean)prop.getValue()) ? 1 : 0));
+            }
+            
             vncServer.run();
             forceStop = Boolean.TRUE;
         }

@@ -31,7 +31,7 @@ public class Manager extends Thread
 {
 	public static final int SEGMENT_WIDTH = 32;
 	public static final int SEGMENT_HEIGHT = 32;
-	public static final long refreshMS = 1000;
+	private static final long refreshMS = 1000;
 	
 	private static final Manager[] selfRef = new Manager[]{null};
 	private static final Semaphore instanceSema = new Semaphore(1, true);
@@ -178,6 +178,7 @@ public class Manager extends Thread
 		for (ClientHandler client : registeredClients)
 		{
 		    monitor.sendDisplayInitEvents(client);
+		    monitor.throttle(true, client.getScanPeriod());
 		}
 		monitor.start();
 		monitorForGraphicsDevice.put(graphicsDevice, monitor);
@@ -244,7 +245,8 @@ public class Manager extends Thread
 			increaseMonitorLock();
 			if (!newMonitor)
 			{
-			    Monitor monitor = monitorForGraphicsDevice.get(graphicsDevice);
+				Monitor monitor = monitorForGraphicsDevice.get(graphicsDevice);
+				monitor.throttle(true, client.getScanPeriod());
                 monitor.sendDisplayInitEvents(client);
 			}
 			registeredClients.add(client);
@@ -265,15 +267,22 @@ public class Manager extends Thread
 			ClientHandler client = (ClientHandler) stagedArgs[0];
 			assert_(client != null);
 			
+			Long oldScanPeriod = client.commitNewScanPeriod();
+			
 			for (Entry<GraphicsDevice, ArrayList<ClientHandler>> entry : clientsPerGraphicsDevice.entrySet())
 			{
 				ArrayList<ClientHandler> list = entry.getValue();
 				if (list.contains(client))
 				{
+					GraphicsDevice graphicsDevice = entry.getKey();
+					Monitor monitor = monitorForGraphicsDevice.get(graphicsDevice);
+					if (monitor != null)
+					{
+						monitor.throttle(false, oldScanPeriod);
+					}
 					list.remove(client);
 					if (list.isEmpty())
 					{
-						GraphicsDevice graphicsDevice = entry.getKey();
 						clientsPerGraphicsDevice.remove(graphicsDevice);
 						killMonitorForGraphicsDevice(graphicsDevice);
 					}

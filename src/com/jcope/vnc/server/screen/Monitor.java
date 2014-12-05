@@ -6,6 +6,8 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.TreeSet;
+import java.util.concurrent.Semaphore;
 
 import com.jcope.debug.LLog;
 import com.jcope.util.FixedLengthBitSet;
@@ -43,7 +45,9 @@ import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
 public class Monitor extends Thread
 {
-    public static final long refreshMS = (Long) SERVER_PROPERTIES.MONITOR_SCANNING_PERIOD.getValue();
+	public static final long NO_LISTENER_MS = 5000; // dummy value to allow things to settle into nop state
+	private static final boolean OBEY_SPEED_LIMITS = (Boolean) SERVER_PROPERTIES.OBEY_SPEED_LIMITS.getValue();
+    private static final long MIN_REFRESH_MS = (Long) SERVER_PROPERTIES.MIN_MONITOR_SCANNING_PERIOD.getValue();
     int screenX, screenY;
     SegmentationInfo segInfo = new SegmentationInfo();
     private Integer screenWidth = null, screenHeight;
@@ -56,6 +60,10 @@ public class Monitor extends Thread
     private volatile boolean joined = Boolean.FALSE;
     private Boolean mouseOnMyScreen = null;
     private final Point mouseLocation = new Point();
+    
+    private Semaphore limitLock = new Semaphore(1, true);
+    private TreeSet<Long> limitTreeSet = new TreeSet<Long>();
+    private volatile long refreshMS;
     
     public Monitor(int segmentWidth, int segmentHeight, DirectRobot dirbot, ArrayList<ClientHandler> clients)
     {
@@ -126,11 +134,16 @@ public class Monitor extends Thread
         long startAt, timeConsumed;
         ArrayList<ClientHandler> newClients = new ArrayList<ClientHandler>();
         
+        startAt = 0;
+        
         try
         {
             while (!stopped)
             {
-                startAt = System.currentTimeMillis();
+            	if (OBEY_SPEED_LIMITS)
+            	{
+            		startAt = System.currentTimeMillis();
+            	}
                 
                 syncMouse();
                 
@@ -188,18 +201,23 @@ public class Monitor extends Thread
                     newClients.clear();
                 }
                 
-                timeConsumed = System.currentTimeMillis() - startAt;
-                
-                if (timeConsumed < refreshMS)
+                if (OBEY_SPEED_LIMITS)
                 {
-                    try
-                    {
-                        sleep(refreshMS - timeConsumed);
-                    }
-                    catch (InterruptedException e)
-                    {
-                        LLog.e(e);
-                    }
+	                timeConsumed = System.currentTimeMillis() - startAt;
+	                
+	                long l_refreshMS = refreshMS;
+	                
+	                if (timeConsumed < l_refreshMS)
+	                {
+	                    try
+	                    {
+	                        sleep(l_refreshMS - timeConsumed);
+	                    }
+	                    catch (InterruptedException e)
+	                    {
+	                        LLog.e(e);
+	                    }
+	                }
                 }
             }
         }
@@ -419,5 +437,50 @@ public class Monitor extends Thread
         pos[0] = screenX;
         pos[1] = screenY;
     }
+
+	public void throttle(boolean addPeriod, Long periodMS)
+	{
+		assert_(!addPeriod || periodMS != null);
+		if (periodMS == null)
+		{
+			// refresh rate NOT affected by this value/config
+			return;
+		}
+		if (periodMS < MIN_REFRESH_MS)
+		{
+			periodMS = MIN_REFRESH_MS;
+		}
+		try {
+			limitLock.acquire();
+		} catch (InterruptedException e) {
+			LLog.e(e);
+		}
+		try
+		{
+			synchronized(limitTreeSet)
+			{
+				if (addPeriod)
+				{
+					limitTreeSet.add(periodMS);
+					refreshMS = limitTreeSet.ceiling(0L);
+					return;
+				}
+				else if (limitTreeSet.remove(periodMS))
+				{
+					if (limitTreeSet.isEmpty())
+					{
+						refreshMS = NO_LISTENER_MS;
+						return;
+					}
+					refreshMS = limitTreeSet.ceiling(0L);
+					return;
+				}
+				assert_(false);
+			}
+		}
+		finally {
+			limitLock.release();
+		}
+	}
 
 }

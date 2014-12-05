@@ -1,5 +1,6 @@
 package com.jcope.vnc.client;
 
+import static com.jcope.debug.Debug.DEBUG;
 import static com.jcope.debug.Debug.assert_;
 import static com.jcope.ui.util.Style.positionThenShow;
 import static com.jcope.vnc.shared.InputEventInfo.MAX_QUEUE_SIZE;
@@ -161,7 +162,7 @@ public class StateMachine implements Runnable
                         public void run()
                         {
                             int selectedScreen = (Integer) CLIENT_PROPERTIES.REMOTE_DISPLAY_NUM.getValue();
-                            sendEvent(CLIENT_EVENT.SELECT_SCREEN, selectedScreen, accessMode, hashedPassword);
+                            sendEvent(CLIENT_EVENT.SELECT_SCREEN, selectedScreen, accessMode, CLIENT_PROPERTIES.MONITOR_SCANNING_PERIOD.getValue(), hashedPassword);
                         }
     				    
     				});
@@ -210,8 +211,18 @@ public class StateMachine implements Runnable
     				disconnect();
     			}
 			} while (Boolean.FALSE);
-			if (whyFailed != null)
+			do
 			{
+				if (null == whyFailed)
+				{
+					break;
+				}
+				if (usrCancel == whyFailed)
+				{
+					whyFailed = null;
+					if (DEBUG){LLog.w(usrCancel.getMessage());}
+					break;
+				}
 				try
 				{
 					String msg = wasConnected ? "Connection lost, reconnect?" : "Failed to connect, retry?";
@@ -228,7 +239,7 @@ public class StateMachine implements Runnable
 				finally {
 					whyFailed = null;
 				}
-			}
+			} while (Boolean.FALSE);
 		} while (tryConnect);
 		frame.dispose();
 	}

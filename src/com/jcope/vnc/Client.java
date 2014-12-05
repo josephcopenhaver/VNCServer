@@ -2,11 +2,13 @@ package com.jcope.vnc;
 
 import static com.jcope.debug.Debug.DEBUG;
 import static com.jcope.debug.Debug.assert_;
+import static com.jcope.util.Time.mustParseISO8601DurationRP;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.UnknownHostException;
+import java.util.GregorianCalendar;
 import java.util.Properties;
 
 import com.jcope.util.TypeSafeEnumPropertyPattern;
@@ -23,12 +25,16 @@ import com.jcope.vnc.client.StateMachine;
 
 public class Client
 {
+	
+	public static final GregorianCalendar startTime = new GregorianCalendar();
+	
     public static enum CLIENT_PROPERTIES implements TypeSafeEnumPropertyPattern
     {
         REMOTE_ADDRESS(""),
         REMOTE_PORT(1987),
         REMOTE_DISPLAY_NUM(null),
-        SYNCHRONIZE_CLIPBOARD(Boolean.FALSE)
+        SYNCHRONIZE_CLIPBOARD(Boolean.FALSE),
+        MONITOR_SCANNING_PERIOD(Long.valueOf(mustParseISO8601DurationRP("T1S", startTime)))
         
         ;
         
@@ -56,6 +62,9 @@ public class Client
                 case SYNCHRONIZE_CLIPBOARD:
                     assert_(obj instanceof Boolean);
                     break;
+                case MONITOR_SCANNING_PERIOD:
+                	assert_(obj instanceof Long);
+                	break;
             }
         }
         
@@ -87,6 +96,12 @@ public class Client
                         value = Boolean.valueOf(0 != ((Integer)value));
                     }
                     break;
+                case MONITOR_SCANNING_PERIOD:
+                	if (value instanceof String)
+                	{
+                		value = Long.valueOf(mustParseISO8601DurationRP((String) value, startTime));
+                	}
+                	break;
             }
             assertType(value);
             this.value = value;

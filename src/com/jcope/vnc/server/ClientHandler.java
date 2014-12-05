@@ -57,6 +57,9 @@ public class ClientHandler extends Thread
     
     private Semaphore changedSegmentsSema = new Semaphore(1, true);
     private volatile FixedLengthBitSet changedSegments = null;
+    private Semaphore scanPeriodSema = new Semaphore(1, true);
+    private volatile Long scanPeriod = null;
+    private volatile Long newScanPeriod;
 	
 	public ClientHandler(Socket socket) throws IOException
 	{
@@ -227,14 +230,40 @@ public class ClientHandler extends Thread
 			kill();
 		}
 	}
+	
+	public Long getScanPeriod()
+	{
+		return scanPeriod;
+	}
+	
+	public Long commitNewScanPeriod()
+	{
+		Long rval;
+		try {
+			scanPeriodSema.acquire();
+		} catch (InterruptedException e) {
+			LLog.e(e);
+		}
+		try
+		{
+			rval = scanPeriod;
+			scanPeriod = newScanPeriod;
+			newScanPeriod = null;
+		}
+		finally {
+			scanPeriodSema.release();
+		}
+		return rval;
+	}
 
-	public boolean selectGraphicsDevice(int graphicsDeviceID, ACCESS_MODE accessMode, String password)
+	public boolean selectGraphicsDevice(int graphicsDeviceID, ACCESS_MODE accessMode, long scanPeriod, String password)
 	{
 	    boolean rval;
 	    
 	    GraphicsDevice[] devices = getScreenDevicesOrdered();
 	    GraphicsDevice graphicsDevice = devices[graphicsDeviceID];
         
+	    this.newScanPeriod = scanPeriod;
 	    rval = Manager.getInstance().bind(this, graphicsDevice, accessMode, password);
 	    
 	    return rval;
