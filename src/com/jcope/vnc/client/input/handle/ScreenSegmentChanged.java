@@ -7,6 +7,7 @@ import java.util.concurrent.Semaphore;
 import com.jcope.debug.LLog;
 import com.jcope.util.FixedLengthBitSet;
 import com.jcope.util.TaskDispatcher;
+import com.jcope.vnc.Client.CLIENT_PROPERTIES;
 import com.jcope.vnc.client.StateMachine;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
@@ -16,6 +17,7 @@ public class ScreenSegmentChanged extends Handle<StateMachine>
 {
     public static final TaskDispatcher<Integer> segmentFetcher = new TaskDispatcher<Integer>("ScreenSegmentChanged.segmentFetcher");
     private volatile Semaphore iconifiedSema = null;
+    private volatile Long lastSleepTime = null;
     
     
     public ScreenSegmentChanged()
@@ -81,7 +83,38 @@ public class ScreenSegmentChanged extends Handle<StateMachine>
                         LLog.e(e);
                     }
                     f_iconifiedSema.release();
-                    stateMachine.sendEvent(CLIENT_EVENT.GET_SCREEN_SEGMENT);
+                    
+                    
+                    // make client obey it's own screen throttle configuration
+                    
+                	Long l_lastSleepTime = lastSleepTime;
+                	long now = System.currentTimeMillis();
+                	
+                	if (l_lastSleepTime == null)
+                	{
+                		lastSleepTime = now;
+                	}
+                	else
+                	{
+                		long refreshMS = (Long) CLIENT_PROPERTIES.MONITOR_SCANNING_PERIOD.getValue();
+                		refreshMS -= now - l_lastSleepTime;
+                		if (refreshMS > 0)
+                    	{
+    	            		try
+    	            		{
+                        		Thread.sleep(refreshMS);
+                        		lastSleepTime = now + refreshMS;
+    	                	} catch (InterruptedException e) {
+    							LLog.e(e, false);
+    						}
+    					}
+                		else
+                		{
+                			lastSleepTime = now;
+                		}
+                	}
+                	
+                	stateMachine.sendEvent(CLIENT_EVENT.GET_SCREEN_SEGMENT);
                 }
             });
         } while (false);
