@@ -11,6 +11,11 @@ import javax.xml.datatype.Duration;
 import com.jcope.debug.LLog;
 
 public class Time {
+    
+    private static long ms_per_second = 1000;
+    private static long ms_per_minute = 60 * ms_per_second;
+    private static long ms_per_hour = 60 * ms_per_minute;
+    private static long ms_per_day = 24 * ms_per_hour;
 	
 	public static class InvalidFormatException extends Exception {
 
@@ -23,12 +28,65 @@ public class Time {
 	
 	public static String toISO8601DurationStr(long duration_ms)
 	{
-		String rval;
+	    if (duration_ms <= 0) {
+	        return "T0S";
+	    }
+	    String rval;
+		StringBuffer sb = new StringBuffer();
+		long factor;
 		
-		java.time.Duration duration = java.time.Duration.ZERO.plusMillis(duration_ms);
-		rval = duration.toString();
-		rval = rval.replaceFirst("P", "");
+		do
+		{
+		    factor = duration_ms / ms_per_day;
+    		if (factor > 0)
+    		{
+    		    sb.append("" + factor);
+    		    sb.append("D");
+    		    duration_ms %= ms_per_day;
+    		}
+    		
+    		if (duration_ms == 0)
+    		    break;
+    		
+    		sb.append("T");
+            
+    		factor = duration_ms / ms_per_hour;
+            if (factor > 0)
+            {
+                sb.append("" + factor);
+                sb.append("H");
+                duration_ms %= ms_per_hour;
+            }
+            
+            if (duration_ms == 0)
+                break;
+            
+            factor = duration_ms / ms_per_minute;
+            if (factor > 0)
+            {
+                sb.append("" + factor);
+                sb.append("M");
+                duration_ms %= ms_per_minute;
+            }
+            
+            if (duration_ms == 0)
+                break;
+            
+            factor = duration_ms / ms_per_second;
+            if (factor > 0)
+            {
+                sb.append("" + factor);
+                duration_ms %= ms_per_second;
+            }
+            if (duration_ms > 0)
+            {
+                sb.append(".");
+                sb.append("" + duration_ms);
+            }
+            sb.append("S");
+		} while (false);
 		
+		rval = sb.toString();
 		return rval;
 	}
     
