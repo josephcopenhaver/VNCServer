@@ -22,10 +22,15 @@ public class FixedLengthBitSet implements Serializable
         return new FixedLengthBitSet(this);
     }
     
+    private FixedLengthBitSet(int length, BitSet bitSetToWrap)
+    {
+        this.length = length;
+        this.bset = bitSetToWrap;
+    }
+    
     private FixedLengthBitSet(FixedLengthBitSet origin)
     {
-        this.length = origin.length;
-        this.bset = (BitSet) origin.bset.clone();
+        this(origin.length, (BitSet) origin.bset.clone());
     }
     
     public FixedLengthBitSet(int length)
@@ -78,6 +83,17 @@ public class FixedLengthBitSet implements Serializable
     {
         assert_(length == flbs.length);
         bset.or(flbs.bset);
+    }
+    
+    public void andNot(FixedLengthBitSet flbs)
+    {
+        assert_(length == flbs.length);
+        bset.andNot(flbs.bset);
+    }
+    
+    public boolean isEmpty()
+    {
+        return bset.isEmpty();
     }
     
 }

@@ -27,6 +27,8 @@ public class GetScreenSegment extends Handle
         
         FixedLengthBitSet flbs = (FixedLengthBitSet) arg0;
         
+        client.subscribe(flbs);
+        
         for (int segmentID = flbs.nextSetBit(0); segmentID >= 0; segmentID = flbs.nextSetBit(segmentID + 1))
         {
             Object solidColorOrPixelArray = client.getSegmentOptimized(segmentID);

@@ -56,7 +56,8 @@ public class ClientHandler extends Thread
     private LinkedList<Integer> nonSerialOrderedEventQueue = new LinkedList<Integer>();
     
     private Semaphore changedSegmentsSema = new Semaphore(1, true);
-    private volatile FixedLengthBitSet changedSegments = null;
+    private volatile FixedLengthBitSet stagedChanges = null;
+    private FixedLengthBitSet[] publishedChanges = new FixedLengthBitSet[]{null};
     private Semaphore scanPeriodSema = new Semaphore(1, true);
     private volatile Long scanPeriod = null;
     private volatile Long newScanPeriod;
@@ -429,7 +430,7 @@ public class ClientHandler extends Thread
 	{
 	    _sendEvent(event, null, args);
 	}
-
+	
 	public void _sendEvent(final SERVER_EVENT event, final JitCompressedEvent jce, final Object... args)
 	{
 		if (event == SERVER_EVENT.SCREEN_SEGMENT_CHANGED)
@@ -437,6 +438,7 @@ public class ClientHandler extends Thread
             assert_(jce == null);
             assert_(args.length == 1);
             assert_(args[0] instanceof FixedLengthBitSet);
+            FixedLengthBitSet newChanges = (FixedLengthBitSet) args[0];
             try
             {
                 changedSegmentsSema.acquire();
@@ -447,15 +449,32 @@ public class ClientHandler extends Thread
             }
             try
             {
-                FixedLengthBitSet flbs = changedSegments;
-                if (flbs != null)
+                synchronized(publishedChanges)
                 {
-                    flbs.or(((FixedLengthBitSet) args[0]));
+                    // limit to only bits changed and not in a published-changed state
+                    FixedLengthBitSet l_publishedChanges = publishedChanges[0];
+                    if (l_publishedChanges == null)
+                    {
+                        publishedChanges[0] = new FixedLengthBitSet(newChanges.length);
+                    }
+                    else
+                    {
+                        newChanges.andNot(l_publishedChanges);
+                        if (newChanges.isEmpty())
+                        {
+                            return;
+                        }
+                    }
+                }
+                FixedLengthBitSet l_stagedChanges = stagedChanges;
+                if (l_stagedChanges != null)
+                {
+                    l_stagedChanges.or(newChanges);
                     return;
                 }
-                flbs = ((FixedLengthBitSet) args[0]).clone();
-                args[0] = flbs;
-                changedSegments = flbs;
+                l_stagedChanges = newChanges.clone();
+                args[0] = l_stagedChanges;
+                stagedChanges = l_stagedChanges;
             }
             finally {
                 changedSegmentsSema.release();
@@ -609,7 +628,12 @@ public class ClientHandler extends Thread
                         }
                         try
                         {
-                            ClientHandler.this.changedSegments = null;
+                            FixedLengthBitSet flbs = ClientHandler.this.stagedChanges;
+                            ClientHandler.this.stagedChanges = null;
+                            synchronized(ClientHandler.this.publishedChanges)
+                            {
+                                ClientHandler.this.publishedChanges[0].or(flbs);
+                            }
                         }
                         finally {
                             changedSegmentsSema.release();
@@ -859,4 +883,26 @@ public class ClientHandler extends Thread
 	        handleIOSema.release();
 	    }
 	}
+	
+	public void subscribe(FixedLengthBitSet flbs)
+    {
+        try
+        {
+            changedSegmentsSema.acquire();
+        }
+        catch (InterruptedException e)
+        {
+            LLog.e(e);
+        }
+        try
+        {
+            synchronized(publishedChanges)
+            {
+                publishedChanges[0].andNot(flbs);
+            }
+        }
+        finally {
+            changedSegmentsSema.release();
+        }
+    }
 }
