@@ -130,7 +130,7 @@ public class ConnectionDialog
             JScrollPane jsp_single_accessModeSelectionList = new JScrollPane(single_accessModeSelectionList);
             jsp_single_accessModeSelectionList.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
             jsp_single_accessModeSelectionList.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-            single_accessModeSelectionList.setSelectedValue(ACCESS_MODE.VIEW_ONLY, Boolean.TRUE);
+            single_accessModeSelectionList.setSelectedValue(CLIENT_PROPERTIES.DEFAULT_ACCESS_MODE.getValue(), Boolean.TRUE);
             
             tmp = CLIENT_PROPERTIES.REMOTE_DISPLAY_NUM.getValue();
             displayNum.setText(tmp == null ? "0" : ((Integer)tmp).toString());
@@ -146,11 +146,11 @@ public class ConnectionDialog
             okButton.addActionListener(ok_or_cancel);
             cancelButton.addActionListener(ok_or_cancel);
             
+            addLabeledComponent("Password", password);
             addLabeledComponent("Server Name", serverName);
             addLabeledComponent("Server Port", serverPort);
             addLabeledComponent("Access Mode", jsp_single_accessModeSelectionList);
             addLabeledComponent("Select Screen", displayNum);
-            addLabeledComponent("Password", password);
             addLabeledComponent("Refresh Period", monitorScanningPeriod);
             addLabeledComponent("SYNC Clipboard", askToSynchronizeClipboard);
             
@@ -336,6 +336,7 @@ public class ConnectionDialog
             CLIENT_PROPERTIES.REMOTE_DISPLAY_NUM.setValue(remoteDisplayNum);
             CLIENT_PROPERTIES.MONITOR_SCANNING_PERIOD.setValue(Long.valueOf(monitorScanningPeriod_ms));
             CLIENT_PROPERTIES.SYNCHRONIZE_CLIPBOARD.setValue(synchronizeClipboard);
+            CLIENT_PROPERTIES.DEFAULT_ACCESS_MODE.setValue(getAccessMode());
         }
         
         return dialog.result;
