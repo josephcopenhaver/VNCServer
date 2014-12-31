@@ -19,6 +19,7 @@ import com.jcope.vnc.server.input.handle.RequestAlias;
 import com.jcope.vnc.server.input.handle.SelectScreen;
 import com.jcope.vnc.server.input.handle.SendChatMsg;
 import com.jcope.vnc.server.input.handle.SetClipboard;
+import com.jcope.vnc.server.input.handle.SetScreenMonitorPaused;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
 import com.jcope.vnc.shared.input.Handle;
 
@@ -42,7 +43,8 @@ public class Handler extends com.jcope.vnc.shared.input.Handler<ClientHandler, C
         RequestAlias.class,
         SelectScreen.class,
         SendChatMsg.class,
-        SetClipboard.class
+        SetClipboard.class,
+        SetScreenMonitorPaused.class
     };
     
     static
