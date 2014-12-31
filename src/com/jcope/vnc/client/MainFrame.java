@@ -118,6 +118,7 @@ public class MainFrame extends JFrame
             
 	        @Override
             public void windowIconified(WindowEvent evt) {
+	        	stateMachine.sendEvent(CLIENT_EVENT.SET_SCREEN_MONITOR_PAUSED, true);
                 try
                 {
                     iconifiedSema.acquire();
@@ -131,6 +132,7 @@ public class MainFrame extends JFrame
             @Override
             public void windowDeiconified(WindowEvent evt) {
                 iconifiedSema.release();
+                stateMachine.sendEvent(CLIENT_EVENT.SET_SCREEN_MONITOR_PAUSED, false);
             }
         });
 	    
