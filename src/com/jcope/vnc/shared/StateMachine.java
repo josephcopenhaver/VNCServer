@@ -28,7 +28,8 @@ public class StateMachine
         ACKNOWLEDGE_NON_SERIAL_EVENT,
         GET_CLIPBOARD,
         CLIPBOARD_CHANGED,
-        SET_CLIPBOARD
+        SET_CLIPBOARD,
+        SET_SCREEN_MONITOR_PAUSED
         
         ;
     };

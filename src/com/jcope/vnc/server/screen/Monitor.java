@@ -65,6 +65,8 @@ public class Monitor extends Thread
     private TreeSet<Long> limitTreeSet = new TreeSet<Long>();
     private volatile long refreshMS;
     
+    private Semaphore unpausedClientSema = new Semaphore(0, true);
+    
     public Monitor(int segmentWidth, int segmentHeight, DirectRobot dirbot, ArrayList<ClientHandler> clients)
     {
         super(String.format("Monitor: %s", dirbot.toString()));
@@ -138,86 +140,100 @@ public class Monitor extends Thread
         
         try
         {
-            while (!stopped)
+            while (true)
             {
-            	if (OBEY_SPEED_LIMITS)
-            	{
-            		startAt = System.currentTimeMillis();
-            	}
-                
-                syncMouse();
-                
-                changed = Boolean.FALSE;
-                
-                dirbot.markRGBCacheDirty();
-                
-                for (int i=0; i<=segInfo.maxSegmentID; i++)
-                {
-                    getSegmentPos(i, segmentDim);
-                    x = segmentDim[0];
-                    y = segmentDim[1];
-                    getSegmentDim(i, segmentDim);
-                    dirbot.getRGBPixels(x, y, segmentDim[0], segmentDim[1], buffer);
-                    if (copyIntArray(segments[i], buffer, segments[i].length, solidSegmentRef))
-                    {
-                        changed = Boolean.TRUE;
-                        changedSegments.set(i, Boolean.TRUE);
-                    }
-                    solidSegments[i] = solidSegmentRef[0];
-                }
-                
-                for (ClientHandler client : clients)
-                {
-                    if (client.getIsNewFlag())
-                    {
-                        newClients.add(client);
-                    }
-                }
-                
-                if (changed)
-                {
-                    FixedLengthBitSet tmp = changedSegments.clone();
-                    for (ClientHandler client : clients)
-                    {
-                        if (client.getIsNewFlag())
-                        {
-                            continue;
-                        }
-                        ScreenListener l = client.getScreenListener(dirbot);
-                        l.onScreenChange(tmp);
-                    }
-                    changedSegments.fill(Boolean.FALSE);
-                }
-                
-                if (newClients.size() > 0)
-                {
-                    FixedLengthBitSet tmp = new FixedLengthBitSet(changedSegments.length, Boolean.TRUE);
-                    for (ClientHandler client : newClients)
-                    {
-                        client.setIsNewFlag(Boolean.FALSE);
-                        ScreenListener l = client.getScreenListener(dirbot);
-                        l.onScreenChange(tmp);
-                    }
-                    newClients.clear();
-                }
-                
-                if (OBEY_SPEED_LIMITS)
-                {
-	                timeConsumed = System.currentTimeMillis() - startAt;
+            	try {
+					unpausedClientSema.acquire();
+				} catch (InterruptedException e) {
+					LLog.e(e);
+				}
+            	try {
+	            	if (stopped)
+	            	{
+	            		break;
+	            	}
+	            	if (OBEY_SPEED_LIMITS)
+	            	{
+	            		startAt = System.currentTimeMillis();
+	            	}
 	                
-	                long l_refreshMS = refreshMS;
+	                syncMouse();
 	                
-	                if (timeConsumed < l_refreshMS)
+	                changed = Boolean.FALSE;
+	                
+	                dirbot.markRGBCacheDirty();
+	                
+	                for (int i=0; i<=segInfo.maxSegmentID; i++)
 	                {
-	                    try
+	                    getSegmentPos(i, segmentDim);
+	                    x = segmentDim[0];
+	                    y = segmentDim[1];
+	                    getSegmentDim(i, segmentDim);
+	                    dirbot.getRGBPixels(x, y, segmentDim[0], segmentDim[1], buffer);
+	                    if (copyIntArray(segments[i], buffer, segments[i].length, solidSegmentRef))
 	                    {
-	                        sleep(l_refreshMS - timeConsumed);
+	                        changed = Boolean.TRUE;
+	                        changedSegments.set(i, Boolean.TRUE);
 	                    }
-	                    catch (InterruptedException e)
+	                    solidSegments[i] = solidSegmentRef[0];
+	                }
+	                
+	                for (ClientHandler client : clients)
+	                {
+	                    if (client.getIsNewFlag())
 	                    {
-	                        LLog.e(e);
+	                        newClients.add(client);
 	                    }
 	                }
+	                
+	                if (changed)
+	                {
+	                    FixedLengthBitSet tmp = changedSegments.clone();
+	                    for (ClientHandler client : clients)
+	                    {
+	                        if (client.getIsNewFlag())
+	                        {
+	                            continue;
+	                        }
+	                        ScreenListener l = client.getScreenListener(dirbot);
+	                        l.onScreenChange(tmp);
+	                    }
+	                    changedSegments.fill(Boolean.FALSE);
+	                }
+	                
+	                if (newClients.size() > 0)
+	                {
+	                    FixedLengthBitSet tmp = new FixedLengthBitSet(changedSegments.length, Boolean.TRUE);
+	                    for (ClientHandler client : newClients)
+	                    {
+	                        client.setIsNewFlag(Boolean.FALSE);
+	                        ScreenListener l = client.getScreenListener(dirbot);
+	                        l.onScreenChange(tmp);
+	                    }
+	                    newClients.clear();
+	                }
+	                
+	                if (OBEY_SPEED_LIMITS)
+	                {
+		                timeConsumed = System.currentTimeMillis() - startAt;
+		                
+		                long l_refreshMS = refreshMS;
+		                
+		                if (timeConsumed < l_refreshMS)
+		                {
+		                    try
+		                    {
+		                        sleep(l_refreshMS - timeConsumed);
+		                    }
+		                    catch (InterruptedException e)
+		                    {
+		                        LLog.e(e);
+		                    }
+		                }
+	                }
+            	}
+                finally {
+                	unpausedClientSema.release();
                 }
             }
         }
@@ -377,6 +393,7 @@ public class Monitor extends Thread
     private void signalStop()
     {
         stopped = true;
+        unpausedClientSema.release();
     }
     
     public boolean isRunning()
@@ -480,6 +497,21 @@ public class Monitor extends Thread
 		}
 		finally {
 			limitLock.release();
+		}
+	}
+
+	public void setPaused(boolean paused) {
+		if (!paused)
+		{
+			unpausedClientSema.release();
+		}
+		else
+		{
+			try {
+				unpausedClientSema.acquire();
+			} catch (InterruptedException e) {
+				LLog.e(e);
+			}
 		}
 	}
 

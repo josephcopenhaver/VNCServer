@@ -7,6 +7,7 @@ import java.awt.GraphicsDevice;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -20,6 +21,7 @@ import com.jcope.debug.LLog;
 import com.jcope.util.FixedLengthBitSet;
 import com.jcope.util.TaskDispatcher;
 import com.jcope.vnc.server.screen.Manager;
+import com.jcope.vnc.server.screen.Monitor;
 import com.jcope.vnc.server.screen.ScreenListener;
 import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
 import com.jcope.vnc.shared.IOERunnable;
@@ -61,6 +63,10 @@ public class ClientHandler extends Thread
     private Semaphore scanPeriodSema = new Semaphore(1, true);
     private volatile Long scanPeriod = null;
     private volatile Long newScanPeriod;
+    
+    private Semaphore monitorLock = new Semaphore(1, true);
+    private WeakReference<?>[] monitorRef = new WeakReference<?>[]{null};
+    private volatile boolean paused = false;
 	
 	public ClientHandler(Socket socket) throws IOException
 	{
@@ -165,30 +171,36 @@ public class ClientHandler extends Thread
         @Override
         public void run()
         {
-            try
-            {
-                queueSema.acquire();
-            }
-            catch (InterruptedException e)
-            {
-                LLog.e(e);
-            }
-            try
-            {
-                synchronized(nonSerialEventQueue) {
-                    for (Object[] sargs : nonSerialEventQueue.values())
-                    {
-                        if (sargs == null || sargs[0] == null)
-                        {
-                            continue;
-                        }
-                        ((JitCompressedEvent)sargs[0]).release();
-                    }
-                }
-            }
-            finally {
-                queueSema.release();
-            }
+        	try
+        	{
+        		setPaused(true);
+        	}
+        	finally {
+	            try
+	            {
+	                queueSema.acquire();
+	            }
+	            catch (InterruptedException e)
+	            {
+	                LLog.e(e);
+	            }
+	            try
+	            {
+	                synchronized(nonSerialEventQueue) {
+	                    for (Object[] sargs : nonSerialEventQueue.values())
+	                    {
+	                        if (sargs == null || sargs[0] == null)
+	                        {
+	                            continue;
+	                        }
+	                        ((JitCompressedEvent)sargs[0]).release();
+	                    }
+	                }
+	            }
+	            finally {
+	                queueSema.release();
+	            }
+        	}
         }
 	};
 	
@@ -905,4 +917,55 @@ public class ClientHandler extends Thread
             changedSegmentsSema.release();
         }
     }
+
+	public void setPaused(boolean newPaused) {
+		try {
+			monitorLock.acquire();
+		} catch (InterruptedException e) {
+			LLog.e(e);
+		}
+		try {
+			if (newPaused == paused)
+			{
+				return;
+			}
+			Monitor monitor;
+			synchronized(monitorRef)
+			{
+				monitor = (Monitor) monitorRef[0].get();
+			}
+			paused = newPaused;
+			monitor.setPaused(newPaused);
+		}
+		finally {
+			monitorLock.release();
+		}
+	}
+
+	public void bindMonitor(Monitor monitor) {
+		try {
+			monitorLock.acquire();
+		} catch (InterruptedException e) {
+			LLog.e(e);
+		}
+		try {
+			boolean l_paused = paused;
+			synchronized(monitorRef)
+			{
+				Object oldMonitor;
+				if (!l_paused && (oldMonitor = monitorRef[0] == null ? null : monitorRef[0].get()) != null)
+				{
+					((Monitor) oldMonitor).setPaused(true);
+				}
+				monitorRef[0] = new WeakReference<Monitor>(monitor);
+			}
+			if (!l_paused)
+			{
+				monitor.setPaused(false);
+			}
+		}
+		finally {
+			monitorLock.release();
+		}
+	}
 }

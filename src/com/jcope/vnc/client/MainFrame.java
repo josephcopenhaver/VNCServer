@@ -34,20 +34,12 @@ import com.jcope.debug.LLog;
 import com.jcope.ui.ImagePanel;
 import com.jcope.ui.JCOptionPane;
 import com.jcope.util.DimensionF;
+import com.jcope.vnc.Client.CLIENT_PROPERTIES;
 import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
 import com.jcope.vnc.shared.InputEvent;
 import com.jcope.vnc.shared.InputEventInfo.INPUT_TYPE;
 import com.jcope.vnc.shared.ScreenSelector;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
-
-enum VIEW_MODE
-{
-    NORMAL_SCROLLING,
-    FULL_SCREEN,
-    FIT,
-    STRETCHED_FIT,
-    STRETCH
-};
 
 public class MainFrame extends JFrame
 {
@@ -118,6 +110,7 @@ public class MainFrame extends JFrame
             
 	        @Override
             public void windowIconified(WindowEvent evt) {
+	        	stateMachine.sendEvent(CLIENT_EVENT.SET_SCREEN_MONITOR_PAUSED, true);
                 try
                 {
                     iconifiedSema.acquire();
@@ -131,6 +124,7 @@ public class MainFrame extends JFrame
             @Override
             public void windowDeiconified(WindowEvent evt) {
                 iconifiedSema.release();
+                stateMachine.sendEvent(CLIENT_EVENT.SET_SCREEN_MONITOR_PAUSED, false);
             }
         });
 	    
@@ -293,7 +287,6 @@ public class MainFrame extends JFrame
 		
 		
 		// View Menu
-		final ActionListener defaultView;
 		ActionListener tmpActionListener = null;
 		
 		// preserve aspect ratio scaling
@@ -360,7 +353,7 @@ public class MainFrame extends JFrame
 		
 		
 		// TODO: define accelerator
-        normalScrollingScreen.addActionListener((defaultView = (tmpActionListener = new ActionListener() {
+        normalScrollingScreen.addActionListener((tmpActionListener = new ActionListener() {
             
             @Override
             public void actionPerformed(ActionEvent ae)
@@ -405,7 +398,7 @@ public class MainFrame extends JFrame
                 });
                 }
             }
-        })));
+        }));
         viewModeActions.put(VIEW_MODE.NORMAL_SCROLLING, tmpActionListener);
         
         // TODO: define accelerator 
@@ -501,10 +494,10 @@ public class MainFrame extends JFrame
 		
         
         
-        // trigger default view
-        defaultView.actionPerformed(null);
-        
         EventListenerDecorator.stateMachine = stateMachine;
+        
+        // trigger default view
+        viewModeActions.get((VIEW_MODE) CLIENT_PROPERTIES.DEFAULT_VIEW_MODE.getValue()).actionPerformed(null);
 	}
 	
 	private boolean setViewMode(VIEW_MODE newMode)
