@@ -13,6 +13,8 @@ import java.util.Properties;
 
 import com.jcope.util.TypeSafeEnumPropertyPattern;
 import com.jcope.vnc.client.StateMachine;
+import com.jcope.vnc.client.VIEW_MODE;
+import com.jcope.vnc.shared.AccessModes.ACCESS_MODE;
 
 /**
  * 
@@ -30,6 +32,8 @@ public class Client
 	
     public static enum CLIENT_PROPERTIES implements TypeSafeEnumPropertyPattern
     {
+    	DEFAULT_VIEW_MODE(VIEW_MODE.NORMAL_SCROLLING),
+    	DEFAULT_ACCESS_MODE(ACCESS_MODE.VIEW_ONLY),
         REMOTE_ADDRESS(""),
         REMOTE_PORT(1987),
         REMOTE_DISPLAY_NUM(null),
@@ -64,6 +68,12 @@ public class Client
                     break;
                 case MONITOR_SCANNING_PERIOD:
                 	assert_(obj instanceof Long);
+                	break;
+                case DEFAULT_VIEW_MODE:
+                	assert_(obj instanceof VIEW_MODE);
+                	break;
+                case DEFAULT_ACCESS_MODE:
+                	assert_(obj instanceof ACCESS_MODE);
                 	break;
             }
         }
@@ -100,6 +110,36 @@ public class Client
                 	if (value instanceof String)
                 	{
                 		value = Long.valueOf(mustParseISO8601DurationRP((String) value, startTime));
+                	}
+                	break;
+                case DEFAULT_VIEW_MODE:
+                	if (value instanceof String)
+                	{
+                		String strValue = ((String) value).trim();
+                		for (VIEW_MODE viewMode : VIEW_MODE.values())
+                		{
+                			if (!strValue.equals(viewMode.name()))
+                			{
+                				continue;
+                			}
+                			value = viewMode;
+                			break;
+                		}
+                	}
+                	break;
+                case DEFAULT_ACCESS_MODE:
+                	if (value instanceof String)
+                	{
+                		String strValue = ((String) value).trim();
+                		for (ACCESS_MODE accessMode : ACCESS_MODE.values())
+                		{
+                			if (!strValue.equals(accessMode.name()))
+                			{
+                				continue;
+                			}
+                			value = (accessMode == ACCESS_MODE.ALL) ? this.value : accessMode;
+                			break;
+                		}
                 	}
                 	break;
             }
