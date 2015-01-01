@@ -147,10 +147,10 @@ public class ConnectionDialog
             cancelButton.addActionListener(ok_or_cancel);
             
             addLabeledComponent("Password", password);
+            addLabeledComponent("Select Screen", displayNum);
             addLabeledComponent("Server Name", serverName);
             addLabeledComponent("Server Port", serverPort);
             addLabeledComponent("Access Mode", jsp_single_accessModeSelectionList);
-            addLabeledComponent("Select Screen", displayNum);
             addLabeledComponent("Refresh Period", monitorScanningPeriod);
             addLabeledComponent("SYNC Clipboard", askToSynchronizeClipboard);
             
