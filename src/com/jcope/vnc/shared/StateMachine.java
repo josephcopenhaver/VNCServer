@@ -69,7 +69,9 @@ public class StateMachine
         
         GET_CLIPBOARD, // loads clipboard from client
         CLIPBOARD_CHANGED, // notifies client that server clipboard contents have changed
-        SET_CLIPBOARD // sends clipboard contents to clients that have synchronization enabled
+        SET_CLIPBOARD, // sends clipboard contents to clients that have synchronization enabled
+        
+        END_OF_FRAME
         
         ;
         
@@ -97,6 +99,7 @@ public class StateMachine
                 case CLIPBOARD_CHANGED:
                 case GET_CLIPBOARD:
                 case SET_CLIPBOARD:
+                case END_OF_FRAME:
                     rval = Boolean.FALSE;
                     break;
                 
@@ -159,6 +162,7 @@ public class StateMachine
                 case SCREEN_SEGMENT_CHANGED:
                 case CLIPBOARD_CHANGED:
                 case GET_CLIPBOARD:
+                case END_OF_FRAME:
                     rval = Boolean.FALSE;
                     break;
             }

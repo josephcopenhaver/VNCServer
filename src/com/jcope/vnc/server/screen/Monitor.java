@@ -54,7 +54,7 @@ public class Monitor extends Thread
     private ArrayList<ClientHandler> clients;
     private DirectRobot dirbot;
     private int[][] segments;
-    private Integer[] solidSegments;
+    private Integer[][] solidSegments;
     private FixedLengthBitSet changedSegments;
     private volatile boolean stopped = Boolean.FALSE;
     private volatile boolean joined = Boolean.FALSE;
@@ -66,6 +66,9 @@ public class Monitor extends Thread
     private volatile long refreshMS;
     
     private Semaphore unpausedClientSema = new Semaphore(0, true);
+    // TODO: refactor segmentSemas out by adding a concept of segments with volatile solidity indicators,
+    // thus no longer making a segment typed and deferring this optimization to serialization time
+    private Semaphore[] segmentSemas;
     
     public Monitor(int segmentWidth, int segmentHeight, DirectRobot dirbot, ArrayList<ClientHandler> clients)
     {
@@ -89,12 +92,15 @@ public class Monitor extends Thread
         if (lastWidth == null || lastWidth != screenWidth || lastHeight != screenHeight)
         {
             segInfo.loadConfig(screenWidth, screenHeight, segInfo.segmentWidth, segInfo.segmentHeight);
+            segmentSemas = new Semaphore[segInfo.numSegments];
             segments = new int[segInfo.numSegments][];
-            solidSegments = new Integer[segInfo.numSegments];
+            solidSegments = new Integer[segInfo.numSegments][];
             changedSegments = new FixedLengthBitSet(segInfo.numSegments);
             for (int i=0; i<segInfo.numSegments; i++)
             {
+            	solidSegments[i] = new Integer[]{null};
                 segments[i] = new int[getSegmentPixelCount(i)];
+                segmentSemas[i] = new Semaphore(1, true);
             }
             if (lastWidth != null)
             {
@@ -128,9 +134,9 @@ public class Monitor extends Thread
         // notify all listeners of the changed segment
         
         boolean changed;
+        boolean discrete_change;
         
         int[] buffer = new int[segInfo.maxSegmentNumPixels];
-        Integer[] solidSegmentRef = new Integer[]{null};
         int[] segmentDim = new int[2];
         int x, y;
         long startAt, timeConsumed;
@@ -170,12 +176,25 @@ public class Monitor extends Thread
 	                    y = segmentDim[1];
 	                    getSegmentDim(i, segmentDim);
 	                    dirbot.getRGBPixels(x, y, segmentDim[0], segmentDim[1], buffer);
-	                    if (copyIntArray(segments[i], buffer, segments[i].length, solidSegmentRef))
+	                    try {
+							segmentSemas[i].acquire();
+						} catch (InterruptedException e) {
+							LLog.e(e);
+						}
+	                    try
+	                    {
+	                    	synchronized(segments[i]){synchronized(solidSegments[i]){
+		                    	discrete_change = copyIntArray(segments[i], buffer, segments[i].length, solidSegments[i]);
+		                    }}
+	                    }
+	                    finally {
+	                    	segmentSemas[i].release();
+	                    }
+	                    if (discrete_change)
 	                    {
 	                        changed = Boolean.TRUE;
 	                        changedSegments.set(i, Boolean.TRUE);
 	                    }
-	                    solidSegments[i] = solidSegmentRef[0];
 	                }
 	                
 	                for (ClientHandler client : clients)
@@ -254,6 +273,25 @@ public class Monitor extends Thread
         }
     }
     
+    private boolean isOneColor(int[] ints, int idx, int sentinelIdx)
+    {
+    	if (idx + 1 == sentinelIdx)
+    	{
+    		return true;
+    	}
+    	int color = ints[idx];
+    	idx++;
+    	while (idx < sentinelIdx)
+    	{
+    		if (ints[idx++] == color)
+    		{
+    			continue;
+    		}
+    		return false;
+    	}
+    	return true;
+    }
+    
     /**
      * Eratta: src array content MAY CHANGE as a result of this function!
      * It is faster to fill a buffer with a SOLID color and compare arrays
@@ -266,74 +304,110 @@ public class Monitor extends Thread
      * @param dst
      * @param src
      * @param length
-     * @param solidColorOut
-     * @return
+     * @param cachedSolidColor
+     * @return true iff. something differs
      */
-    private boolean copyIntArray(int[] dst, int[] src, int length, Integer[] solidColorOut)
+    private boolean copyIntArray(int[] dst, int[] src, int length, Integer[] cachedSolidColor)
     {
-        boolean rval = Boolean.FALSE;
-        int solidColor, srcPixel;
+    	if (length <= 0)
+    	{
+    		if (length == 0)
+    		{
+    			return false;
+    		}
+    		throw new IllegalArgumentException();
+    	}
         
-        if (solidColorOut != null && solidColorOut.length > 0 && length > 0)
+        if (cachedSolidColor != null && cachedSolidColor.length > 0)
         {
-            solidColor = src[0];
+        	// handle solid color concerns
+        	if (dst.length == src.length && length == src.length)
+        	{
+        		boolean isDiff = !Arrays.equals(src, dst);
+        		if (isDiff)
+        		{
+        			System.arraycopy(src, 0, dst, 0, src.length);
+        		}
+        		Arrays.fill(src, dst[0]);
+        		cachedSolidColor[0] = Arrays.equals(src, dst) ? dst[0] : null;
+        		return isDiff;
+        	}
+        	int i;
+        	if (cachedSolidColor[0] != null)
+        	{
+        		// was a solid color in a former life
+        		i = 0;
+        		for (; i<length; i++)
+        		{
+            		if (dst[i] == src[i])
+            		{
+            			continue;
+            		}
+            		System.arraycopy(src, i, dst, i, length-i);
+        			cachedSolidColor[0] = (i == 0 && isOneColor(dst, 0, length)) ? dst[0] : null;
+        			return true;
+        		}
+        		return false;
+        	}
+        	// was never a solid color in a former life
+        	if (src[0] != dst[0])
+        	{
+        		// only looking for solid colors now
+        		System.arraycopy(src, 0, dst, 0, length);
+        		cachedSolidColor[0] = isOneColor(dst, 0, length) ? dst[0] : null;
+        		return true;
+        	}
+        	int solidColor = src[0];
+        	i = 1;
+        	for (; i<length; i++)
+        	{
+        		if (src[i] != dst[i])
+        		{
+        			//only looking for solid color now
+        			System.arraycopy(src, i, dst, i, length-i);
+        			cachedSolidColor[0] = isOneColor(dst, i-1, length) ? dst[0] : null;
+        			return true;
+        		}
+        		if (src[i] != solidColor)
+        		{
+        			//only looking for diff now
+        			cachedSolidColor[0] = null;
+        			i++;
+        			while (i < length)
+        			{
+        				if (src[i] == dst[i])
+        				{
+        					i++;
+        					continue;
+        				}
+        				System.arraycopy(src, i, dst, i, length-i);
+    					return true;
+        			}
+        			return false;
+        		}
+        	}
+        	return false;
         }
-        else
-        {
-            solidColor = 0;
-            if (solidColorOut.length > 0)
-            {
-                solidColorOut[0] = null;
-            }
-            solidColorOut = null;
-        }
-        
-        if (src.length == length && dst.length == length)
-        {
-            rval = !Arrays.equals(src, dst);
-            System.arraycopy(src, 0, dst, 0, length);
-            if (solidColorOut != null)
-            {
-                Arrays.fill(src, solidColor);
-                if (!Arrays.equals(src, dst))
-                {
-                    solidColorOut[0] = null;
-                    solidColorOut = null;
-                }
-            }
-        }
-        else
-        {
-            // this appears to be faster than doing multiple loops
-            // or even separate continual loops
-            // java seems to compile this into efficient piecewise code...
-            for (int i=0;i<length; i++)
-            {
-                srcPixel = src[i];
-                if (dst[i] != srcPixel)
-                {
-                    dst[i] = srcPixel;
-                    rval = Boolean.TRUE;
-                }
-                if (solidColorOut != null && srcPixel != solidColor)
-                {
-                    solidColorOut[0] = null;
-                    solidColorOut = null;
-                }
-                if (solidColorOut == null && rval && i<length-1)
-                {
-                    i++;
-                    System.arraycopy(src, i, dst, i, length-i);
-                }
-            }
-        }
-        
-        if (solidColorOut != null)
-        {
-            solidColorOut[0] = solidColor;
-        }
-        
-        return rval;
+    	// solid colors are not to be addressed
+    	if (dst.length == src.length && length == src.length)
+    	{
+    		if (Arrays.equals(src, dst))
+    		{
+    			return false;
+    		}
+    		System.arraycopy(src, 0, dst, 0, src.length);
+			return true;
+    	}
+		for (int i=0; i<length; i++)
+		{
+			if (dst[i] == src[i])
+			{
+				continue;
+			}
+			System.arraycopy(src, i, dst, i, length-i);
+			return true;
+		}
+		return false;
     }
     
     public int getSegmentID(int x, int y)
@@ -410,40 +484,34 @@ public class Monitor extends Thread
     {
         signalStop();
     }
-
-    public int[] getSegment(int segmentID)
-    {
-        int[] rval = (segmentID == -1) ? dirbot.getRGBPixels() : segments[segmentID];
-        
-        return rval;
-    }
-
-    public Integer getSegmentSolidColor(int segmentID)
-    {
-        Integer rval;
-        
-        if (segmentID == -1)
-        {
-            rval = null;
-        }
-        else
-        {
-            rval = solidSegments[segmentID];
-        }
-        
-        return rval;
-    }
     
     public Object getSegmentOptimized(int segmentID)
     {
-        Object rval = getSegmentSolidColor(segmentID);
-        
-        if (rval == null)
+    	if (segmentID == -1)
+    	{
+    		return dirbot.getRGBPixels();
+    	}
+    	Object rval;
+    	try {
+			segmentSemas[segmentID].acquire();
+		} catch (InterruptedException e) {
+			LLog.e(e);
+		}
+    	try
         {
-            rval = getSegment(segmentID);
+    		synchronized(segments[segmentID]){synchronized(solidSegments[segmentID]){
+		        rval = solidSegments[segmentID][0];
+		        
+		        if (rval == null)
+		        {
+		            return segments[segmentID];
+		        }
+		        return rval;
+        	}}
         }
-        
-        return rval;
+        finally {
+        	segmentSemas[segmentID].release();
+        }
     }
 
     public void getOrigin(int[] pos)
