@@ -11,8 +11,10 @@ import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
+import java.util.Arrays;
 
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 
 import com.jcope.util.DimensionF;
 import com.jcope.util.SegmentationInfo;
@@ -40,6 +42,9 @@ public class ImagePanel extends JPanel
     private Rectangle pixelsUnderCursorRect = new Rectangle();
     private volatile int offX=0;
     private volatile int offY=0;
+    
+    private int frameBufferIdx = 0;
+    private int[] frameBuffer = null;
     
     public ImagePanel(int width, int height)
     {
@@ -111,8 +116,25 @@ public class ImagePanel extends JPanel
         int screenWidth = image.getWidth();
         int screenHeight = image.getHeight();
         setRGB(image, 0, 0, pixels, 0, 0, screenWidth, screenHeight, screenWidth, screenHeight);
-        
-        repaint();
+    }
+    
+    /**
+     * Only resets the frame buffer state
+     * Does NOT flush the frame buffer
+     */
+    public void clearFrameBuffer()
+    {
+        frameBufferIdx = 0;
+    }
+    
+    /**
+     * force repainting of everything,
+     * including any scaled image buffers
+     */
+    private void repaintBuffers()
+    {
+    	scaledImageCache = null;
+    	repaint();
     }
     
     private void setSegment(int segmentID, SEGMENT_ALGORITHM alg, Object... args)
@@ -120,6 +142,7 @@ public class ImagePanel extends JPanel
         int solidPixelColor = 0;
         int[] pixels = null;
         
+        assert_(segmentID >= -1);
         assert_(args.length == 1);
         
         switch (alg)
@@ -128,13 +151,22 @@ public class ImagePanel extends JPanel
                 pixels = (int[]) args[0];
                 if (segmentID == -1)
                 {
+                    clearFrameBuffer();
                     loadScreenPixels(pixels);
+                    repaintBuffers();
                     return;
                 }
                 break;
             case SOLID_COLOR:
                 assert_(segmentID >= 0);
                 solidPixelColor = (Integer) args[0];
+                if (segmentID == -1)
+                {
+                	clearFrameBuffer();
+                	fillRGB(image, solidPixelColor);
+                	repaintBuffers();
+                	return;
+                }
                 break;
         }
         
@@ -166,7 +198,55 @@ public class ImagePanel extends JPanel
                 break;
         }
         
-        repaint(startX, startY, tmp[0], tmp[1]);
+        addToFrameBuffer(startX, startY, tmp[0], tmp[1]);
+    }
+    
+    public void addToFrameBuffer(int x, int y, int w, int h)
+    {
+        frameBuffer[frameBufferIdx++] = x;
+        frameBuffer[frameBufferIdx++] = y;
+        frameBuffer[frameBufferIdx++] = w;
+        frameBuffer[frameBufferIdx++] = h;
+    }
+    
+    public void flushFrameBuffer()
+    {
+        if (frameBufferIdx == 0)
+        {
+            return;
+        }
+        if (frameBufferIdx == segInfo.numSegments * 4)
+        {
+            clearFrameBuffer();
+            SwingUtilities.invokeLater(new Runnable() {
+
+    			@Override
+    			public void run() {
+    				repaintBuffers();
+    			}
+            });
+            return;
+        }
+        final int f_frameBufferIdx = frameBufferIdx;
+        final int[] f_frameBuffer = Arrays.copyOf(frameBuffer, f_frameBufferIdx);
+        SwingUtilities.invokeLater(new Runnable() {
+
+			@Override
+			public void run() {
+				int idx,x,y,w,h;
+		        idx = 0;
+		        while (idx < f_frameBufferIdx)
+		        {
+		            x = f_frameBuffer[idx++];
+		            y = f_frameBuffer[idx++];
+		            w = f_frameBuffer[idx++];
+		            h = f_frameBuffer[idx++];
+		            repaint(x, y, w, h);
+		        }
+			}
+        	
+        });
+        clearFrameBuffer();
     }
     
     public void setSegmentPixels(int segmentID, int[] pixels)
@@ -278,6 +358,12 @@ public class ImagePanel extends JPanel
         int screenWidth = image.getWidth();
         int screenHeight = image.getHeight();
         segInfo.loadConfig(screenWidth, screenHeight, segmentWidth, segmentHeight);
+        int numSegmentInfoValues = segInfo.numSegments * 4;
+        flushFrameBuffer();
+        if (frameBuffer == null || frameBuffer.length < numSegmentInfoValues)
+        {
+            frameBuffer = new int[numSegmentInfoValues];
+        }
     }
     
     private static void setRGB(BufferedImage dstimg, int dstx, int dsty,
@@ -305,6 +391,12 @@ public class ImagePanel extends JPanel
             srcBlock += srcScanWidth;
             src = srcBlock;
         }
+    }
+    
+    private static void fillRGB(BufferedImage dstimg, int pixelColor)
+    {
+    	int[] dstPixels = ((DataBufferInt) dstimg.getRaster().getDataBuffer()).getData();
+    	Arrays.fill(dstPixels, pixelColor);
     }
     
     public void hideCursor()

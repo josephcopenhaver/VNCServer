@@ -18,6 +18,7 @@ import java.util.concurrent.Semaphore;
 import javax.swing.SwingUtilities;
 
 import com.jcope.debug.LLog;
+import com.jcope.ui.ImagePanel;
 import com.jcope.ui.JCOptionPane;
 import com.jcope.util.FixedLengthBitSet;
 import com.jcope.util.TaskDispatcher;
@@ -58,6 +59,8 @@ public class StateMachine implements Runnable
     
     private volatile FixedLengthBitSet changedSegments = null;
     public final Semaphore changedSegmentsSema = new Semaphore(1, true);
+    
+    public final Semaphore processingFrameSema = new Semaphore(1, true);
     
     public StateMachine() throws UnknownHostException, IOException
 	{
@@ -370,21 +373,34 @@ public class StateMachine implements Runnable
             }
 	    }
 	    finally {
-            if (socket != null)
-            {
-                try
-                {
-                    socket.close();
-                }
-                catch (IOException e)
-                {
-                    // Do Nothing
-                }
-                finally {
-                    socket = null;
-                    changedSegments = null;
-                }
-            }
+	    	try
+	    	{
+	            if (socket != null)
+	            {
+	                try
+	                {
+	                    socket.close();
+	                }
+	                catch (IOException e)
+	                {
+	                    // Do Nothing
+	                }
+	                finally {
+	                    socket = null;
+	                    changedSegments = null;
+	                }
+	            }
+	    	}
+	    	finally {
+	    		ImagePanel imagePanel = frame.getImagePanel();
+	    		if (imagePanel != null)
+	    		{
+	    			imagePanel.clearFrameBuffer();
+	    			imagePanel.repaint();
+	    		}
+	    		processingFrameSema.drainPermits();
+	    		processingFrameSema.release();
+	    	}
 	    }
 	}
 	
@@ -536,5 +552,15 @@ public class StateMachine implements Runnable
     public void setChangedSegments(FixedLengthBitSet changedSegments)
     {
     	this.changedSegments = changedSegments;
+    }
+
+    public void flushFrameBuffer()
+    {
+        try {
+            frame.getImagePanel().flushFrameBuffer();
+        }
+        finally {
+            processingFrameSema.release();
+        }
     }
 }

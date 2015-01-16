@@ -14,21 +14,18 @@ import java.awt.PointerInfo;
 import java.awt.Rectangle;
 import java.awt.Robot;
 import java.awt.Toolkit;
-import java.awt.image.BufferedImage;
 import java.awt.peer.MouseInfoPeer;
 import java.awt.peer.RobotPeer;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.WeakHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.ReentrantLock;
 
 import sun.awt.ComponentFactory;
 
 import com.jcope.debug.LLog;
-import com.jcope.ui.DirectBufferedImage;
 import com.jcope.vnc.shared.ScreenInfo;
 
 public final class DirectRobot
@@ -42,15 +39,12 @@ public final class DirectRobot
     private final RobotPeer peer;
     private static boolean hasMouseInfoPeer;
     private static MouseInfoPeer mouseInfoPeer;
-    private WeakHashMap<int[],BufferedImage> nonAlphaCache = new WeakHashMap<int[],BufferedImage>();
-    private WeakHashMap<int[],BufferedImage> alphaCache = new WeakHashMap<int[],BufferedImage>();
-    private boolean isDirty = true, usedEfficientMethod;
-    private int[] pixelCache;
-    private int width, height, numPixels;
+    private volatile boolean isDirty = true;
+    private int[][] pixelCache = new int[][]{null};
+    private volatile int width, height;
     
     private Semaphore getPixelsSema = new Semaphore(1, true);
     private ReentrantLock methLock = new ReentrantLock(true);
-    private ReentrantLock cacheSyncLock = new ReentrantLock(true);
     
     public DirectRobot() throws AWTException
 	{
@@ -464,19 +458,23 @@ public final class DirectRobot
         }
 	    try
 	    {
-    		if (isDirty)
-    		{
-    			isDirty = false;
-    			usedEfficientMethod = _getRGBPixels();
-    		}
-    		else
-    		{
-    			usedEfficientMethod = true;
-    		}
-    		
-    		getRGBPixelSlice(pixelCache, this.width, this.height, x, y, width, height, pixels);
-    		
-    		return usedEfficientMethod;
+	    	synchronized(pixelCache)
+	    	{
+	    		boolean usedEfficientMethod;
+	    		if (isDirty)
+	    		{
+	    			isDirty = false;
+	    			usedEfficientMethod = _getRGBPixels();
+	    		}
+	    		else
+	    		{
+	    			usedEfficientMethod = true;
+	    		}
+	    		
+	    		getRGBPixelSlice(pixelCache[0], this.width, this.height, x, y, width, height, pixels);
+	    		
+	    		return usedEfficientMethod;
+	    	}
 	    }
 	    finally {
 	        getPixelsSema.release();
@@ -486,12 +484,14 @@ public final class DirectRobot
 	private boolean _getRGBPixels()
 	{
 		Rectangle r = getScreenBounds();
-		numPixels = r.width * r.height;
-		width = r.width;
-		height = r.height;
-		if (pixelCache == null || pixelCache.length != numPixels)
+		int numPixels = r.width * r.height;
+		int width = r.width;
+		int height = r.height;
+		this.width = width;
+		this.height = height;
+		if (pixelCache[0] == null || pixelCache[0].length != numPixels)
 		{
-			pixelCache = new int[numPixels];
+			pixelCache[0] = new int[numPixels];
 		}
 		if (getRGBPixelsMethod != null)
 		{
@@ -510,16 +510,16 @@ public final class DirectRobot
 						switch(getRGBPixelsMethodType)
 						{
 							case 0:
-								getRGBPixelsMethod.invoke(peer, new Object[] { Integer.valueOf(r.x), Integer.valueOf(r.y), Integer.valueOf(width), Integer.valueOf(height), pixelCache });
+								getRGBPixelsMethod.invoke(peer, new Object[] { Integer.valueOf(r.x), Integer.valueOf(r.y), Integer.valueOf(width), Integer.valueOf(height), pixelCache[0] });
 								break;
 							case 1:
-								getRGBPixelsMethod.invoke(peer, new Object[] { new Rectangle(r.x, r.y, width, height), pixelCache });
+								getRGBPixelsMethod.invoke(peer, new Object[] { new Rectangle(r.x, r.y, width, height), pixelCache[0] });
 								break;
 							case 2:
-								getRGBPixelsMethod.invoke(peer, new Object[] { getRGBPixelsMethodParam, new Rectangle(r.x, r.y, width, height), pixelCache });
+								getRGBPixelsMethod.invoke(peer, new Object[] { getRGBPixelsMethodParam, new Rectangle(r.x, r.y, width, height), pixelCache[0] });
 								break;
 							default:
-								getRGBPixelsMethod.invoke(peer, new Object[] { getRGBPixelsMethodParam, Integer.valueOf(r.x), Integer.valueOf(r.y), Integer.valueOf(width), Integer.valueOf(height), pixelCache });
+								getRGBPixelsMethod.invoke(peer, new Object[] { getRGBPixelsMethodParam, Integer.valueOf(r.x), Integer.valueOf(r.y), Integer.valueOf(width), Integer.valueOf(height), pixelCache[0] });
 								break;
 						}
 					}
@@ -545,7 +545,7 @@ public final class DirectRobot
 		}
 		
 		int[] tmp = getRGBPixels(r);
-		System.arraycopy(tmp, 0, pixelCache, 0, numPixels);
+		System.arraycopy(tmp, 0, pixelCache[0], 0, numPixels);
 		return false;
 	}
 
@@ -601,52 +601,6 @@ public final class DirectRobot
 		}
 	}
 	
-	public void clearBufferedImage(int[] pixels)
-	{
-		cacheSyncLock.lock();
-		try
-		{
-			synchronized(alphaCache){synchronized(nonAlphaCache){
-				alphaCache.remove(pixels);
-				nonAlphaCache.remove(pixels);
-			}}
-		}
-		finally {
-			cacheSyncLock.unlock();
-		}
-	}
-	
-	public BufferedImage getBufferedImage(int[] pixels, int size, int width, int height, boolean hasAlpha)
-	{
-		BufferedImage image = null;
-		
-		assert_(size > 0);
-		assert_(width > 0);
-		assert_(height > 0);
-		assert_(size == (width * height));
-		assert_(pixels.length >= size);
-		
-		cacheSyncLock.lock();
-		try 
-		{
-			synchronized(alphaCache){synchronized(nonAlphaCache){
-				image = (hasAlpha ? alphaCache : nonAlphaCache).get(pixels);
-				
-				if (image == null)
-				{
-					image = new DirectBufferedImage(pixels, size, width, height, hasAlpha);
-					
-					(hasAlpha ? alphaCache : nonAlphaCache).put(pixels, image);
-				}
-			}}
-		}
-		finally {
-			cacheSyncLock.unlock();
-		}
-		
-		return image;
-	}
-	
 	public int[] getRGBPixels()
     {
 	    try
@@ -659,8 +613,11 @@ public final class DirectRobot
         }
         try
         {
-            _getRGBPixels();
-            return pixelCache;
+        	synchronized(pixelCache)
+        	{
+	            _getRGBPixels();
+	            return pixelCache[0];
+        	}
         }
         finally {
             getPixelsSema.release();

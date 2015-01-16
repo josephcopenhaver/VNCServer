@@ -29,10 +29,15 @@ public class GetScreenSegment extends Handle
         
         client.subscribe(flbs);
         
-        for (int segmentID = flbs.nextSetBit(0); segmentID >= 0; segmentID = flbs.nextSetBit(segmentID + 1))
-        {
-            Object solidColorOrPixelArray = client.getSegmentOptimized(segmentID);
-            client.sendEvent(SERVER_EVENT.SCREEN_SEGMENT_UPDATE, segmentID, solidColorOrPixelArray);
+        try {
+            for (int segmentID = flbs.nextSetBit(0); segmentID >= 0; segmentID = flbs.nextSetBit(segmentID + 1))
+            {
+                Object solidColorOrPixelArray = client.getSegmentOptimized(segmentID);
+                client.sendEvent(SERVER_EVENT.SCREEN_SEGMENT_UPDATE, segmentID, solidColorOrPixelArray);
+            }
+        }
+        finally {
+            client.sendEvent(SERVER_EVENT.END_OF_FRAME);
         }
     }
     

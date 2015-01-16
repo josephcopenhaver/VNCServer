@@ -736,6 +736,8 @@ public class ClientHandler extends Thread
                                 case GET_CLIPBOARD:
                                 case SET_CLIPBOARD:
                                     break;
+							case END_OF_FRAME:
+								break;
 	                        }
 	                    }
 	                    catch (IOException e)

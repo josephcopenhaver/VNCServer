@@ -43,6 +43,7 @@ public class AcknowledgeNonSerialEvent extends Handle
             case GET_CLIPBOARD:
             case SET_CLIPBOARD:
             case SCREEN_SEGMENT_CHANGED:
+            case END_OF_FRAME:
                 assert_(args.length == 1);
                 break;
             case SCREEN_SEGMENT_UPDATE:

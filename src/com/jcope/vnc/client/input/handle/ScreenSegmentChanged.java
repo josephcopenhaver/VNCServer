@@ -114,6 +114,15 @@ public class ScreenSegmentChanged extends Handle<StateMachine>
                 		}
                 	}
                 	
+                	try
+                    {
+                        stateMachine.processingFrameSema.acquire();
+                    }
+                    catch (InterruptedException e)
+                    {
+                        LLog.e(e);
+                    }
+                	
                 	stateMachine.sendEvent(CLIENT_EVENT.GET_SCREEN_SEGMENT);
                 }
             });
