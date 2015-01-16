@@ -12,10 +12,12 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.util.Arrays;
+import java.util.concurrent.Semaphore;
 
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
+import com.jcope.debug.LLog;
 import com.jcope.util.DimensionF;
 import com.jcope.util.SegmentationInfo;
 import com.jcope.util.SegmentationInfo.SEGMENT_ALGORITHM;
@@ -43,8 +45,9 @@ public class ImagePanel extends JPanel
     private volatile int offX=0;
     private volatile int offY=0;
     
-    private int frameBufferIdx = 0;
-    private int[] frameBuffer = null;
+    private volatile int frameBufferIdx = 0;
+    private int[][] frameBuffer = new int[][]{null};
+    private Semaphore frameBufferLock = new Semaphore(1, true);
     
     public ImagePanel(int width, int height)
     {
@@ -203,32 +206,64 @@ public class ImagePanel extends JPanel
     
     public void addToFrameBuffer(int x, int y, int w, int h)
     {
-        frameBuffer[frameBufferIdx++] = x;
-        frameBuffer[frameBufferIdx++] = y;
-        frameBuffer[frameBufferIdx++] = w;
-        frameBuffer[frameBufferIdx++] = h;
+    	try
+    	{
+    		frameBufferLock.acquire();
+    	} catch (InterruptedException e) {
+			LLog.e(e);
+		}
+    	try
+    	{
+    		synchronized(frameBuffer) {
+	    		int idx = frameBufferIdx;
+	    		int[] buffer = frameBuffer[0];
+	    		buffer[idx++] = x;
+		        buffer[idx++] = y;
+		        buffer[idx++] = w;
+		        buffer[idx++] = h;
+		        frameBufferIdx = idx;
+    		}
+    	}
+    	finally {
+    		frameBufferLock.release();
+    	}
     }
     
     public void flushFrameBuffer()
     {
-        if (frameBufferIdx == 0)
+        final int f_frameBufferIdx;
+        final int[] f_frameBuffer;
+        try {
+			frameBufferLock.acquire();
+		} catch (InterruptedException e) {
+			LLog.e(e);
+		}
+        try
         {
-            return;
-        }
-        if (frameBufferIdx == segInfo.numSegments * 4)
-        {
-            clearFrameBuffer();
-            SwingUtilities.invokeLater(new Runnable() {
+        	f_frameBufferIdx = frameBufferIdx;
+        	if (f_frameBufferIdx == 0)
+            {
+                return;
+            }
+            if (f_frameBufferIdx == segInfo.numSegments * 4)
+            {
+                clearFrameBuffer();
+                SwingUtilities.invokeLater(new Runnable() {
 
-    			@Override
-    			public void run() {
-    				repaintBuffers();
-    			}
-            });
-            return;
+        			@Override
+        			public void run() {
+        				repaintBuffers();
+        			}
+                });
+                return;
+            }
+        	synchronized(frameBuffer) {
+	        	f_frameBuffer = Arrays.copyOf(frameBuffer[0], f_frameBufferIdx);
+        	}
         }
-        final int f_frameBufferIdx = frameBufferIdx;
-        final int[] f_frameBuffer = Arrays.copyOf(frameBuffer, f_frameBufferIdx);
+        finally {
+        	frameBufferLock.release();
+        }
         SwingUtilities.invokeLater(new Runnable() {
 
 			@Override
@@ -360,9 +395,22 @@ public class ImagePanel extends JPanel
         segInfo.loadConfig(screenWidth, screenHeight, segmentWidth, segmentHeight);
         int numSegmentInfoValues = segInfo.numSegments * 4;
         flushFrameBuffer();
-        if (frameBuffer == null || frameBuffer.length < numSegmentInfoValues)
+        try {
+			frameBufferLock.acquire();
+		} catch (InterruptedException e) {
+			LLog.e(e);
+		}
+        try
         {
-            frameBuffer = new int[numSegmentInfoValues];
+        	synchronized(frameBuffer) {
+		        if (frameBuffer[0] == null || frameBuffer[0].length < numSegmentInfoValues)
+		        {
+		            frameBuffer[0] = new int[numSegmentInfoValues];
+		        }
+        	}
+        }
+        finally {
+        	frameBufferLock.release();
         }
     }
     
