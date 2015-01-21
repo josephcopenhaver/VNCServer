@@ -11,6 +11,7 @@ import java.util.concurrent.Semaphore;
 
 import com.jcope.debug.LLog;
 import com.jcope.util.FixedLengthBitSet;
+import com.jcope.util.GraphicsSegment;
 import com.jcope.util.SegmentationInfo;
 import com.jcope.vnc.Server.SERVER_PROPERTIES;
 import com.jcope.vnc.server.ClientHandler;
@@ -53,8 +54,7 @@ public class Monitor extends Thread
     private Integer screenWidth = null, screenHeight;
     private ArrayList<ClientHandler> clients;
     private DirectRobot dirbot;
-    private int[][] segments;
-    private Integer[][] solidSegments;
+    private GraphicsSegment[] segments;
     private FixedLengthBitSet changedSegments;
     private volatile boolean stopped = Boolean.FALSE;
     private volatile boolean joined = Boolean.FALSE;
@@ -66,9 +66,6 @@ public class Monitor extends Thread
     private volatile long refreshMS;
     
     private Semaphore unpausedClientSema = new Semaphore(0, true);
-    // TODO: refactor segmentSemas out by adding a concept of segments with volatile solidity indicators,
-    // thus no longer making a segment typed and deferring this optimization to serialization time
-    private Semaphore[] segmentSemas;
     
     public Monitor(int segmentWidth, int segmentHeight, DirectRobot dirbot, ArrayList<ClientHandler> clients)
     {
@@ -92,15 +89,11 @@ public class Monitor extends Thread
         if (lastWidth == null || lastWidth != screenWidth || lastHeight != screenHeight)
         {
             segInfo.loadConfig(screenWidth, screenHeight, segInfo.segmentWidth, segInfo.segmentHeight);
-            segmentSemas = new Semaphore[segInfo.numSegments];
-            segments = new int[segInfo.numSegments][];
-            solidSegments = new Integer[segInfo.numSegments][];
+            segments = new GraphicsSegment[segInfo.numSegments];
             changedSegments = new FixedLengthBitSet(segInfo.numSegments);
-            for (int i=0; i<segInfo.numSegments; i++)
+            for (int i=0; i<segments.length; i++)
             {
-            	solidSegments[i] = new Integer[]{null};
-                segments[i] = new int[getSegmentPixelCount(i)];
-                segmentSemas[i] = new Semaphore(1, true);
+                segments[i] = new GraphicsSegment(getSegmentPixelCount(i));
             }
             if (lastWidth != null)
             {
@@ -133,16 +126,28 @@ public class Monitor extends Thread
         // detect change in a segment of the configured screen
         // notify all listeners of the changed segment
         
+        GraphicsSegment graphicsSegment;
         boolean changed;
-        boolean discrete_change;
+        final boolean discrete_change[] = new boolean[1];
         
-        int[] buffer = new int[segInfo.maxSegmentNumPixels];
+        final int[] buffer = new int[segInfo.maxSegmentNumPixels];
         int[] segmentDim = new int[2];
         int x, y;
         long startAt, timeConsumed;
         ArrayList<ClientHandler> newClients = new ArrayList<ClientHandler>();
         
         startAt = 0;
+        
+        GraphicsSegment.Synchronously refresh = new GraphicsSegment.Synchronously() {
+
+            @Override
+            public Object run(int[] pixels, Integer[] solidColorPtr)
+            {
+                discrete_change[0] = copyIntArray(pixels, buffer, pixels.length, solidColorPtr);
+                return null;
+            }
+            
+        };
         
         try
         {
@@ -171,26 +176,14 @@ public class Monitor extends Thread
 	                
 	                for (int i=0; i<=segInfo.maxSegmentID; i++)
 	                {
+	                    graphicsSegment = segments[i];
 	                    getSegmentPos(i, segmentDim);
 	                    x = segmentDim[0];
 	                    y = segmentDim[1];
 	                    getSegmentDim(i, segmentDim);
 	                    dirbot.getRGBPixels(x, y, segmentDim[0], segmentDim[1], buffer);
-	                    try {
-							segmentSemas[i].acquire();
-						} catch (InterruptedException e) {
-							LLog.e(e);
-						}
-	                    try
-	                    {
-	                    	synchronized(segments[i]){synchronized(solidSegments[i]){
-		                    	discrete_change = copyIntArray(segments[i], buffer, segments[i].length, solidSegments[i]);
-		                    }}
-	                    }
-	                    finally {
-	                    	segmentSemas[i].release();
-	                    }
-	                    if (discrete_change)
+	                    graphicsSegment.synchronously(refresh);
+	                    if (discrete_change[0])
 	                    {
 	                        changed = Boolean.TRUE;
 	                        changedSegments.set(i, Boolean.TRUE);
@@ -485,33 +478,13 @@ public class Monitor extends Thread
         signalStop();
     }
     
-    public Object getSegmentOptimized(int segmentID)
+    public GraphicsSegment getSegment(int segmentID)
     {
     	if (segmentID == -1)
     	{
-    		return dirbot.getRGBPixels();
+    		return new GraphicsSegment(dirbot.getRGBPixels()); 
     	}
-    	Object rval;
-    	try {
-			segmentSemas[segmentID].acquire();
-		} catch (InterruptedException e) {
-			LLog.e(e);
-		}
-    	try
-        {
-    		synchronized(segments[segmentID]){synchronized(solidSegments[segmentID]){
-		        rval = solidSegments[segmentID][0];
-		        
-		        if (rval == null)
-		        {
-		            return segments[segmentID];
-		        }
-		        return rval;
-        	}}
-        }
-        finally {
-        	segmentSemas[segmentID].release();
-        }
+    	return segments[segmentID];
     }
 
     public void getOrigin(int[] pos)

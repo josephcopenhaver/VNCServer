@@ -12,6 +12,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.Semaphore;
 
 import com.jcope.debug.LLog;
+import com.jcope.util.GraphicsSegment;
 import com.jcope.vnc.server.ClientHandler;
 import com.jcope.vnc.server.DirectRobot;
 import com.jcope.vnc.server.JitCompressedEvent;
@@ -417,17 +418,15 @@ public class Manager extends Thread
         withLock(actionSendEventToAllExcept, notThiz, evt, args); 
     }
 	
-	public Object getSegmentOptimized(DirectRobot dirbot, int segmentID)
+	public GraphicsSegment getSegment(DirectRobot dirbot, int segmentID)
 	{
-	    Object rval = null;
-	    
 	    Monitor monitor = monitorForGraphicsDevice.get(dirbot.device);
-	    if (monitor != null)
+	    if (monitor == null)
 	    {
-	        rval = monitor.getSegmentOptimized(segmentID);
+	        return null;
 	    }
 	    
-	    return rval;
+	    return monitor.getSegment(segmentID);
 	}
 	
 	public void getOrigin(DirectRobot dirbot, int[] pos)

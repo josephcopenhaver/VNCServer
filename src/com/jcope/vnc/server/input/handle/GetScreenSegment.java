@@ -3,6 +3,7 @@ package com.jcope.vnc.server.input.handle;
 import static com.jcope.debug.Debug.assert_;
 
 import com.jcope.util.FixedLengthBitSet;
+import com.jcope.util.GraphicsSegment;
 import com.jcope.vnc.server.ClientHandler;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 import com.jcope.vnc.server.input.Handle;
@@ -20,8 +21,8 @@ public class GetScreenSegment extends Handle
         
         if (arg0 instanceof Integer)
         {
-            Object solidColorOrPixelArray = client.getSegmentOptimized(-1);
-            client.sendEvent(SERVER_EVENT.SCREEN_SEGMENT_UPDATE, -1, solidColorOrPixelArray);
+            GraphicsSegment graphicsSegment = client.getSegment(-1);
+            client.sendEvent(SERVER_EVENT.SCREEN_SEGMENT_UPDATE, -1, graphicsSegment);
             return;
         }
         
@@ -32,8 +33,8 @@ public class GetScreenSegment extends Handle
         try {
             for (int segmentID = flbs.nextSetBit(0); segmentID >= 0; segmentID = flbs.nextSetBit(segmentID + 1))
             {
-                Object solidColorOrPixelArray = client.getSegmentOptimized(segmentID);
-                client.sendEvent(SERVER_EVENT.SCREEN_SEGMENT_UPDATE, segmentID, solidColorOrPixelArray);
+                GraphicsSegment graphicsSegment = client.getSegment(segmentID);
+                client.sendEvent(SERVER_EVENT.SCREEN_SEGMENT_UPDATE, segmentID, graphicsSegment);
             }
         }
         finally {

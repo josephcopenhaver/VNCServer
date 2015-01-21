@@ -19,6 +19,7 @@ import javax.swing.SwingUtilities;
 
 import com.jcope.debug.LLog;
 import com.jcope.util.FixedLengthBitSet;
+import com.jcope.util.GraphicsSegment;
 import com.jcope.util.TaskDispatcher;
 import com.jcope.vnc.server.screen.Manager;
 import com.jcope.vnc.server.screen.Monitor;
@@ -31,6 +32,17 @@ import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
 public class ClientHandler extends Thread
 {
+    private static GraphicsSegment.Synchronously serialize = new GraphicsSegment.Synchronously() {
+
+        @Override
+        public Object run(int[] pixels, Integer[] solidColorPtr)
+        {
+            Integer solidColor = solidColorPtr[0];
+            return (solidColor == null) ? pixels : solidColor;
+        }
+        
+    };
+    
     private Socket socket;
 	private BufferedInputStream in = null;
 	private BufferedOutputStream out = null;
@@ -445,7 +457,7 @@ public class ClientHandler extends Thread
 	
 	public void _sendEvent(final SERVER_EVENT event, final JitCompressedEvent jce, final Object... args)
 	{
-		if (event == SERVER_EVENT.SCREEN_SEGMENT_CHANGED)
+	    if (event == SERVER_EVENT.SCREEN_SEGMENT_CHANGED)
         {
             assert_(jce == null);
             assert_(args.length == 1);
@@ -623,7 +635,24 @@ public class ClientHandler extends Thread
 		if (dispatch)
 		{
 		    final IOERunnable msgAction;
-		    if (event == SERVER_EVENT.SCREEN_SEGMENT_CHANGED)
+		    if (event == SERVER_EVENT.SCREEN_SEGMENT_UPDATE)
+	        {
+		        assert_(jce == null);
+	            assert_(args.length == 2);
+	            
+	            msgAction = new IOERunnable() {
+
+                    @Override
+                    public void run() throws IOException
+                    {
+                        GraphicsSegment graphicsSegment = (GraphicsSegment) args[1];
+                        Object serializedGraphicsSegment = graphicsSegment.synchronously(serialize);
+                        Msg.send(out, jce, event, args[0], serializedGraphicsSegment);
+                    }
+                    
+                };
+	        }
+		    else if (event == SERVER_EVENT.SCREEN_SEGMENT_CHANGED)
 		    {
 		        msgAction = new IOERunnable() {
 		            
@@ -790,11 +819,9 @@ public class ClientHandler extends Thread
 	    return rval;
     }
 
-    public Object getSegmentOptimized(int segmentID)
+    public GraphicsSegment getSegment(int segmentID)
 	{
-	    Object rval = Manager.getInstance().getSegmentOptimized(dirbot, segmentID);
-	    
-	    return rval;
+	    return Manager.getInstance().getSegment(dirbot, segmentID);
 	}
 	
 	public DirectRobot getDirbot()
