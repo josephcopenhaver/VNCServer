@@ -32,13 +32,18 @@ import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
 public class ClientHandler extends Thread
 {
-    private static GraphicsSegment.Synchronously serialize = new GraphicsSegment.Synchronously() {
+	private static final Object[] jce_id_ptr = new Object[]{null};
+    private static GraphicsSegment.Synchronously getJCE = new GraphicsSegment.Synchronously() {
 
         @Override
-        public Object run(int[] pixels, Integer[] solidColorPtr)
+        public Object run(GraphicsSegment receiver, int[] pixels, Integer[] solidColorPtr)
         {
             Integer solidColor = solidColorPtr[0];
-            return (solidColor == null) ? pixels : solidColor;
+            Object serialized = (solidColor == null) ? pixels : solidColor;
+            Object id = jce_id_ptr[0];
+            jce_id_ptr[0] = null;
+            JitCompressedEvent jce = receiver.acquireJitCompressedEvent(id, serialized);
+            return jce;
         }
         
     };
@@ -646,8 +651,9 @@ public class ClientHandler extends Thread
                     public void run() throws IOException
                     {
                         GraphicsSegment graphicsSegment = (GraphicsSegment) args[1];
-                        Object serializedGraphicsSegment = graphicsSegment.synchronously(serialize);
-                        Msg.send(out, jce, event, args[0], serializedGraphicsSegment);
+                        jce_id_ptr[0] = args[0];
+                        JitCompressedEvent new_jce = (JitCompressedEvent) graphicsSegment.synchronously(getJCE);
+                        Msg.send(out, new_jce, event);
                     }
                     
                 };

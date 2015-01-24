@@ -46,6 +46,14 @@ import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
 public class Monitor extends Thread
 {
+	private static final GraphicsSegment.Synchronously releaseResources = new GraphicsSegment.Synchronously() {
+		
+		@Override
+		public Object run(GraphicsSegment receiver, int[] pixels, Integer[] solidColorPtr) {
+			receiver.releaseJitCompressedEvent();
+			return null;
+		}
+	};
 	public static final long NO_LISTENER_MS = 5000; // dummy value to allow things to settle into nop state
 	private static final boolean OBEY_SPEED_LIMITS = (Boolean) SERVER_PROPERTIES.OBEY_SPEED_LIMITS.getValue();
     private static final long MIN_REFRESH_MS = (Long) SERVER_PROPERTIES.MIN_MONITOR_SCANNING_PERIOD.getValue();
@@ -141,9 +149,14 @@ public class Monitor extends Thread
         GraphicsSegment.Synchronously refresh = new GraphicsSegment.Synchronously() {
 
             @Override
-            public Object run(int[] pixels, Integer[] solidColorPtr)
+            public Object run(GraphicsSegment receiver, int[] pixels, Integer[] solidColorPtr)
             {
-                discrete_change[0] = copyIntArray(pixels, buffer, pixels.length, solidColorPtr);
+                boolean changed = copyIntArray(pixels, buffer, pixels.length, solidColorPtr);
+                if (changed)
+                {
+                	receiver.releaseJitCompressedEvent();
+                }
+                discrete_change[0] = changed;
                 return null;
             }
             
@@ -251,6 +264,17 @@ public class Monitor extends Thread
         }
         finally {
             stopped = Boolean.TRUE;
+            for (GraphicsSegment segment : segments)
+            {
+            	try
+            	{
+            		segment.synchronously(releaseResources);
+            	}
+            	catch (Exception e)
+            	{
+            		LLog.e(e, false);
+            	}
+            }
             joined = Boolean.TRUE;
         }
     }
