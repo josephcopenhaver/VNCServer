@@ -53,9 +53,9 @@ public class GraphicsSegment
     	JitCompressedEvent my_jce = jce;
     	if (my_jce != null)
     	{
-    		my_jce.release();
+    		jce = null;
+            my_jce.release();
     	}
-    	jce = null;
     }
     
     public JitCompressedEvent acquireJitCompressedEvent(Object id, Object serialized)

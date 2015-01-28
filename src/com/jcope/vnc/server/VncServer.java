@@ -213,13 +213,14 @@ public class VncServer implements Runnable
 					serverSocket = new ServerSocket(serverPort, listenBacklog, serverBindAddress); 
 				}
 				if (_DEBUG) System.out.println("Waiting for connections!");
+				ClientHandler newClient;
 				while (true)
 				{
+					newClient = null;
 					Socket socket = serverSocket.accept();
 					if (_DEBUG) System.out.println("Got a new connection!");
 					if (socket != null)
 					{
-						ClientHandler newClient = null;
 						try
 						{
 							newClient = new ClientHandler(socket);
