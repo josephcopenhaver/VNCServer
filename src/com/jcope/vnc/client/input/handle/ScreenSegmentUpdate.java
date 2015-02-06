@@ -2,8 +2,6 @@ package com.jcope.vnc.client.input.handle;
 
 import static com.jcope.debug.Debug.assert_;
 
-import javax.swing.SwingUtilities;
-
 import com.jcope.ui.ImagePanel;
 import com.jcope.vnc.client.MainFrame;
 import com.jcope.vnc.client.StateMachine;
@@ -34,7 +32,7 @@ public class ScreenSegmentUpdate extends Handle<StateMachine>
             final int[] pixels = (int[]) args[1];
             assert_(pixels != null);
             
-            SwingUtilities.invokeLater(new Runnable() {
+            stateMachine.scheduleGUIAction(new Runnable() {
 
 				@Override
 				public void run() {
@@ -48,9 +46,7 @@ public class ScreenSegmentUpdate extends Handle<StateMachine>
             final Integer solidPixelColor = (Integer) args[1];
             assert_(solidPixelColor != null);
             
-            // TODO: dispatch the writing of pixel data
-            // rather than blocking the reader thread
-            SwingUtilities.invokeLater(new Runnable() {
+            stateMachine.scheduleGUIAction(new Runnable() {
 
 				@Override
 				public void run() {

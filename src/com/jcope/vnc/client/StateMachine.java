@@ -10,6 +10,7 @@ import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -50,7 +51,10 @@ public class StateMachine implements Runnable
 	private Semaphore inputHandlingSema = new Semaphore(1, true);
 	
 	private Semaphore sendSema = new Semaphore(1, true);
-	private TaskDispatcher<Integer> dispatcher = new TaskDispatcher<Integer>("Client output dispatcher");
+    private TaskDispatcher<Integer> dispatcher = new TaskDispatcher<Integer>("Client output dispatcher");
+    
+    private volatile int gui_tid = -1;
+    private TaskDispatcher<Integer> gui_dispatcher = new TaskDispatcher<Integer>("GUI dispatcher");
     
     private Semaphore queueAccessSema = new Semaphore(1, true);
     private volatile ArrayList<InputEvent> outQueue = null;
@@ -395,8 +399,7 @@ public class StateMachine implements Runnable
 	    		ImagePanel imagePanel = frame.getImagePanel();
 	    		if (imagePanel != null)
 	    		{
-	    			imagePanel.clearFrameBuffer();
-	    			imagePanel.repaint();
+	    			imagePanel.repaintBuffers();
 	    		}
 	    		processingFrameSema.drainPermits();
 	    		processingFrameSema.release();
@@ -562,5 +565,34 @@ public class StateMachine implements Runnable
         finally {
             processingFrameSema.release();
         }
+    }
+    
+    public void scheduleGUIAction(final Runnable gui_action)
+    {
+        int tid = gui_tid + 1;
+        if (tid < 0)
+        {
+            tid = 0;
+        }
+        gui_tid = tid;
+        gui_dispatcher.dispatch(tid, new Runnable(){
+
+            @Override
+            public void run()
+            {
+                try
+                {
+                    SwingUtilities.invokeAndWait(gui_action);
+                }
+                catch (InvocationTargetException e)
+                {
+                    LLog.e(e);
+                }
+                catch (InterruptedException e)
+                {
+                    LLog.e(e);
+                }
+            }
+        });
     }
 }
