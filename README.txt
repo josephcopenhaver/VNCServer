@@ -3,12 +3,6 @@ VNCServer
 
 
 
-COMPATABILITY ISSUES:
-====================
-1. Does not work on retina display macbooks (must be scaling and drawing routines)
-
-
-
 PREREQUISITS:
 ============
 0. apache ant already installed and executable from command line (  ant -v  )
