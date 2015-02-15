@@ -11,7 +11,6 @@ import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferInt;
 import java.util.Arrays;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicIntegerArray;
@@ -21,6 +20,7 @@ import javax.swing.SwingUtilities;
 
 import com.jcope.debug.LLog;
 import com.jcope.util.DimensionF;
+import com.jcope.util.NativeBufferedImage;
 import com.jcope.util.SegmentationInfo;
 import com.jcope.util.SegmentationInfo.SEGMENT_ALGORITHM;
 
@@ -356,7 +356,7 @@ public class ImagePanel extends JPanel
     private static final int cursorSideLength = 32;
     private static final int halfCursorSideLength = cursorSideLength/2;
     
-    private BufferedImage image;
+    private NativeBufferedImage image;
     private SegmentationInfo segInfo;
     
     private boolean cursorVisible = false;
@@ -375,7 +375,7 @@ public class ImagePanel extends JPanel
     public ImagePanel(int width, int height)
     {
         setBackground(Color.BLACK);
-        image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        image = new NativeBufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         segInfo = new SegmentationInfo();
         preferredSize.width = width;
         preferredSize.height = height;
@@ -385,15 +385,12 @@ public class ImagePanel extends JPanel
     
     private static void setRenderingHints(Graphics2D g2d)
     {
-        setRenderingHints(g2d, Boolean.FALSE);
-    }
-    
-    private static void setRenderingHints(Graphics2D g2d, boolean withIntentToScale)
-    {
-        if (withIntentToScale)
-        {
-            g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        }
+    	// begin scale hints
+        
+    	g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        
+    	// end scale hints
+        
         g2d.setRenderingHint(RenderingHints.KEY_DITHERING, RenderingHints.VALUE_DITHER_DISABLE);
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
         g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
@@ -406,7 +403,6 @@ public class ImagePanel extends JPanel
     {
         Graphics2D g2d = (Graphics2D) g;
         super.paintComponent(g);
-        setRenderingHints(g2d);
         
         int[] offsets = transform.getOffsets();
         
@@ -419,7 +415,7 @@ public class ImagePanel extends JPanel
         }
         else
         {
-            g2d.drawImage(image, transform.get(), null);
+            g2d.drawImage(image.get(), transform.get(), null);
         }
         
         drawCursor(g2d);
@@ -445,7 +441,7 @@ public class ImagePanel extends JPanel
     {
         int screenWidth = image.getWidth();
         int screenHeight = image.getHeight();
-        setRGB(image, 0, 0, pixels, 0, 0, screenWidth, screenHeight, screenWidth, screenHeight);
+        image.setRGB(0, 0, pixels, 0, 0, screenWidth, screenHeight, screenWidth, screenHeight);
     }
     
     private void nts_clearFrameBuffer()
@@ -511,7 +507,7 @@ public class ImagePanel extends JPanel
                 solidPixelColor = (Integer) args[0];
                 if (segmentID == -1)
                 {
-                    fillRGB(image, solidPixelColor);
+                	image.fillRGB(solidPixelColor);
                     repaintBuffers();
                 	return;
                 }
@@ -539,7 +535,7 @@ public class ImagePanel extends JPanel
                 switch (alg)
                 {
                     case PIXELS:
-                        setRGB(image, startX, startY, pixels, 0, 0, tmp[0], tmp[1], tmp[0], tmp[1]);
+                    	image.setRGB(startX, startY, pixels, 0, 0, tmp[0], tmp[1], tmp[0], tmp[1]);
                         break;
                     case SOLID_COLOR:
                         int endX = startX + tmp[0];
@@ -677,8 +673,8 @@ public class ImagePanel extends JPanel
             // pull the entire image out and place into scaledImageCache
             scaledImageCache = new BufferedImage(preferredSize.width, preferredSize.height, image.getType());
             Graphics2D g2d = scaledImageCache.createGraphics();
-            setRenderingHints(g2d, Boolean.TRUE);
-            g2d.drawImage(image, 0, 0, scaledImageCache.getWidth(), scaledImageCache.getHeight(), 0, 0, image.getWidth(), image.getHeight(), null);
+            setRenderingHints(g2d);
+            g2d.drawImage(image.get(), 0, 0, scaledImageCache.getWidth(), scaledImageCache.getHeight(), 0, 0, image.getWidth(), image.getHeight(), null);
             g2d.dispose();
             didRepaint = true;
         }
@@ -780,8 +776,8 @@ public class ImagePanel extends JPanel
                     final int x2dst = Math.round(scaleFactors[0]*((float)x2src));
                     final int y2dst = Math.round(scaleFactors[1]*((float)y2src));
                     Graphics2D g2d = scaledImageCache.createGraphics();
-                    setRenderingHints(g2d, Boolean.TRUE);
-                    g2d.drawImage(image, x1dst, y1dst, x2dst, y2dst, x, y, x2src, y2src, null);
+                    setRenderingHints(g2d);
+                    g2d.drawImage(image.get(), x1dst, y1dst, x2dst, y2dst, x, y, x2src, y2src, null);
                     g2d.dispose();
                     super.repaint(offsets[0] + x1dst, offsets[1] + y1dst, x2dst - x1dst, y2dst - y1dst);
                 }
@@ -827,39 +823,6 @@ public class ImagePanel extends JPanel
         finally {
         	frameBufferLock.release();
         }
-    }
-    
-    private static void setRGB(BufferedImage dstimg, int dstx, int dsty,
-            int[] srcPixels, int srcx, int srcy, int srcw, int srch, int srcScanWidth, int srcScanHeight)
-    {
-        int dstw = dstimg.getWidth();
-        int dsth = dstimg.getHeight();
-        assert_(srcx + srcw <= srcScanWidth);
-        assert_(srcy + srch <= srcScanHeight);
-        assert_(srcw + dstx <= dstw);
-        assert_(srch + dsty <= dsth);
-        
-        int[] dstPixels = ((DataBufferInt) dstimg.getRaster().getDataBuffer()).getData();
-        
-        int dst = dsty * dstw + dstx;
-        int dstBlock = dst;
-        int src = srcy * srcScanWidth + srcx;
-        int srcBlock = src;
-        
-        for (int y=0; y<srch; y++)
-        {
-            System.arraycopy(srcPixels, src, dstPixels, dst, srcw);
-            dstBlock += dstw;
-            dst = dstBlock;
-            srcBlock += srcScanWidth;
-            src = srcBlock;
-        }
-    }
-    
-    private static void fillRGB(BufferedImage dstimg, int pixelColor)
-    {
-    	int[] dstPixels = ((DataBufferInt) dstimg.getRaster().getDataBuffer()).getData();
-    	Arrays.fill(dstPixels, pixelColor);
     }
     
     public void hideCursor()
