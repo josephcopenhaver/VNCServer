@@ -775,7 +775,7 @@ public class TaskDispatcher<T> extends Thread
 	    return (queue.size == 0 && inQueue.size == 0);
 	}
 	
-	public void dispatch(T k, Runnable r, Runnable onDestroy)
+	public void dispatch(T k, Runnable r, Runnable onDestroy, Semaphore semaphore)
 	{
 		try
 		{
@@ -784,16 +784,27 @@ public class TaskDispatcher<T> extends Thread
 			{
 			    if (disposed)
 			    {
-			        if (onDestroy != null)
+			        Semaphore t_semaphore = semaphore;
+			        semaphore = null;
+			        try
 			        {
-			            Runnable tmp = onDestroy;
-			            onDestroy = null;
-			            tmp.run();
+    			        if (onDestroy != null)
+    			        {
+    			            Runnable t_onDestroy = onDestroy;
+    			            onDestroy = null;
+    			            t_onDestroy.run();
+    			        }
+			        }
+			        finally {
+			            if (t_semaphore != null)
+                        {
+			                t_semaphore.release();
+                        }
 			        }
 			    }
 			    else
 			    {
-			        _dispatch(k, r, onDestroy, null);
+			        _dispatch(k, r, onDestroy, semaphore);
 			    }
 			}
 			finally {
@@ -808,6 +819,11 @@ public class TaskDispatcher<T> extends Thread
 			}
 			LLog.e(e);
 		}
+	}
+	
+	public void dispatch(T k, Runnable r, Runnable onDestroy)
+	{
+	    dispatch(k, r, onDestroy, null);
 	}
 	
 	public void dispatch(T k, Runnable r)

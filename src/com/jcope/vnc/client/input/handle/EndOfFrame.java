@@ -9,11 +9,18 @@ public class EndOfFrame extends Handle
 {
     
     @Override
-    public void handle(StateMachine stateMachine, Object[] args)
+    public void handle(final StateMachine stateMachine, Object[] args)
     {
         assert_(args == null);
         
-        stateMachine.flushFrameBuffer();
+        stateMachine.scheduleGUIAction(new Runnable() {
+
+            @Override
+            public void run() {
+                stateMachine.flushFrameBuffer();
+            }
+            
+        });
     }
     
 }

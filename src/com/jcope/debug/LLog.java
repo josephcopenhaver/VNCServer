@@ -108,10 +108,10 @@ public class LLog
 	    boolean rval;
 	    
 	    if (lastError instanceof RuntimeException_)
-        {
-            lastError = ((RuntimeException_) lastError).getExceptionRoot();
-        }
-        
+	    {
+	        lastError = ((RuntimeException_) lastError).getExceptionRoot();
+	    }
+	    
 	    if (lastError != null && e instanceof RuntimeException_)
         {
             e = ((RuntimeException_) e).getExceptionRoot();
