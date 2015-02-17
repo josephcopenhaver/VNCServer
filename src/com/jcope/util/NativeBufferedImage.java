@@ -26,7 +26,8 @@ public class NativeBufferedImage {
         public void mutate(int idx, int[] pixels, int pixel)
         {
         	assert_(bytesPerPixel == 3);
-            int midx = idx / 3;
+            int midx = idx / 4;
+            midx *= 3;
             pixel = mutate(pixel) & 0xFFFFFF;
             switch (idx % 4) {
             case 0:
@@ -41,11 +42,13 @@ public class NativeBufferedImage {
                 break;
             case 2:
                 // last two & first
+                midx++;
                 pixels[midx] = (pixels[midx] & 0xFFFF0000) | ((pixel >> 8) & 0x0000FFFF);
                 midx++;
                 pixels[midx] = (pixels[midx] & 0x00FFFFFF) | ((pixel << 24) & 0xFF000000);
                 break;
             case 3:
+                midx += 2;
                 // last 3
                 pixels[midx] = (pixels[midx] & 0xFF000000) | pixel;
                 break;
