@@ -13,7 +13,6 @@ import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicIntegerArray;
 
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
@@ -29,20 +28,21 @@ public class ImagePanel extends JPanel
     static class SynchronousTransform {
         
         private final Semaphore accessSema = new Semaphore(1, true);
-        private final AtomicIntegerArray a_offsets;
-        private final AtomicIntegerArray a_scaleFactors;
-        private volatile byte scaleState = 0;
+        private final int[] _offsets;
+        private final float[] _scaleFactors;
+        private volatile byte _scaleState = 0;
 
         public static final byte SCALING_MASK = 1;
         public static final byte SCALING_DOWN_MASK = 2;
         
         public SynchronousTransform()
         {
-            a_offsets = new AtomicIntegerArray(2);
-            a_scaleFactors = new AtomicIntegerArray(2);
-            int[] offsets = new int[2];
-            float[] scaleFactors = new float[]{1.0f, 1.0f};
-            nts_write(offsets, scaleFactors);
+            _offsets = new int[]{0, 0};
+            _scaleFactors = new float[]{1.0f, 1.0f};
+            synchronized(_scaleFactors){synchronized(_offsets){
+	            nts_write(_offsets);
+	            nts_write(_scaleFactors);
+            }}
         }
         
         public AffineTransform get()
@@ -57,37 +57,33 @@ public class ImagePanel extends JPanel
             }
             try
             {
-                return new AffineTransform((double) Float.intBitsToFloat(a_scaleFactors.get(0)), 0.0d, 0.0d, (double) Float.intBitsToFloat(a_scaleFactors.get(1)), (double) a_offsets.get(0), (double) a_offsets.get(1));
+                synchronized(_scaleFactors){synchronized(_offsets){
+                    return new AffineTransform((double) _scaleFactors[0], 0.0d, 0.0d, (double) _scaleFactors[1], (double) _offsets[0], (double) _offsets[1]);
+                }}
             }
             finally {
                 accessSema.release();
             }
         }
         
-        private void nts_write(int[] offsets, float[] scaleFactors)
-        {
-            nts_write(offsets);
-            nts_write(scaleFactors);
-        }
-        
         private void nts_write(int[] offsets)
         {
-            for (int i=0; i < offsets.length; i++)
+            for (int i=0; i < _offsets.length; i++)
             {
-                a_offsets.set(i, offsets[i]);
+                _offsets[i] = offsets[i];
             }
         }
         
         private void nts_write(float[] scaleFactors)
         {
             byte scaleState = 0;
-            for (int i=0; i < scaleFactors.length; i++)
+            for (int i=0; i < _scaleFactors.length; i++)
             {
                 if (scaleFactors[i] != 1.0f)
                 {
                     scaleState = SCALING_MASK;
                 }
-                a_scaleFactors.set(i, Float.floatToIntBits(scaleFactors[i]));
+                _scaleFactors[i] = scaleFactors[i];
             }
             if (
                 scaleState == SCALING_MASK
@@ -97,14 +93,14 @@ public class ImagePanel extends JPanel
             {
                 scaleState |= SCALING_DOWN_MASK;
             }
-            this.scaleState = scaleState;
+            _scaleState = scaleState;
         }
         
-        public void nts_offsets(int[] offsets)
+        private void nts_offsets(int[] offsets)
         {
-            for (int i=0; i < offsets.length; i++)
+            for (int i=0; i < _offsets.length; i++)
             {
-                offsets[i] = a_offsets.get(i);
+                offsets[i] = _offsets[i];
             }
         }
         
@@ -121,7 +117,10 @@ public class ImagePanel extends JPanel
             }
             try
             {
-                nts_offsets(offsets);
+            	synchronized(_offsets)
+            	{
+            		nts_offsets(offsets);
+            	}
                 return offsets;
             }
             finally {
@@ -131,9 +130,9 @@ public class ImagePanel extends JPanel
         
         public void nts_scaleFactors(float[] scaleFactors)
         {
-            for (int i=0; i < scaleFactors.length; i++)
+            for (int i=0; i < _scaleFactors.length; i++)
             {
-                scaleFactors[i] = Float.intBitsToFloat(a_scaleFactors.get(i));
+                scaleFactors[i] = _scaleFactors[i];
             }
         }
         
@@ -150,7 +149,10 @@ public class ImagePanel extends JPanel
             }
             try
             {
-                nts_scaleFactors(scaleFactors);
+            	synchronized(_scaleFactors)
+            	{
+            		nts_scaleFactors(scaleFactors);
+            	}
                 return scaleFactors;
             }
             finally {
@@ -177,96 +179,19 @@ public class ImagePanel extends JPanel
             }
             try
             {
-                nts_offsets(offsets);
-                nts_scaleFactors(scaleFactors);
+            	synchronized(_offsets)
+            	{
+            		nts_offsets(offsets);
+            	}
+                synchronized(_scaleFactors)
+                {
+                	nts_scaleFactors(scaleFactors);
+                }
                 if (scaleStates == null)
                 {
                     return;
                 }
-                scaleStates[0] = scaleState;
-            }
-            finally {
-                accessSema.release();
-            }
-        }
-        
-        public void write(int[] offsets, float[] scaleFactors)
-        {
-            try
-            {
-                accessSema.acquire();
-            }
-            catch (InterruptedException e)
-            {
-                LLog.e(e);
-            }
-            try
-            {
-                nts_write(offsets, scaleFactors);
-            }
-            finally {
-                accessSema.release();
-            }
-        }
-        
-        public void write(int[] offsets)
-        {
-            try
-            {
-                accessSema.acquire();
-            }
-            catch (InterruptedException e)
-            {
-                LLog.e(e);
-            }
-            try
-            {
-                nts_write(offsets);
-            }
-            finally {
-                accessSema.release();
-            }
-        }
-        
-        public void write(float[] scaleFactors)
-        {
-            try
-            {
-                accessSema.acquire();
-            }
-            catch (InterruptedException e)
-            {
-                LLog.e(e);
-            }
-            try
-            {
-                nts_write(scaleFactors);
-            }
-            finally {
-                accessSema.release();
-            }
-        }
-
-        public boolean setOffsets(int offX, int offY)
-        {
-            int[] offsets = new int[2];
-            try
-            {
-                accessSema.acquire();
-            }
-            catch (InterruptedException e)
-            {
-                LLog.e(e);
-            }
-            try
-            {
-                nts_offsets(offsets);
-                if (offsets[0] != offX || offsets[1] != offY)
-                {
-                    write(offsets);
-                    return true;
-                }
-                return false;
+                scaleStates[0] = _scaleState;
             }
             finally {
                 accessSema.release();
@@ -305,28 +230,30 @@ public class ImagePanel extends JPanel
             }
             try
             {
-                if (onOffsetChange == null && onChange == null)
-                {
-                    nts_write(offsets);
-                }
-                else if (offsets[0] != a_offsets.get(0)
-                    || offsets[1] != a_offsets.get(1))
-                {
-                    fireChange = true;
-                    fireOffsetChange = (onOffsetChange != null);
-                    nts_write(offsets);
-                }
-                if (onScaleFactorChange == null && onChange == null)
-                {
-                    nts_write(scaleFactors);
-                }
-                else if (scaleFactors[0] != Float.intBitsToFloat(a_scaleFactors.get(0))
-                    || scaleFactors[1] != Float.intBitsToFloat(a_scaleFactors.get(1)))
-                {
-                    fireChange = true;
-                    fireScaleFactorChange = (onScaleFactorChange != null);
-                    nts_write(scaleFactors);
-                }
+            	synchronized(_scaleFactors){synchronized(_offsets){
+                    if (onOffsetChange == null && onChange == null)
+                    {
+                        nts_write(offsets);
+                    }
+                    else if (offsets[0] != _offsets[0]
+                        || offsets[1] != _offsets[1])
+                    {
+                        fireChange = true;
+                        fireOffsetChange = (onOffsetChange != null);
+                        nts_write(offsets);
+                    }
+                    if (onScaleFactorChange == null && onChange == null)
+                    {
+                        nts_write(scaleFactors);
+                    }
+                    else if (scaleFactors[0] != _scaleFactors[0]
+                        || scaleFactors[1] != _scaleFactors[1])
+                    {
+                        fireChange = true;
+                        fireScaleFactorChange = (onScaleFactorChange != null);
+                        nts_write(scaleFactors);
+                    }
+                }}
                 if (fireOffsetChange)
                 {
                     onOffsetChange.run();
@@ -347,7 +274,7 @@ public class ImagePanel extends JPanel
         
         public boolean isScalingDown()
         {
-            return (scaleState & SCALING_DOWN_MASK) != 0;
+            return (_scaleState & SCALING_DOWN_MASK) != 0;
         }
     }
     

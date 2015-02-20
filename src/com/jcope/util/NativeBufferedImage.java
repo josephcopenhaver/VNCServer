@@ -258,6 +258,12 @@ public class NativeBufferedImage {
             	mutator.mutate(idx, alignedSolidPixels, pixelColor);
             }
             int idx = 0;
+            int greatest_factor = dstPixels.length - (dstPixels.length % alignedSolidPixels.length);
+            while (idx < greatest_factor)
+            {
+                System.arraycopy(alignedSolidPixels, 0, dstPixels, idx, alignedSolidPixels.length);
+                idx += alignedSolidPixels.length;
+            }
             while (idx < dstPixels.length)
             {
             	dstPixels[idx] = alignedSolidPixels[idx % alignedSolidPixels.length];
