@@ -38,6 +38,7 @@ public class Style
         point = frame.getLocationOnScreen();
         frame.setVisible(Boolean.FALSE);
         
+        FOUND_BOUNDS:
         for (GraphicsDevice gDevice : GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices())
         { 
             for (GraphicsConfiguration gConfig : gDevice.getConfigurations())
@@ -48,7 +49,7 @@ public class Style
                 {
                     gcBounds = bounds;
                     insets = Toolkit.getDefaultToolkit().getScreenInsets(gConfig);
-                    break;
+                    break FOUND_BOUNDS;
                 }
             }
         }
