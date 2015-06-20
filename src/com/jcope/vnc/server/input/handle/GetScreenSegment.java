@@ -27,13 +27,13 @@ public class GetScreenSegment extends Handle
         
         final FixedLengthBitSet flbs = (FixedLengthBitSet) arg0;
         
-        client.subscribe(flbs);
         final ClientHandler f_client = client;
         
         client.dispatchTransaction(new Runnable(){
 
 			@Override
 			public void run() {
+			    f_client.subscribe(flbs);
 				try {
 		            for (int segmentID = flbs.nextSetBit(0); segmentID >= 0; segmentID = flbs.nextSetBit(segmentID + 1))
 		            {
