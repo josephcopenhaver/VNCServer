@@ -84,6 +84,10 @@ public class ClientHandler extends Thread
     private Semaphore monitorLock = new Semaphore(1, true);
     private WeakReference<?>[] monitorRef = new WeakReference<?>[]{null};
     private volatile boolean paused = false;
+    
+    private Semaphore transactionQueueSema = new Semaphore(1, true);
+    private volatile int transaction_tid = -1;
+    private TaskDispatcher<Integer> transactionDispatcher;
 	
 	public ClientHandler(Socket socket) throws IOException
 	{
@@ -94,6 +98,7 @@ public class ClientHandler extends Thread
 		String strID = toString();
 		unserializedDispatcher = new TaskDispatcher<Integer>(String.format("Non-serial dispatcher: %s", strID));
         serializedDispatcher = new TaskDispatcher<Integer>(String.format("Serial dispatcher: %s", strID));
+        transactionDispatcher = new TaskDispatcher<Integer>(String.format("Transaction dispatcher: %s", strID));
         
         unserializedDispatcher.setImmediate(true, getNonSerialTID(SERVER_EVENT.READ_INPUT_EVENTS, null, 0));
 	}
@@ -1044,6 +1049,23 @@ public class ClientHandler extends Thread
 		}
 		finally {
 			monitorLock.release();
+		}
+	}
+
+	public void dispatchTransaction(Runnable action) {
+		try {
+			transactionQueueSema.acquire();
+		} catch (InterruptedException e) {
+			LLog.e(e);
+		}
+		try {
+			int tid = transaction_tid;
+			tid++;
+			transaction_tid = tid;
+			transactionDispatcher.dispatch(tid, action);
+		}
+		finally {
+			transactionQueueSema.release();
 		}
 	}
 }
