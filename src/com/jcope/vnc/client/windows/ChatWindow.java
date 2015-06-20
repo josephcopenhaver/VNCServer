@@ -4,35 +4,30 @@ import javax.swing.JFrame;
 
 import com.jcope.vnc.client.MainFrame;
 
-public class ChatWindow extends JFrame
-{
+public class ChatWindow extends JFrame {
     /**
      * Generated Value
      */
     private static final long serialVersionUID = -5046705738778651186L;
-    
-    private static ChatWindow[] selfRef = new ChatWindow[]{null};
-    
-    private ChatWindow(MainFrame mainFrame)
-    {
+
+    private static ChatWindow[] selfRef = new ChatWindow[] { null };
+
+    private ChatWindow(MainFrame mainFrame) {
         // TODO: complete
     }
-    
-    public ChatWindow getInstance()
-    {
+
+    public ChatWindow getInstance() {
         ChatWindow rval = selfRef[0];
-        
-        if (rval == null)
-        {
+
+        if (rval == null) {
             synchronized (selfRef) {
                 rval = selfRef[0];
-                if (rval == null)
-                {
+                if (rval == null) {
                     rval = new ChatWindow(MainFrame.getCachedInstance());
                 }
             }
         }
-        
+
         return rval;
     }
 }

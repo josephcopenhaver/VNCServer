@@ -7,17 +7,15 @@ import com.jcope.vnc.client.MainFrame;
 import com.jcope.vnc.client.StateMachine;
 import com.jcope.vnc.client.input.Handle;
 
-public class CursorGone extends Handle
-{
-    
+public class CursorGone extends Handle {
+
     @Override
-    public void handle(StateMachine stateMachine, Object[] args)
-    {
+    public void handle(StateMachine stateMachine, Object[] args) {
         assert_(args == null);
-        
+
         MainFrame frame = stateMachine.getFrame();
         ImagePanel imagePanel = frame.getImagePanel();
         imagePanel.hideCursor();
     }
-    
+
 }

@@ -12,42 +12,33 @@ import com.jcope.vnc.server.ClientHandler;
 import com.jcope.vnc.server.input.Handle;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
-public class GetClipboard extends Handle
-{
-    
+public class GetClipboard extends Handle {
+
     @Override
-    public void handle(ClientHandler client, Object[] args)
-    {
+    public void handle(ClientHandler client, Object[] args) {
         assert_(null == args);
-        
-        if (!((Boolean)Server.SERVER_PROPERTIES.SUPPORT_CLIPBOARD_SYNCHRONIZATION.getValue()))
-        {
+
+        if (!((Boolean) Server.SERVER_PROPERTIES.SUPPORT_CLIPBOARD_SYNCHRONIZATION
+                .getValue())) {
             return;
         }
-        
+
         Object[] clipboardContents = null;
-        
+
         ClipboardInterface.lock();
-        try
-        {
+        try {
             clipboardContents = ClipboardInterface.get();
-        }
-        catch (IOException e)
-        {
+        } catch (IOException e) {
             LLog.e(e, Boolean.FALSE);
-        }
-        catch (ClipboardBusyException e)
-        {
+        } catch (ClipboardBusyException e) {
             LLog.e(e, Boolean.FALSE);
-        }
-        finally {
+        } finally {
             ClipboardInterface.unlock();
         }
-        
-        if (null != clipboardContents)
-        {
+
+        if (null != clipboardContents) {
             client.sendEvent(SERVER_EVENT.SET_CLIPBOARD, clipboardContents);
         }
     }
-    
+
 }

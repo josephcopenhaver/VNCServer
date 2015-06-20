@@ -14,53 +14,43 @@ import com.jcope.vnc.server.input.Handle;
 import com.jcope.vnc.server.screen.Manager;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
-public class SetClipboard extends Handle
-{
+public class SetClipboard extends Handle {
     @Override
-    public void handle(ClientHandler client, Object[] args)
-    {
+    public void handle(ClientHandler client, Object[] args) {
         assert_(null != args);
         assert_(args.length > 0);
         assert_(args.length % 2 == 0);
-        
-        if (!((Boolean)Server.SERVER_PROPERTIES.SUPPORT_CLIPBOARD_SYNCHRONIZATION.getValue()))
-        {
+
+        if (!((Boolean) Server.SERVER_PROPERTIES.SUPPORT_CLIPBOARD_SYNCHRONIZATION
+                .getValue())) {
             return;
         }
-        
+
         ClipboardMonitor clipboardMonitor = ClipboardMonitor.getInstance();
         boolean forwardChangeNotice = Boolean.FALSE;
-        
+
         ClipboardInterface.lock();
-        try
-        {
+        try {
             clipboardMonitor.lockAndPause();
-            try
-            {
+            try {
                 ClipboardInterface.set(args);
                 forwardChangeNotice = Boolean.TRUE;
-            }
-            catch (IOException e)
-            {
+            } catch (IOException e) {
                 LLog.e(e, Boolean.FALSE);
-            }
-            catch (ClipboardBusyException e)
-            {
+            } catch (ClipboardBusyException e) {
                 LLog.e(e, Boolean.FALSE);
-            }
-            finally {
+            } finally {
                 clipboardMonitor.unlockAndUnpause();
             }
-        }
-        finally {
+        } finally {
             ClipboardInterface.unlock();
         }
-        
+
         // Notify all OTHER clients of the clipboard contents change
-        if (forwardChangeNotice)
-        {
-            Manager.getInstance().sendToAllExcept(client, SERVER_EVENT.CLIPBOARD_CHANGED, (Object[]) null);
+        if (forwardChangeNotice) {
+            Manager.getInstance().sendToAllExcept(client,
+                    SERVER_EVENT.CLIPBOARD_CHANGED, (Object[]) null);
         }
     }
-    
+
 }

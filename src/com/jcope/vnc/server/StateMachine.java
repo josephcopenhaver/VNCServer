@@ -12,82 +12,71 @@ import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
  * 
  * @author Joseph Copenhaver
  *
- * Handle input from the client and server
+ *         Handle input from the client and server
  * 
  */
 
+public class StateMachine {
 
-public class StateMachine
-{
+    public static void handleClientInput(ClientHandler client, Object obj) {
+        if (obj instanceof CLIENT_EVENT) {
+            _handleClientInput(client, (CLIENT_EVENT) obj, null);
+        } else {
+            Msg msg = (Msg) obj;
+            _handleClientInput(client, (CLIENT_EVENT) msg.event, msg.args);
+        }
+    }
 
-    public static void handleClientInput(ClientHandler client, Object obj)
-	{
-        if (obj instanceof CLIENT_EVENT)
-		{
-			_handleClientInput(client, (CLIENT_EVENT) obj, null);
-		}
-		else
-		{
-			Msg msg = (Msg) obj;
-			_handleClientInput(client, (CLIENT_EVENT) msg.event, msg.args);
-		}
-	}
-    
-    private static void _handleClientInput(ClientHandler client, CLIENT_EVENT event, Object[] args)
-	{
-		LLog.logEvent(String.format("Client \"%s\"", client.toString()), event, args);
-		Handler.getInstance().handle(client, event, args);
-	}
-	
-    public static void handleServerEvent(final ClientHandler notThiz, ArrayList<ClientHandler> clients, JitCompressedEvent jce, SERVER_EVENT event)
-    {
-        for (ClientHandler client : clients)
-        {
-            if (notThiz != client)
-            {
+    private static void _handleClientInput(ClientHandler client,
+            CLIENT_EVENT event, Object[] args) {
+        LLog.logEvent(String.format("Client \"%s\"", client.toString()), event,
+                args);
+        Handler.getInstance().handle(client, event, args);
+    }
+
+    public static void handleServerEvent(final ClientHandler notThiz,
+            ArrayList<ClientHandler> clients, JitCompressedEvent jce,
+            SERVER_EVENT event) {
+        for (ClientHandler client : clients) {
+            if (notThiz != client) {
                 client.sendEvent(jce);
             }
         }
     }
-    
-    public static void handleServerEvent(ArrayList<ClientHandler> clients, SERVER_EVENT event)
-    {
+
+    public static void handleServerEvent(ArrayList<ClientHandler> clients,
+            SERVER_EVENT event) {
         handleServerEvent(clients, event, (Object[]) null);
     }
-    
-    public static void handleServerEvent(ArrayList<ClientHandler> clients, SERVER_EVENT event, Object... args)
-    {
-        if (clients.size() > 1)
-        {
-            JitCompressedEvent jce = JitCompressedEvent.getInstance(event, args);
-            try
-            {
-                for (ClientHandler client : clients)
-                {
+
+    public static void handleServerEvent(ArrayList<ClientHandler> clients,
+            SERVER_EVENT event, Object... args) {
+        if (clients.size() > 1) {
+            JitCompressedEvent jce = JitCompressedEvent
+                    .getInstance(event, args);
+            try {
+                for (ClientHandler client : clients) {
                     client.sendEvent(jce);
                 }
-            }
-            finally {
+            } finally {
                 jce.release();
             }
-        }
-        else
-        {
+        } else {
             for (ClientHandler client : clients) // just in case something shift
             {
                 handleServerEvent(client, event, args);
             }
         }
     }
-    
-    public static void handleServerEvent(ClientHandler client, SERVER_EVENT event)
-    {
+
+    public static void handleServerEvent(ClientHandler client,
+            SERVER_EVENT event) {
         client.sendEvent(event);
     }
-    
-    public static void handleServerEvent(ClientHandler client, SERVER_EVENT event, Object... args)
-	{
-		client.sendEvent(event, args);
-	}
-	
+
+    public static void handleServerEvent(ClientHandler client,
+            SERVER_EVENT event, Object... args) {
+        client.sendEvent(event, args);
+    }
+
 }

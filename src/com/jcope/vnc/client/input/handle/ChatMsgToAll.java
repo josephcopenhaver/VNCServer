@@ -5,13 +5,11 @@ import static com.jcope.debug.Debug.assert_;
 import com.jcope.vnc.client.StateMachine;
 import com.jcope.vnc.client.input.Handle;
 
-public class ChatMsgToAll extends Handle
-{
-    
+public class ChatMsgToAll extends Handle {
+
     @Override
-    public void handle(StateMachine stateMachine, Object[] args)
-    {
+    public void handle(StateMachine stateMachine, Object[] args) {
         assert_(true); // TODO: remove me and finish
     }
-    
+
 }

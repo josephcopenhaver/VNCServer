@@ -26,10 +26,9 @@ import com.jcope.vnc.shared.InputEvent;
 import com.jcope.vnc.shared.InputEventInfo.INPUT_TYPE;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
 
-public class EventListenerDecorator
-{
+public class EventListenerDecorator {
     public static StateMachine stateMachine = null;
-    
+
     private static FrameDecorator nativeDecorator = null;
     private static volatile ImagePanel currentPanel = null;
     private static volatile JFrame currentParent = null;
@@ -37,239 +36,197 @@ public class EventListenerDecorator
     private static Point point = new Point();
     private static boolean traversalKeysEnabled = true;
     private static ClipboardListener clipboardListener = null;
-    
-    static
-    {
-        try
-        {
+
+    static {
+        try {
             Class<?> cl = Class.forName("com.jcope.vnc.client.NativeDecorator");
-            Constructor<?> c = cl.getDeclaredConstructor((Class<?>[])null);
+            Constructor<?> c = cl.getDeclaredConstructor((Class<?>[]) null);
             nativeDecorator = (FrameDecorator) c.newInstance();
-        }
-        catch (InstantiationException e)
-        {
+        } catch (InstantiationException e) {
             LLog.e(e);
-        }
-        catch (IllegalAccessException e)
-        {
+        } catch (IllegalAccessException e) {
             LLog.e(e);
-        }
-        catch (IllegalArgumentException e)
-        {
+        } catch (IllegalArgumentException e) {
             LLog.e(e);
-        }
-        catch (InvocationTargetException e)
-        {
+        } catch (InvocationTargetException e) {
             LLog.e(e);
-        }
-        catch (NoSuchMethodException e)
-        {
+        } catch (NoSuchMethodException e) {
             LLog.e(e);
-        }
-        catch (SecurityException e)
-        {
+        } catch (SecurityException e) {
             LLog.e(e);
-        }
-        catch (ClassNotFoundException e)
-        {
+        } catch (ClassNotFoundException e) {
             // Do Nothing
-            if (DEBUG) {LLog.w(e);}
+            if (DEBUG) {
+                LLog.w(e);
+            }
         }
     }
-    
-    public static void decorate(JFrame parent, ImagePanel panel)
-    {
+
+    public static void decorate(JFrame parent, ImagePanel panel) {
         assert_(parent != null);
-        try
-        {
+        try {
             accessSema.acquire();
-        }
-        catch (InterruptedException e)
-        {
+        } catch (InterruptedException e) {
             LLog.e(e);
         }
-        try
-        {
+        try {
             ImagePanel oldPanel = currentPanel;
             currentPanel = panel;
-            if (oldPanel != null)
-            {
+            if (oldPanel != null) {
                 undecorate(currentParent, oldPanel);
             }
-            if (panel != null)
-            {
+            if (panel != null) {
                 currentParent = parent;
                 _decorate(parent, panel);
-            }
-            else
-            {
+            } else {
                 currentParent = null;
             }
-        }
-        finally {
+        } finally {
             accessSema.release();
         }
     }
-    
+
     private static KeyListener keyListener = new KeyListener() {
-        
-        private boolean isModifier(KeyEvent e)
-        {
+
+        private boolean isModifier(KeyEvent e) {
             boolean rval = false;
-            
-            switch (e.getKeyCode())
-            {
-                case KeyEvent.VK_SHIFT:
-                case KeyEvent.VK_CONTROL:
-                case KeyEvent.VK_META:
-                case KeyEvent.VK_ALT:
-                    rval = true;
-                    break;
-                default:
-                    break;
+
+            switch (e.getKeyCode()) {
+            case KeyEvent.VK_SHIFT:
+            case KeyEvent.VK_CONTROL:
+            case KeyEvent.VK_META:
+            case KeyEvent.VK_ALT:
+                rval = true;
+                break;
+            default:
+                break;
             }
-            
+
             return rval;
         }
-        
+
         @Override
-        public void keyTyped(KeyEvent e)
-        {
+        public void keyTyped(KeyEvent e) {
             // Do Nothing
         }
-        
+
         @Override
-        public void keyReleased(KeyEvent e)
-        {
-            if (!isModifier(e))
-            {
+        public void keyReleased(KeyEvent e) {
+            if (!isModifier(e)) {
                 InputEvent event = new InputEvent(INPUT_TYPE.KEY_UP, e);
                 stateMachine.addInput(event);
             }
         }
-        
+
         @Override
-        public void keyPressed(KeyEvent e)
-        {
-            if (!isModifier(e))
-            {
+        public void keyPressed(KeyEvent e) {
+            if (!isModifier(e)) {
                 InputEvent event = new InputEvent(INPUT_TYPE.KEY_DOWN, e);
                 stateMachine.addInput(event);
             }
         }
-        
+
     };
-    
+
     private static MouseMotionListener mouseMotionListener = new MouseMotionListener() {
-        
+
         @Override
-        public void mouseMoved(MouseEvent e)
-        {
-            if (readPoint(e))
-            {
-                InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_MOVE, e, point.x, point.y);
+        public void mouseMoved(MouseEvent e) {
+            if (readPoint(e)) {
+                InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_MOVE, e,
+                        point.x, point.y);
                 stateMachine.addInput(event);
             }
         }
-        
+
         @Override
-        public void mouseDragged(MouseEvent e)
-        {
-            if (readPoint(e))
-            {
-                InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_MOVE, e, point.x, point.y);
+        public void mouseDragged(MouseEvent e) {
+            if (readPoint(e)) {
+                InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_MOVE, e,
+                        point.x, point.y);
                 stateMachine.addInput(event);
             }
         }
-        
+
     };
-    
+
     private static MouseListener mouseListener = new MouseListener() {
 
         @Override
-        public void mouseClicked(MouseEvent e)
-        {
+        public void mouseClicked(MouseEvent e) {
             // Do Nothing
         }
 
         @Override
-        public void mouseEntered(MouseEvent e)
-        {
+        public void mouseEntered(MouseEvent e) {
             // Do Nothing
         }
 
         @Override
-        public void mouseExited(MouseEvent e)
-        {
+        public void mouseExited(MouseEvent e) {
             // Do Nothing
         }
 
         @Override
-        public void mousePressed(MouseEvent e)
-        {
-            if (readPoint(e))
-            {
-                InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_DOWN, e, point.x, point.y);
+        public void mousePressed(MouseEvent e) {
+            if (readPoint(e)) {
+                InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_DOWN, e,
+                        point.x, point.y);
                 stateMachine.addInput(event);
             }
         }
 
         @Override
-        public void mouseReleased(MouseEvent e)
-        {
-            if (readPoint(e))
-            {
-                InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_UP, e, point.x, point.y);
+        public void mouseReleased(MouseEvent e) {
+            if (readPoint(e)) {
+                InputEvent event = new InputEvent(INPUT_TYPE.MOUSE_UP, e,
+                        point.x, point.y);
                 stateMachine.addInput(event);
             }
         }
-        
+
     };
-    
+
     private static MouseWheelListener mouseWheelListener = new MouseWheelListener() {
 
         @Override
-        public void mouseWheelMoved(MouseWheelEvent e)
-        {
+        public void mouseWheelMoved(MouseWheelEvent e) {
             InputEvent event = new InputEvent(INPUT_TYPE.WHEEL_SCROLL, e);
-            if (event.mwheel() != 0.0d)
-            {
-            	stateMachine.addInput(event);
+            if (event.mwheel() != 0.0d) {
+                stateMachine.addInput(event);
             }
         }
-        
+
     };
-    
-    private static boolean readPoint(MouseEvent e)
-    {
+
+    private static boolean readPoint(MouseEvent e) {
         Point t = e.getPoint();
-        
+
         point.x = t.x;
         point.y = t.y;
-        
+
         return currentPanel.worldToScale(point);
     }
-    
-    private static void _decorate(JFrame parent, ImagePanel panel)
-    {
-        if (stateMachine.isClipboardSyncEnabled())
-        {
+
+    private static void _decorate(JFrame parent, ImagePanel panel) {
+        if (stateMachine.isClipboardSyncEnabled()) {
             // clipboard synchronization is enabled
-            
+
             clipboardListener = new ClipboardListener() {
 
                 @Override
-                public void onChange(Clipboard clipboard)
-                {
+                public void onChange(Clipboard clipboard) {
                     stateMachine.sendEvent(CLIENT_EVENT.CLIPBOARD_CHANGED);
                 }
-                
+
             };
-            
+
             ClipboardMonitor.getInstance().addListener(clipboardListener);
         }
-        
-        if (nativeDecorator != null) {nativeDecorator.decorate(parent);}
+
+        if (nativeDecorator != null) {
+            nativeDecorator.decorate(parent);
+        }
         //
         traversalKeysEnabled = parent.getFocusTraversalKeysEnabled();
         parent.setFocusTraversalKeysEnabled(false);
@@ -279,16 +236,16 @@ public class EventListenerDecorator
         panel.addMouseListener(mouseListener);
         panel.addMouseWheelListener(mouseWheelListener);
     }
-    
-    private static void undecorate(JFrame parent, ImagePanel panel)
-    {
-        if (null != clipboardListener)
-        {
+
+    private static void undecorate(JFrame parent, ImagePanel panel) {
+        if (null != clipboardListener) {
             ClipboardMonitor.getInstance().removeListener(clipboardListener);
             clipboardListener = null;
         }
-        
-        if (nativeDecorator != null) {nativeDecorator.undecorate();}
+
+        if (nativeDecorator != null) {
+            nativeDecorator.undecorate();
+        }
         //
         parent.removeKeyListener(keyListener);
         panel.removeMouseMotionListener(mouseMotionListener);

@@ -9,192 +9,151 @@ import com.jcope.vnc.shared.JitCompressable;
 import com.jcope.vnc.shared.Msg;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
 
-public class JitCompressedEvent implements JitCompressable
-{
-    
+public class JitCompressedEvent implements JitCompressable {
+
     private static final Semaphore poolSyncLock = new Semaphore(1, true);
-    private static final ArrayList<JitCompressedEvent> objPool = new  ArrayList<JitCompressedEvent>();
-    
+    private static final ArrayList<JitCompressedEvent> objPool = new ArrayList<JitCompressedEvent>();
+
     private final Semaphore readSyncLock;
     private final Semaphore releaseSyncLock;
-    
+
     // Must have a local refcount
     // using BufferPool ref's refCount is NOT an option
     // this counter is for the container (which serves git compressed instances)
     private volatile int refCount;
-    
+
     private volatile ByteBufferPool.PoolRef ref;
     private volatile SERVER_EVENT event;
     private volatile Object[] args;
-    
+
     private final Runnable onDestroy;
-    
-    private JitCompressedEvent()
-    {
+
+    private JitCompressedEvent() {
         readSyncLock = new Semaphore(1, true);
         releaseSyncLock = new Semaphore(1, true);
         reset();
         onDestroy = new Runnable() {
 
             @Override
-            public void run()
-            {
+            public void run() {
                 release();
             }
-            
+
         };
     }
-    
-    private void reset()
-    {
+
+    private void reset() {
         refCount = 1;
         ref = null;
         event = null;
         args = null;
     }
-    
-    public static void clearPool()
-    {
-        try
-        {
+
+    public static void clearPool() {
+        try {
             poolSyncLock.acquire();
-        }
-        catch (InterruptedException e)
-        {
+        } catch (InterruptedException e) {
             LLog.e(e);
         }
-        
-        try
-        {
-            synchronized(objPool) {
+
+        try {
+            synchronized (objPool) {
                 objPool.clear();
             }
-        }
-        finally {
+        } finally {
             poolSyncLock.release();
         }
     }
-    
-    public static JitCompressedEvent getInstance(SERVER_EVENT event, Object[] args)
-    {
+
+    public static JitCompressedEvent getInstance(SERVER_EVENT event,
+            Object[] args) {
         JitCompressedEvent rval = null;
-        try
-        {
+        try {
             poolSyncLock.acquire();
-        }
-        catch (InterruptedException e)
-        {
+        } catch (InterruptedException e) {
             LLog.e(e);
         }
-        
-        try
-        {
-            synchronized(objPool) {
-                if (!objPool.isEmpty())
-                {
-                    rval = objPool.remove(objPool.size()-1);
+
+        try {
+            synchronized (objPool) {
+                if (!objPool.isEmpty()) {
+                    rval = objPool.remove(objPool.size() - 1);
                 }
             }
-        }
-        finally {
+        } finally {
             poolSyncLock.release();
         }
-        
-        if (rval == null)
-        {
+
+        if (rval == null) {
             rval = new JitCompressedEvent();
         }
-        
+
         rval.event = event;
         rval.args = args;
-        
+
         return rval;
     }
-    
-    public void acquire()
-    {
+
+    public void acquire() {
         refCount++;
     }
-    
-    public void release()
-    {
-        try
-        {
+
+    public void release() {
+        try {
             releaseSyncLock.acquire();
-        }
-        catch (InterruptedException e)
-        {
+        } catch (InterruptedException e) {
             LLog.e(e);
         }
-        
-        try
-        {
-            if ((--refCount) <= 0)
-            {
-                if (ref != null)
-                {
+
+        try {
+            if ((--refCount) <= 0) {
+                if (ref != null) {
                     ref.release();
                 }
                 reset();
-                try
-                {
+                try {
                     poolSyncLock.acquire();
-                }
-                catch (InterruptedException e)
-                {
+                } catch (InterruptedException e) {
                     LLog.e(e);
                 }
-                try
-                {
-                    synchronized(objPool) {
+                try {
+                    synchronized (objPool) {
                         objPool.add(this);
                     }
-                }
-                finally {
+                } finally {
                     poolSyncLock.release();
                 }
             }
-        }
-        finally {
+        } finally {
             releaseSyncLock.release();
         }
     }
 
-    public byte[] getCompressed()
-    {
-        if (ref == null)
-        {
-            try
-            {
+    public byte[] getCompressed() {
+        if (ref == null) {
+            try {
                 readSyncLock.acquire();
-            }
-            catch (InterruptedException e)
-            {
+            } catch (InterruptedException e) {
                 LLog.e(e);
             }
-            
-            try
-            {
-                if (ref == null)
-                {
+
+            try {
+                if (ref == null) {
                     ref = Msg.getCompressed(event, args);
                 }
-            }
-            finally {
+            } finally {
                 readSyncLock.release();
             }
         }
-        
+
         return ref.get();
     }
-    
-    public SERVER_EVENT getEvent()
-    {
+
+    public SERVER_EVENT getEvent() {
         return event;
     }
 
-    public Runnable getOnDestroy()
-    {
+    public Runnable getOnDestroy() {
         return onDestroy;
     }
 }

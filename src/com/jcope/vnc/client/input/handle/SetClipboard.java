@@ -11,38 +11,29 @@ import com.jcope.util.ClipboardMonitor;
 import com.jcope.vnc.client.StateMachine;
 import com.jcope.vnc.client.input.Handle;
 
-public class SetClipboard extends Handle
-{
+public class SetClipboard extends Handle {
     @Override
-    public void handle(StateMachine stateMachine, Object[] args)
-    {
+    public void handle(StateMachine stateMachine, Object[] args) {
         assert_(null != args);
         assert_(args.length > 0);
         assert_(args.length % 2 == 0);
-        
-        if (!stateMachine.isClipboardSyncEnabled())
-        {
+
+        if (!stateMachine.isClipboardSyncEnabled()) {
             return;
         }
-        
+
         ClipboardMonitor clipboardMonitor = ClipboardMonitor.getInstance();
-        
+
         clipboardMonitor.lockAndPause();
-        try
-        {
+        try {
             ClipboardInterface.set(args);
-        }
-        catch (IOException e)
-        {
+        } catch (IOException e) {
             LLog.e(e, Boolean.FALSE);
-        }
-        catch (ClipboardBusyException e)
-        {
+        } catch (ClipboardBusyException e) {
             LLog.e(e, Boolean.FALSE);
-        }
-        finally {
+        } finally {
             clipboardMonitor.unlockAndUnpause();
         }
     }
-    
+
 }
