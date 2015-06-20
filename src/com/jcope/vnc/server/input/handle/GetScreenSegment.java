@@ -21,25 +21,31 @@ public class GetScreenSegment extends Handle
         
         if (arg0 instanceof Integer)
         {
-            GraphicsSegment graphicsSegment = client.getSegment(-1);
-            client.sendEvent(SERVER_EVENT.SCREEN_SEGMENT_UPDATE, -1, graphicsSegment);
+            client.sendEvent(SERVER_EVENT.ENTIRE_SCREEN_UPDATE);
             return;
         }
         
-        FixedLengthBitSet flbs = (FixedLengthBitSet) arg0;
+        final FixedLengthBitSet flbs = (FixedLengthBitSet) arg0;
         
         client.subscribe(flbs);
+        final ClientHandler f_client = client;
         
-        try {
-            for (int segmentID = flbs.nextSetBit(0); segmentID >= 0; segmentID = flbs.nextSetBit(segmentID + 1))
-            {
-                GraphicsSegment graphicsSegment = client.getSegment(segmentID);
-                client.sendEvent(SERVER_EVENT.SCREEN_SEGMENT_UPDATE, segmentID, graphicsSegment);
-            }
-        }
-        finally {
-            client.sendEvent(SERVER_EVENT.END_OF_FRAME);
-        }
+        client.dispatchTransaction(new Runnable(){
+
+			@Override
+			public void run() {
+				try {
+		            for (int segmentID = flbs.nextSetBit(0); segmentID >= 0; segmentID = flbs.nextSetBit(segmentID + 1))
+		            {
+		                GraphicsSegment graphicsSegment = f_client.getSegment(segmentID);
+		                f_client.sendEvent(SERVER_EVENT.SCREEN_SEGMENT_UPDATE, segmentID, graphicsSegment);
+		            }
+		        }
+		        finally {
+		        	f_client.sendEvent(SERVER_EVENT.END_OF_FRAME);
+		        }
+			}
+		});
     }
     
 }

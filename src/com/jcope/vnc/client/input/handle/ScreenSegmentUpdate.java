@@ -21,28 +21,20 @@ public class ScreenSegmentUpdate extends Handle<StateMachine>
         assert_(args.length == 2);
         assert_(args[0] instanceof Integer);
         
-        MainFrame frame = stateMachine.getFrame();
-        final ImagePanel imagePanel = frame.getImagePanel();
-        
         final int segmentID = (Integer) args[0];
-        assert_(segmentID >= -1);
+        assert_(segmentID >= 0);
         
         if (args[1] instanceof int[])
         {
             final int[] pixels = (int[]) args[1];
             assert_(pixels != null);
             
-            stateMachine.scheduleGUIAction(new Runnable() {
-
-				@Override
-				public void run() {
-					imagePanel.setSegmentPixels(segmentID, pixels);
-				}
-            	
-            });
+            handleSetSegmentPixels(stateMachine, segmentID, pixels);
         }
         else if (args[1] instanceof Integer)
         {
+        	MainFrame frame = stateMachine.getFrame();
+            final ImagePanel imagePanel = frame.getImagePanel();
             final Integer solidPixelColor = (Integer) args[1];
             assert_(solidPixelColor != null);
             
@@ -60,4 +52,17 @@ public class ScreenSegmentUpdate extends Handle<StateMachine>
             assert_(false);
         }
     }
+
+	public static void handleSetSegmentPixels(StateMachine stateMachine, final int segmentID, final int[] pixels) {
+		MainFrame frame = stateMachine.getFrame();
+        final ImagePanel imagePanel = frame.getImagePanel();
+		stateMachine.scheduleGUIAction(new Runnable() {
+
+			@Override
+			public void run() {
+				imagePanel.setSegmentPixels(segmentID, pixels);
+			}
+        	
+        });
+	}
 }
