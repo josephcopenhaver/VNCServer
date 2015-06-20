@@ -31,6 +31,7 @@ import com.jcope.vnc.client.input.handle.ScreenSegmentChanged;
 import com.jcope.vnc.client.input.handle.ScreenSegmentSizeUpdate;
 import com.jcope.vnc.client.input.handle.ScreenSegmentUpdate;
 import com.jcope.vnc.client.input.handle.SetClipboard;
+import com.jcope.vnc.client.input.handle.EntireScreenUpdate;
 import com.jcope.vnc.client.input.handle.EndOfFrame;
 import com.jcope.vnc.shared.StateMachine.CLIENT_EVENT;
 import com.jcope.vnc.shared.StateMachine.SERVER_EVENT;
@@ -69,6 +70,7 @@ public class Handler extends com.jcope.vnc.shared.input.Handler<StateMachine, SE
         ScreenSegmentSizeUpdate.class,
         ScreenSegmentUpdate.class,
         SetClipboard.class,
+        EntireScreenUpdate.class,
         EndOfFrame.class
     };
     

@@ -639,69 +639,108 @@ public class ClientHandler extends Thread
 		}
 		if (dispatch)
 		{
-		    final IOERunnable msgAction;
-		    if (event == SERVER_EVENT.SCREEN_SEGMENT_UPDATE)
-	        {
-		        assert_(jce == null);
-	            assert_(args.length == 2);
-	            
-	            msgAction = new IOERunnable() {
+		    final IOERunnable f_msgAction;
+		    IOERunnable msgAction = null;
+		    switch (event) {
+				case ALIAS_CHANGED:
+				case ALIAS_DISCONNECTED:
+				case ALIAS_REGISTERED:
+				case ALIAS_UNREGISTERED:
+				case AUTHORIZATION_UPDATE:
+				case CHAT_MSG_TO_ALL:
+				case CHAT_MSG_TO_USER:
+				case CLIENT_ALIAS_UPDATE:
+				case CLIPBOARD_CHANGED:
+				case CONNECTION_CLOSED:
+				case CONNECTION_ESTABLISHED:
+				case CURSOR_GONE:
+				case CURSOR_MOVE:
+				case END_OF_FRAME:
+				case FAILED_AUTHORIZATION:
+				case GET_CLIPBOARD:
+				case NUM_SCREENS_CHANGED:
+				case READ_INPUT_EVENTS:
+				case SCREEN_GONE:
+				case SCREEN_RESIZED:
+				case SET_CLIPBOARD:
+				case SCREEN_SEGMENT_SIZE_UPDATE:
+					msgAction = new IOERunnable() {
 
-                    @Override
-                    public void run() throws IOException
-                    {
-                        GraphicsSegment graphicsSegment = (GraphicsSegment) args[1];
-                        jce_id_ptr[0] = args[0];
-                        JitCompressedEvent new_jce = (JitCompressedEvent) graphicsSegment.synchronously(getJCE);
-                        Msg.send(out, new_jce, event);
-                    }
-                    
-                };
-	        }
-		    else if (event == SERVER_EVENT.SCREEN_SEGMENT_CHANGED)
-		    {
-		        msgAction = new IOERunnable() {
-		            
-                    @Override
-                    public void run() throws IOException
-                    {
-                        try
-                        {
-                            changedSegmentsSema.acquire();
-                        }
-                        catch (InterruptedException e)
-                        {
-                            LLog.e(e);
-                        }
-                        try
-                        {
-                            FixedLengthBitSet flbs = ClientHandler.this.stagedChanges;
-                            ClientHandler.this.stagedChanges = null;
-                            synchronized(ClientHandler.this.publishedChanges)
-                            {
-                                ClientHandler.this.publishedChanges[0].or(flbs);
-                            }
-                        }
-                        finally {
-                            changedSegmentsSema.release();
-                        }
-                        Msg.send(out, jce, event, args);
-                    }
-                    
-                };
-		    }
-		    else
-		    {
-		        msgAction = new IOERunnable() {
+	                    @Override
+	                    public void run() throws IOException
+	                    {
+	                        Msg.send(out, jce, event, args);
+	                    }
+			            
+			        };
+					break;
+				case ENTIRE_SCREEN_UPDATE:
+					assert_(jce == null);
+		            assert_(args == null);
+					msgAction = new IOERunnable() {
 
-                    @Override
-                    public void run() throws IOException
-                    {
-                        Msg.send(out, jce, event, args);
-                    }
+	                    @Override
+	                    public void run() throws IOException
+	                    {
+	                    	DirectRobot dirbot = ClientHandler.this.dirbot;
+	                    	if (dirbot != null) {
+	                    		Object[] args = new Object[] {dirbot.getRGBPixels()};
+	                    		Msg.send(out, jce, event, args);
+	                    	}
+	                    }
+			            
+			        };
+					break;
+				case SCREEN_SEGMENT_UPDATE:
+					assert_(jce == null);
+		            assert_(args.length == 2);
 		            
-		        };
+		            msgAction = new IOERunnable() {
+
+	                    @Override
+	                    public void run() throws IOException
+	                    {
+	                        GraphicsSegment graphicsSegment = (GraphicsSegment) args[1];
+	                        jce_id_ptr[0] = args[0];
+	                        JitCompressedEvent new_jce = (JitCompressedEvent) graphicsSegment.synchronously(getJCE);
+	                        Msg.send(out, new_jce, event);
+	                    }
+	                    
+	                };
+					break;
+				case SCREEN_SEGMENT_CHANGED:
+					msgAction = new IOERunnable() {
+			            
+	                    @Override
+	                    public void run() throws IOException
+	                    {
+	                        try
+	                        {
+	                            changedSegmentsSema.acquire();
+	                        }
+	                        catch (InterruptedException e)
+	                        {
+	                            LLog.e(e);
+	                        }
+	                        try
+	                        {
+	                            FixedLengthBitSet flbs = ClientHandler.this.stagedChanges;
+	                            ClientHandler.this.stagedChanges = null;
+	                            synchronized(ClientHandler.this.publishedChanges)
+	                            {
+	                                ClientHandler.this.publishedChanges[0].or(flbs);
+	                            }
+	                        }
+	                        finally {
+	                            changedSegmentsSema.release();
+	                        }
+	                        Msg.send(out, jce, event, args);
+	                    }
+	                    
+	                };
+					break;
 		    }
+		    f_msgAction = msgAction;
 		    Runnable r = new Runnable() {
 	            
 	            @Override
@@ -721,12 +760,15 @@ public class ClientHandler extends Thread
 	                    }
 	                    try
 	                    {
-	                        msgAction.run();
-	                        if (serializedDispatcher.isEmpty() && unserializedDispatcher.isEmpty())
+	                        f_msgAction.run();
+	                        if ((!event.isCursor()) && serializedDispatcher.isEmpty() && unserializedDispatcher.isEmpty())
 	                        {
 	                            flushed = true;
 	                            out.flush();
 	                        }
+	                        
+	                        // connection related post send handling...
+	                        
 	                        switch(event)
 	                        {
                                 case AUTHORIZATION_UPDATE:
@@ -770,9 +812,10 @@ public class ClientHandler extends Thread
                                 case CLIPBOARD_CHANGED:
                                 case GET_CLIPBOARD:
                                 case SET_CLIPBOARD:
+                                case ENTIRE_SCREEN_UPDATE:
                                     break;
-							case END_OF_FRAME:
-								break;
+								case END_OF_FRAME:
+									break;
 	                        }
 	                    }
 	                    catch (IOException e)

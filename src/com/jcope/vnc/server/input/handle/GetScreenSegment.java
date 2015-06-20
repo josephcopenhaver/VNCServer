@@ -21,8 +21,7 @@ public class GetScreenSegment extends Handle
         
         if (arg0 instanceof Integer)
         {
-            GraphicsSegment graphicsSegment = client.getSegment(-1);
-            client.sendEvent(SERVER_EVENT.SCREEN_SEGMENT_UPDATE, -1, graphicsSegment);
+            client.sendEvent(SERVER_EVENT.ENTIRE_SCREEN_UPDATE);
             return;
         }
         

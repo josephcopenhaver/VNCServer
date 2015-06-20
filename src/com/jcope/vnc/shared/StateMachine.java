@@ -48,7 +48,6 @@ public class StateMachine
         SCREEN_SEGMENT_SIZE_UPDATE,
         SCREEN_SEGMENT_UPDATE, // Response to client event GET_SCREEN_SEGMENT
         SCREEN_SEGMENT_CHANGED,
-        //ENTIRE_SCREEN_UPDATE, // collapsed into SCREEN_SEGEMENT_* (ID = -1)
         //ENTIRE_SCREEN_CHANGED,
         SCREEN_RESIZED,
         SCREEN_GONE,
@@ -70,6 +69,8 @@ public class StateMachine
         GET_CLIPBOARD, // loads clipboard from client
         CLIPBOARD_CHANGED, // notifies client that server clipboard contents have changed
         SET_CLIPBOARD, // sends clipboard contents to clients that have synchronization enabled
+        
+        ENTIRE_SCREEN_UPDATE,
         
         END_OF_FRAME
         
@@ -99,6 +100,7 @@ public class StateMachine
                 case CLIPBOARD_CHANGED:
                 case GET_CLIPBOARD:
                 case SET_CLIPBOARD:
+                case ENTIRE_SCREEN_UPDATE:
                 case END_OF_FRAME:
                     rval = Boolean.FALSE;
                     break;
@@ -163,6 +165,54 @@ public class StateMachine
                 case CLIPBOARD_CHANGED:
                 case GET_CLIPBOARD:
                 case END_OF_FRAME:
+                case ENTIRE_SCREEN_UPDATE:
+                    rval = Boolean.FALSE;
+                    break;
+            }
+            
+            return rval;
+        }
+        
+        public boolean isCursor()
+        {
+            Boolean rval = null;
+            
+            switch (this)
+            {
+                // These events cannot be flushed when the data out pending queue is idle because
+                // they are events sent in an iterative manner and will be followed by another
+            	// event that indicates a transaction has completed
+                case SCREEN_SEGMENT_UPDATE:
+                    rval = Boolean.TRUE;
+                    break;
+                
+                // These events can be flushed when the data out pending queue is idle because
+                // they are discrete events not sent in an iterative manner and do not take part
+                // in any transaction like event dispatching terminated by a subsequent event
+                case SCREEN_SEGMENT_CHANGED:
+                case CURSOR_GONE:
+                case CURSOR_MOVE:
+                case NUM_SCREENS_CHANGED:
+                case SCREEN_GONE:
+                case SCREEN_RESIZED:
+                case AUTHORIZATION_UPDATE:
+                case SCREEN_SEGMENT_SIZE_UPDATE:
+                case CLIENT_ALIAS_UPDATE:
+                case READ_INPUT_EVENTS:
+                case CLIPBOARD_CHANGED:
+                case GET_CLIPBOARD:
+                case SET_CLIPBOARD:
+                case END_OF_FRAME:
+                case ALIAS_DISCONNECTED:
+                case ALIAS_REGISTERED:
+                case ALIAS_UNREGISTERED:
+                case CHAT_MSG_TO_ALL:
+                case CHAT_MSG_TO_USER:
+                case CONNECTION_CLOSED:
+                case CONNECTION_ESTABLISHED:
+                case FAILED_AUTHORIZATION:
+                case ALIAS_CHANGED:
+                case ENTIRE_SCREEN_UPDATE:
                     rval = Boolean.FALSE;
                     break;
             }
