@@ -885,9 +885,6 @@ public class TaskDispatcher<T> extends Thread
 				}
 			}
 			finally {
-				if (disposed) {
-					return;
-				}
 				d = null;
 				try
 				{
