@@ -1,5 +1,6 @@
 package com.jcope.util;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.Semaphore;
 
@@ -821,20 +822,31 @@ public class TaskDispatcher<T> extends Thread
 		}
 	}
 	
-	public void cancel(T k) {
-		cancel(null, k);
+	// Uncomment if on java v1.7
+    //@SafeVarargs
+	public void cancel(T... ks) {
+		cancel(null, ks);
 	}
 	
-	private void cancel(Boolean releaseLocks, T k)
+	// Uncomment if on java v1.7
+    //@SafeVarargs
+	private void cancel(Boolean releaseLocks, T... ks)
 	{
+		int idx;
+	    int size;
+	    Throwable topE = null;
+		Dispatchable d;
+		Semaphore s;
+		ArrayList<Dispatchable> destroyables;
+		
+		if (ks == null || ks.length == 0) {
+			return;
+		}
 		if (releaseLocks == null)
 	    {
 	        releaseLocks = Boolean.TRUE;
 	    }
-		Dispatchable d = null;
-		Runnable onDestroy = null;
-		Semaphore s = null;
-		boolean disposedDetected = false;
+	    destroyables = new ArrayList<Dispatchable>();
 		
 		try {
 			listLock.acquire();
@@ -844,98 +856,97 @@ public class TaskDispatcher<T> extends Thread
 		}
 		try
 		{
-			if (disposed) {
-				disposedDetected = true;
+			try {
+				curTaskLock.acquire();
+			} catch (InterruptedException e) {
+				dispose(e);
 				return;
 			}
-			d = inMapSet.remove(k);
-			if (d != null) {
-				onDestroy = d.onDestroy;
-				s = d.s;
-				try {
-					inQueue.remove(d.n);
-				} catch (InterruptedException e) {
-					dispose(e);
-					return;
+			try {
+				for (T k : ks) {
+					d = mapSet.remove(k);
+					if (d != null) {
+						try {
+							queue.remove(d.n);
+						} catch (InterruptedException e) {
+							dispose(e);
+							break;
+						}
+						if (d.onDestroy != null) {
+							destroyables.add(d);
+						}
+						else {
+							if (releaseLocks && (s = d.s) != null) {
+								s.release();
+							}
+							d.dispose();
+						}
+					}
+					d = inMapSet.remove(k);
+					if (d != null) {
+						try {
+							inQueue.remove(d.n);
+						} catch (InterruptedException e) {
+							dispose(e);
+							break;
+						}
+						if (d.onDestroy != null) {
+							destroyables.add(d);
+						}
+						else {
+							if (releaseLocks && (s = d.s) != null) {
+								s.release();
+							}
+							d.dispose();
+						}
+					}
 				}
+				d = null;
+				s = null;
+			}
+			finally {
+				curTaskLock.release();
 			}
 		}
 		finally {
 			listLock.release();
-			if (disposedDetected) {
-				return;
-			}
+		}
+		idx = 0;
+		size = destroyables.size();
+		while (idx < size) {
 			try {
-				if (d != null) {
-					try {
-						try {
-							if (onDestroy != null) {
-								onDestroy.run();
-							}
-						}
-						finally {
-							if (releaseLocks && s != null) {
-								s.release();
-							}
-						}
-					}
-					finally {
-						d.dispose();
-					}
+				d = destroyables.get(idx);
+				d.onDestroy.run();
+			}
+			catch (Exception e) {
+				if (topE == null) {
+					topE = e;
+				}
+				else {
+					LLog.e(e, false);
+				}
+			}
+			catch (Throwable t) {
+				if (topE == null) {
+					topE = t;
+				}
+				else {
+					LLog.e(t, false);
 				}
 			}
 			finally {
-				d = null;
-				try
-				{
-					curTaskLock.acquire();
+				destroyables.set(idx, null);
+				if (releaseLocks && (s = d.s) != null) {
+					s.release();
+					s = null;
 				}
-				catch (InterruptedException e)
-				{
-					dispose(e);
-					return;
-				}
-				try
-				{
-					if (disposed) {
-						return;
-					}
-					d = mapSet.remove(k);
-					if (d == null) {
-						return;
-					}
-					onDestroy = d.onDestroy;
-					s = d.s;
-					try {
-						queue.remove(d.n);
-					} catch (InterruptedException e) {
-						dispose(e);
-						return;
-					}
-				}
-				finally
-				{
-					curTaskLock.release();
-					if (d == null) {
-						return;
-					}
-					try {
-						try {
-							if (onDestroy != null) {
-								onDestroy.run();
-							}
-						}
-						finally {
-							if (releaseLocks && s != null) {
-								s.release();
-							}
-						}
-					}
-					finally {
-						d.dispose();
-					}
-				}
+				d.dispose();
 			}
+			idx++;
+		}
+		d = null;
+		if (topE != null) {
+			throw new RuntimeException(topE);
 		}
 	}
 	
