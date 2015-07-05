@@ -1,5 +1,6 @@
 package com.jcope.vnc.server;
 
+import static com.jcope.debug.Debug.DEBUG;
 import static com.jcope.debug.Debug.assert_;
 import static com.jcope.vnc.shared.ScreenSelector.getScreenDevicesOrdered;
 
@@ -1015,7 +1016,11 @@ public class ClientHandler extends Thread
 			Monitor monitor;
 			synchronized(monitorRef)
 			{
-				monitor = (Monitor) monitorRef[0].get();
+				monitor = (monitorRef[0] == null) ? null : (Monitor) monitorRef[0].get();
+			}
+			if (monitor == null) {
+				if (DEBUG) {LLog.w("Instance not bound to a monitor");}
+				return;
 			}
 			paused = newPaused;
 			monitor.setPaused(newPaused);
