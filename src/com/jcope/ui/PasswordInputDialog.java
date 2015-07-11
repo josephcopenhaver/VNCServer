@@ -64,11 +64,11 @@ public class PasswordInputDialog
         String[] options = new String[]{"OK", "Cancel"};
         panel.addAncestorListener(al);
         int resultOption;
-        boolean done = false;
+        boolean haveResult = false;
         
         try
         {
-            do
+            while (true)
             {
                 pass.setText("");
                 if (confirm)
@@ -83,6 +83,7 @@ public class PasswordInputDialog
                     tmp = pass.getPassword();
                     if (!confirm || ((confirmTmp = confirmPass.getPassword()).length > 0 && tmp.length == confirmTmp.length && Arrays.equals(tmp, confirmTmp)))
                     {
+                        haveResult = true;
                         return tmp;
                     }
                     if (confirm)
@@ -94,15 +95,25 @@ public class PasswordInputDialog
                         }
                     }
                 }
-                done = true;
-            } while (!done);
+                break;
+            }
         }
         finally {
             try
             {
                 try
                 {
-                    pass.setText("");
+                    try {
+                        if (!haveResult && tmp != null) {
+                            Arrays.fill(tmp, (char) 0);
+                        }
+                        if (confirmTmp != null) {
+                            Arrays.fill(confirmTmp, (char) 0);
+                        }
+                    }
+                    finally {
+                        pass.setText("");
+                    }
                 }
                 finally {
                     if (confirm)
