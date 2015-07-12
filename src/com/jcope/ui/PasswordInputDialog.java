@@ -68,7 +68,7 @@ public class PasswordInputDialog
         
         try
         {
-            while (true)
+            do
             {
                 pass.setText("");
                 if (confirm)
@@ -96,7 +96,7 @@ public class PasswordInputDialog
                     }
                 }
                 break;
-            }
+            } while (true);
         }
         finally {
             try
