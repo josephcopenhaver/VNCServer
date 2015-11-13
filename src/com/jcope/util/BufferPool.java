@@ -4,15 +4,15 @@ import static com.jcope.debug.Debug.assert_;
 
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.SoftReference;
-import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.concurrent.Semaphore;
 
 import com.jcope.debug.LLog;
 
 public abstract class BufferPool<T>
 {
-    private final ArrayList<PoolRef> poolList;
-    private volatile int size;
+    private final HashMap<Integer, Object> poolMap;
     private final Semaphore listSema;
     
     @SuppressWarnings("rawtypes")
@@ -49,17 +49,14 @@ public abstract class BufferPool<T>
                         }
                         try
                         {
-                            synchronized(pool.poolList)
+                            synchronized(pool.poolMap)
                             {
                                 do
                                 {
                                     ref.parentPool = null;
                                     ref.sema = null;
                                     ref.hardRef = null;
-                                    if (ref.idx >= 0)
-                                    {
-                                        pool.remove(ref);
-                                    }
+                                    pool.remove(ref);
                                 } while ((ref = (BufferPool.PoolRef) queue.poll()) != null && pool == ref.parentPool);
                             }
                         }
@@ -83,11 +80,9 @@ public abstract class BufferPool<T>
     
     public class PoolRef extends SoftReference<T>
     {
-        //private volatile boolean isOwned;
         private volatile int refCount;
         private Semaphore sema;
         private volatile T hardRef;
-        private volatile int idx;
         private final int order;
         BufferPool<T> parentPool;
         
@@ -99,9 +94,7 @@ public abstract class BufferPool<T>
             sema = new Semaphore(1, true);
             this.order = order;
             this.hardRef = hardRef;
-            idx = -1;
             refCount = 1;
-            //isOwned = Boolean.TRUE;
         }
         
         private void stageGet()
@@ -168,233 +161,107 @@ public abstract class BufferPool<T>
     
     public BufferPool()
     {
-        size = 0;
-        poolList = new ArrayList<PoolRef>();
+        poolMap = new HashMap<Integer, Object>();
         listSema = new Semaphore(1, true);
     }
     
-    private void set(final int idx, final PoolRef ref)
+    @SuppressWarnings("unchecked")
+    private void reclaim(final PoolRef ref)
     {
-        ref.idx = idx;
-        if (idx == poolList.size())
+        Object poolSetObj = poolMap.get(ref.order);
+        if (poolSetObj == null)
         {
-            poolList.add(ref);
-        }
-        else
-        {
-            poolList.set(idx, ref);
-        }
-    }
-    
-    private void percolateUp(int idx)
-    {
-        if (idx <= 0)
-        {
-            // prevent null de-ref errors
-            // and reading pointless data
+            poolMap.put(ref.order, ref);
             return;
         }
-        
-        boolean somethingMoved = Boolean.FALSE;
-        final PoolRef nRef = poolList.get(idx);
-        final int order = nRef.order;
-        PoolRef ref;
-        int nextIdx;
-        
-        // Do not worry about optimizing setter functions to run only once
-        // the Java compiler ends up being efficient here when using
-        // static rvals in the setter, especially when the LHS is used
-        // in FLOW control logic
-        while (idx > 0)
-        {
-            nextIdx = (idx-1)/2;
-            if ((ref = poolList.get(nextIdx)).order <= order)
-            {
-                break;
+        LinkedList<PoolRef> poolSet;
+        if (poolSetObj instanceof LinkedList) {
+            poolSet = (LinkedList<PoolRef>) poolSetObj;
+            synchronized(poolSet) {
+                poolSet.add(ref);
             }
-            set(idx, ref);
-            somethingMoved = Boolean.TRUE;
-            idx = nextIdx;
+            return;
         }
-        
-        if (somethingMoved)
-        {
-            set(idx, nRef);
-        }
+        poolSet = new LinkedList<PoolRef>();
+        poolSet.add((BufferPool<T>.PoolRef) poolSetObj);
+        poolSet.add(ref);
+        poolMap.put(ref.order, poolSet);
     }
     
     private void remove(PoolRef ref)
     {
-        int idx = ref.idx;
-        
-        if (idx < 0)
-        {
-            return;
+        Object poolSetObj = poolMap.get(ref.order);
+        if (poolSetObj == null) {
+        	// Do Nothing
+        	return;
         }
-        
-        //assert_(!ref.isOwned);
-        
-        int leftIdx, rightIdx;
-        PoolRef left;
-        
-        final int newSize = size-1;
-        assert_(newSize >= 0);
-        
-        while (true)
-        {
-            rightIdx = (idx+1)<<1;
-            leftIdx = rightIdx-1;
-            
-            if (leftIdx <= newSize)
-            {
-                left = poolList.get(leftIdx);
-                if (rightIdx <= newSize)
-                {
-                    if (left.order >= (ref = poolList.get(rightIdx)).order)
-                    {
-                        set(idx, ref);
-                        idx = rightIdx;
-                    }
-                    else
-                    {
-                        set(idx, left);
-                        idx = leftIdx;
-                    }
+        else if (poolSetObj instanceof LinkedList) {
+            @SuppressWarnings("unchecked")
+            LinkedList<PoolRef> poolSet = (LinkedList<PoolRef>) poolSetObj;
+            synchronized(poolSet) {
+                poolSet.remove(ref);
+                if (poolSet.isEmpty()) {
+                    poolMap.remove(ref.order);
                 }
-                else
-                {
-                    set(idx, left);
-                    idx = leftIdx;
-                }
-            }
-            else if (rightIdx <= newSize)
-            {
-                set(idx, poolList.get(rightIdx));
-                idx = rightIdx;
-            }
-            else
-            {
-                assert_(idx <= newSize);
-                if (idx != newSize)
-                {
-                    set(idx, poolList.get(newSize));
-                    percolateUp(idx);
-                }
-                poolList.set(newSize, null);
-                break;
             }
         }
-        size = newSize;
+        else if (poolSetObj == ref) {
+            poolMap.remove(ref.order);
+        }
     }
     
-    private PoolRef get(final int order, final int[] startRef)
-    {
-        final int size = startRef[1];
-        int idx = startRef[0];
-        
-        if (size <= idx)
-        {
-            return null;
-        }
-        
-        PoolRef rval = null;
-        PoolRef left = null;
-        PoolRef right = null;
-        int leftIdx, rightIdx;
-        Integer useParent = null;
-        
-        while ((rval = poolList.get(idx)).order != order)
-        {
-            rightIdx = (idx + 1)<<1;
-            leftIdx = rightIdx - 1;
-            
-            if (leftIdx < size)
-            {
-                if ((left = poolList.get(leftIdx)).order > order)
-                {
-                    left = null;
-                }
-            }
-            if (rightIdx < size)
-            {
-                if ((right = poolList.get(rightIdx)).order > order)
-                {
-                    right = null;
-                }
-            }
-            if (left == null && right == null)
-            {
-                rval = null;
-                break;
-            }
-            else if (left != null)
-            {
-                if (right != null)
-                {
-                    rval = (left.order < right.order) ? right : left;
-                    useParent = (left.order == right.order) ? idx : null;
-                    right = null;
-                }
-                else
-                {
-                    rval = left;
-                    useParent = null;
-                }
-                left = null;
-            }
-            else
-            {
-                rval = right;
-                useParent = null;
-                right = null;
-            }
-            idx = rval.idx;
-        }
-            
-        if (rval != null)
-        {
-            rval.stageGet();
-            startRef[1]--;
-            remove(rval);
-            //assert_(startRef[1] == this.size);
-            rval.idx = -1;
-            startRef[0] = (useParent == null) ? idx : useParent;
-        }
-        
-        return rval;
-    }
-    
+    @SuppressWarnings("unchecked")
     public PoolRef acquire(final int order)
     {
         PoolRef rval = null;
-        int[] startRef = new int[]{0, 0};
+        PoolRef tmp;
         
-        if (size > 0)
+        try
         {
-            try
+            listSema.acquire();
+        }
+        catch (InterruptedException e)
+        {
+            LLog.e(e);
+        }
+        try
+        {
+            synchronized(poolMap)
             {
-                listSema.acquire();
-            }
-            catch (InterruptedException e)
-            {
-                LLog.e(e);
-            }
-            try
-            {
-                if ((startRef[1] = size) > 0)
-                {
-                    synchronized(poolList)
-                    {
-                        do
-                        {
-                            rval = get(order, startRef);
-                        } while (rval != null && rval.hardRef == null);
+            	Object poolSetObj = poolMap.get(order);
+                if (poolSetObj != null) {
+                    LinkedList<PoolRef> poolSet;
+                    if (poolSetObj instanceof HashMap) {
+                    	boolean poolIsEmpty;
+                        poolSet = (LinkedList<BufferPool<T>.PoolRef>) poolSetObj;
+                        synchronized(poolSet){
+                            while (!(poolIsEmpty = poolSet.isEmpty()))
+                            {
+                                tmp = poolSet.remove();
+                                tmp.stageGet();
+                                if (tmp.hardRef != null) {
+                                    rval = tmp;
+                                    break;
+                                }
+                            }
+                        }
+                        if (poolIsEmpty) {
+                        	poolMap.remove(order);
+                        }
+                    }
+                    else {
+                        poolMap.remove(order);
+                        tmp = (BufferPool<T>.PoolRef) poolSetObj;
+                        tmp.stageGet();
+                        if (tmp.hardRef != null) {
+                            rval = tmp;
+                        }
                     }
                 }
             }
-            finally {
-                listSema.release();
-            }
+        }
+        finally {
+            listSema.release();
         }
         
         if (rval == null)
@@ -407,14 +274,11 @@ public abstract class BufferPool<T>
             rval.refCount = 1;
         }
         
-        //rval.isOwned = Boolean.TRUE;
-        
         return rval;
     }
     
     private void release(final PoolRef ref)
     {
-        int newSize;
         try
         {
             listSema.acquire();
@@ -425,17 +289,11 @@ public abstract class BufferPool<T>
         }
         try
         {
-            //assert_(ref.isOwned);
-            assert_(ref.idx < 0);
-            newSize = size;
             ref.hardRef = null;
-            synchronized(poolList)
+            synchronized(poolMap)
             {
-                set(newSize, ref);
-                percolateUp(newSize);
+                reclaim(ref);
             }
-            size = newSize+1;
-            //ref.isOwned = Boolean.FALSE;
         }
         finally {
             listSema.release();
